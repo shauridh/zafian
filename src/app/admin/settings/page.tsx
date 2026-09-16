@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { isBluetoothAvailable } from "@/lib/printer";
+import NotificationSettings from "@/components/admin/NotificationSettings";
+import ThemeToggle from "@/components/ThemeToggle";
+import BackupSettings from "@/components/admin/BackupSettings";
 
 interface OutletSettings {
   id: string;
@@ -207,6 +210,33 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* Theme Settings */}
+      <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm mb-4">
+        <h3 className="font-heading font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <span className="w-8 h-8 rounded-lg bg-sabana-100 flex items-center justify-center text-sm">🎨</span>
+          Tema
+        </h3>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-800">Mode Tampilan</p>
+            <p className="text-sm text-gray-500">Pilih tema untuk aplikasi</p>
+          </div>
+          <ThemeToggle />
+        </div>
+      </div>
+
+      {/* Notification Settings */}
+      <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm mb-4">
+        <h3 className="font-heading font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <span className="w-8 h-8 rounded-lg bg-sabana-100 flex items-center justify-center text-sm">🔔</span>
+          Notifikasi
+        </h3>
+        <NotificationSettings />
+      </div>
+
+      {/* Backup Settings */}
+      <BackupSettings />
 
       {/* Danger Zone */}
       <div className="bg-white rounded-2xl p-5 border border-red-200 shadow-sm">

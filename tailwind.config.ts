@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -28,6 +29,19 @@ const config: Config = {
         warning: "#FACC15",
         danger: "#DC2626",
         cream: "#FFFBEB",
+        dark: {
+          DEFAULT: "#121212",
+          50: "#1E1E1E",
+          100: "#2D2D2D",
+          200: "#3D3D3D",
+          300: "#4D4D4D",
+          400: "#6D6D6D",
+          500: "#8D8D8D",
+          600: "#ADADAD",
+          700: "#CDCDCD",
+          800: "#E5E5E5",
+          900: "#F5F5F5",
+        },
       },
       fontFamily: {
         heading: ["Poppins", "sans-serif"],

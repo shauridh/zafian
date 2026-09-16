@@ -6,6 +6,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { useShiftStore } from "@/stores/shiftStore";
 import { getPrinter, isBluetoothAvailable } from "@/lib/printer";
 import { formatRupiah, formatDateTime, generateOrderNumber, SERVICE_MODE_LABELS } from "@/lib/format";
+import { supabase } from "@/lib/supabase/client";
 
 interface ReceiptPreviewProps {
   isOpen: boolean;
@@ -26,8 +27,9 @@ export default function ReceiptPreview({
   changeAmount,
   savedOrderId,
 }: ReceiptPreviewProps) {
-  const { items, getTotal, serviceMode, getDiscountAmount } = useCartStore();
+  const { items, getTotal, serviceMode, getDiscountAmount, clearCart } = useCartStore();
   const { cashierName } = useShiftStore();
+  const [cancelling, setCancelling] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [printStatus, setPrintStatus] = useState<"idle" | "connecting" | "printing" | "done" | "error">("idle");
 
@@ -203,6 +205,29 @@ ${discount > 0 ? `║  Diskon:${"".padEnd(19)}-${formatRupiah(discount).padStart
             <span className="text-xs">Download</span>
           </button>
         </div>
+
+        {/* Cancel Order */}
+        {savedOrderId && (
+          <button
+            onClick={async () => {
+              if (!confirm("Batalkan order ini? Stok akan dikembalikan.")) return;
+              setCancelling(true);
+              try {
+                await supabase.from("orders").update({ status: "cancelled" }).eq("id", savedOrderId);
+                alert("Order dibatalkan!");
+                onClose();
+              } catch (err) {
+                alert("Gagal membatalkan order");
+              } finally {
+                setCancelling(false);
+              }
+            }}
+            disabled={cancelling}
+            className="w-full py-2.5 mt-2 rounded-xl border-2 border-red-200 text-danger font-semibold text-sm hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            {cancelling ? "Membatalkan..." : "❌ Batalkan Order"}
+          </button>
+        )}
 
         <button onClick={onClose} variant="ghost" className="w-full py-3 text-gray-500 font-medium hover:text-gray-700">
           ✕ Tutup

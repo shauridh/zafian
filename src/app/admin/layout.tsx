@@ -48,6 +48,7 @@ const NAV_SECTIONS = [
     label: "System",
     items: [
       { href: "/admin/users", label: "Users", icon: "👥" },
+      { href: "/admin/audit", label: "Audit Log", icon: "📋" },
       { href: "/admin/settings", label: "Pengaturan", icon: "⚙️" },
     ],
   },

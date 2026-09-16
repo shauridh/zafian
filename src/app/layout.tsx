@@ -3,6 +3,7 @@ import { Inter, Poppins, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { PWASetup } from "@/components/PWASetup";
 import OfflineProvider from "@/components/OfflineProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -47,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" className="light">
       <head>
         <link rel="apple-touch-icon" href="/icons/icon.svg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -57,8 +58,10 @@ export default function RootLayout({
         className={`${inter.variable} ${poppins.variable} ${jetbrainsMono.variable}`}
         style={{ fontFamily: "var(--font-inter), sans-serif" }}
       >
-        <PWASetup />
-        <OfflineProvider>{children}</OfflineProvider>
+        <ThemeProvider>
+          <PWASetup />
+          <OfflineProvider>{children}</OfflineProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

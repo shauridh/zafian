@@ -40,8 +40,9 @@ const REPORT_DATA = {
 export default function ReportsPage() {
   const [period, setPeriod] = useState("today");
   const [showExport, setShowExport] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const handleExport = () => {
+  const handleExportCSV = () => {
     // Generate CSV
     const csv = [
       "Laporan Harian - Sabana Fried Chicken",
@@ -74,6 +75,100 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      // Dynamic import for jsPDF
+      const { default: jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
+
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Header
+      doc.setFillColor(232, 109, 61);
+      doc.rect(0, 0, pageWidth, 40, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("SABANA FRIED CHICKEN", pageWidth / 2, 18, { align: "center" });
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Laporan Penjualan - ${new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`, pageWidth / 2, 28, { align: "center" });
+
+      // Summary Section
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Ringkasan", 14, 55);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Total Transaksi: ${REPORT_DATA.summary.totalTransactions}`, 14, 65);
+      doc.text(`Total Pendapatan: Rp ${REPORT_DATA.summary.totalRevenue.toLocaleString("id-ID")}`, 14, 73);
+      doc.text(`Total HPP: Rp ${REPORT_DATA.summary.totalHpp.toLocaleString("id-ID")}`, 14, 81);
+      doc.text(`Gross Profit: Rp ${REPORT_DATA.summary.grossProfit.toLocaleString("id-ID")}`, 14, 89);
+      doc.text(`Margin: ${REPORT_DATA.summary.margin}%`, 14, 97);
+
+      // Category Table
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Penjualan per Kategori", 14, 115);
+
+      autoTable(doc, {
+        startY: 120,
+        head: [["Kategori", "Jumlah", "Persentase"]],
+        body: REPORT_DATA.byCategory.map((c) => [
+          c.name,
+          `Rp ${c.amount.toLocaleString("id-ID")}`,
+          `${c.pct}%`,
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [232, 109, 61] },
+      });
+
+      // Top Products Table
+      const finalY = (doc as any).lastAutoTable?.finalY || 180;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Top 5 Produk", 14, finalY + 15);
+
+      autoTable(doc, {
+        startY: finalY + 20,
+        head: [["#", "Produk", "Qty", "Revenue", "HPP", "Margin"]],
+        body: REPORT_DATA.topProducts.map((p, i) => [
+          `${i + 1}`,
+          p.name,
+          `${p.qty}`,
+          `Rp ${p.revenue.toLocaleString("id-ID")}`,
+          `Rp ${p.hpp.toLocaleString("id-ID")}`,
+          `Rp ${p.margin.toLocaleString("id-ID")}`,
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [232, 109, 61] },
+      });
+
+      // Footer
+      const footerY = doc.internal.pageSize.getHeight() - 20;
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(
+        `Dicetak pada ${new Date().toLocaleString("id-ID")} | Sabana POS - Sistem Manajemen Penjualan`,
+        pageWidth / 2,
+        footerY,
+        { align: "center" }
+      );
+
+      // Save PDF
+      doc.save(`Laporan-Sabana-${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (error) {
+      console.error("PDF export error:", error);
+      alert("Gagal export PDF. Silakan coba lagi.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -98,12 +193,28 @@ export default function ReportsPage() {
               </button>
             ))}
           </div>
-          <button
-            onClick={handleExport}
-            className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors"
-          >
-            📥 Export CSV
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleExportCSV}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+            >
+              📊 CSV
+            </button>
+            <button
+              onClick={handleExportPDF}
+              disabled={exporting}
+              className="px-4 py-2 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+            >
+              {exporting ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Exporting...
+                </span>
+              ) : (
+                "📄 PDF"
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
