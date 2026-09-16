@@ -93,8 +93,8 @@ export default function PromosPage() {
         type: formData.type,
         value: formData.value,
         min_purchase: formData.min_purchase || 0,
-        start_date: formData.start_date || null,
-        end_date: formData.end_date || null,
+        start_date: formData.start_date || undefined,
+        end_date: formData.end_date || undefined,
         is_active: formData.is_active,
       };
 

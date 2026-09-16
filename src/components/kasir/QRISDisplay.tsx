@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import QRCode from "qrcode.react";
+import { QRCodeSVG } from "qrcode.react";
 
 interface QRISDisplayProps {
   amount: number;
@@ -81,7 +81,7 @@ export default function QRISDisplay({
 
       <div className="flex justify-center mb-4">
         <div className="bg-white p-4 rounded-xl border-2 border-gray-100 shadow-inner">
-          <QRCode
+          <QRCodeSVG
             value={qrisPayload}
             size={200}
             level="H"

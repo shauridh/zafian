@@ -273,7 +273,7 @@ export default function ProductionPage() {
                 {selectedRecipe.inputs.map((input, idx) => (
                   <div key={idx} className="flex items-center justify-between ml-3 text-sm">
                     <span>{input.ingredient_name}</span>
-                    <span className="font-mono text-xs">{input.qty || input.quantity} {input.unit} × {batchQty} = {(input.qty || input.quantity) * batchQty}</span>
+                    <span className="font-mono text-xs">{input.quantity} {input.unit} × {batchQty} = {input.quantity * batchQty}</span>
                   </div>
                 ))}
               </div>

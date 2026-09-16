@@ -81,8 +81,8 @@ export default function UsersPage() {
       const payload = {
         name: formData.name,
         role: formData.role,
-        pin: formData.pin || null,
-        phone: formData.phone || null,
+        pin: formData.pin || undefined,
+        phone: formData.phone || undefined,
         is_active: formData.is_active,
         outlet_id: "00000000-0000-0000-0000-000000000001",
       };

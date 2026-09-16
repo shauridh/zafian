@@ -6,7 +6,7 @@ import Modal from "@/components/ui/Modal";
 import Numpad from "@/components/ui/Numpad";
 import { useCartStore } from "@/stores/cartStore";
 import { formatRupiah, SERVICE_MODE_LABELS } from "@/lib/format";
-import QRCode from "qrcode.react";
+import { QRCodeSVG } from "qrcode.react";
 import { findCustomerByPhone, earnPoints, getCustomerTier, type LoyaltyCustomer } from "@/lib/loyalty";
 import { getActivePromos, calculateBestDiscount, type PromoResult } from "@/lib/promos";
 
@@ -326,7 +326,7 @@ export default function PaymentModal({
                   </div>
                 </div>
                 <div className="flex justify-center">
-                  <QRCode
+                  <QRCodeSVG
                     value={`https://qris.sabana.id/pay?amount=${finalTotal}&order=${Date.now()}`}
                     size={200}
                     level="H"

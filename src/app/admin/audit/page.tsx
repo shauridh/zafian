@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 type AuditLog = {
   id: string;
@@ -11,9 +11,9 @@ type AuditLog = {
   entity_name: string;
   user_id: string;
   user_name: string;
-  before: any;
-  after: any;
-  metadata: any;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -70,6 +70,7 @@ export default function AuditPage() {
 
   useEffect(() => {
     fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const fetchLogs = async () => {
@@ -283,7 +284,7 @@ export default function AuditPage() {
                     </span>
                     {log.entity_name && (
                       <span className="text-sm text-gray-600 truncate">
-                        "{log.entity_name}"
+                        &quot;{log.entity_name}&quot;
                       </span>
                     )}
                   </div>

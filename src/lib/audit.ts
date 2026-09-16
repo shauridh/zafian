@@ -1,7 +1,7 @@
 // Audit Log System for Sabana POS
 // Tracks all data changes with who, when, what, and before/after values
 
-import { supabase } from "./supabase";
+import { supabase } from "./supabase/client";
 
 type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "LOGIN" | "LOGOUT" | "PAYMENT" | "SHIFT_OPEN" | "SHIFT_CLOSE";
 

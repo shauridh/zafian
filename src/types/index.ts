@@ -8,7 +8,7 @@ export interface Category {
   color: string;
   sort_order: number;
   is_active: boolean;
-  created_at: string;
+  created_at?: string;
 }
 
 // ============================================
@@ -27,8 +27,8 @@ export interface Product {
   unit: string;
   is_active: boolean;
   is_available: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // ============================================

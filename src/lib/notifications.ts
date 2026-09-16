@@ -1,7 +1,7 @@
 // Push Notification Manager for Sabana POS
 // Handles browser push notifications and in-app alerts
 
-import { supabase } from "./supabase";
+import { supabase } from "./supabase/client";
 
 type NotificationPayload = {
   title: string;

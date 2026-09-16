@@ -229,7 +229,7 @@ ${discount > 0 ? `║  Diskon:${"".padEnd(19)}-${formatRupiah(discount).padStart
           </button>
         )}
 
-        <button onClick={onClose} variant="ghost" className="w-full py-3 text-gray-500 font-medium hover:text-gray-700">
+        <button onClick={onClose} className="w-full py-3 text-gray-500 font-medium hover:text-gray-700">
           ✕ Tutup
         </button>
       </div>

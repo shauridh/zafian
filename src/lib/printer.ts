@@ -41,6 +41,9 @@ class ThermalPrinter {
   // Connect to thermal printer via Web Bluetooth
   async connect(): Promise<boolean> {
     try {
+      if (!navigator.bluetooth) {
+        throw new Error("Web Bluetooth not supported in this browser");
+      }
       this.device = await navigator.bluetooth.requestDevice({
         filters: [
           { services: [] },  // Accept all BLE devices

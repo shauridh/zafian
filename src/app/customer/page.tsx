@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 type Customer = {
   id: string;
@@ -366,23 +366,26 @@ export default function CustomerPortal() {
           </div>
           
           {/* Tier Progress */}
-          {getTierProgress().next && (
+          {(() => {
+            const tp = getTierProgress();
+            return tp.next ? (
             <div>
               <div className="flex justify-between text-xs mb-1">
-                <span>{getTierProgress().current.name}</span>
-                <span>{getTierProgress().next.name}</span>
+                <span>{tp.current.name}</span>
+                <span>{tp.next.name}</span>
               </div>
               <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-white rounded-full transition-all"
-                  style={{ width: `${getTierProgress().progress}%` }}
+                  style={{ width: `${tp.progress}%` }}
                 />
               </div>
               <p className="text-xs text-white/70 mt-1">
-                {getTierProgress().next.min - (customer?.points || 0)} poin lagi ke {getTierProgress().next.name}
+                {tp.next.min - (customer?.points || 0)} poin lagi ke {tp.next.name}
               </p>
             </div>
-          )}
+          ) : null;
+          })()}
         </div>
 
         {/* Stats */}

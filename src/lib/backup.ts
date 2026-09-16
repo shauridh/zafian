@@ -1,7 +1,7 @@
 // Database Backup System for Sabana POS
 // Handles export, import, and scheduled backups of Supabase data
 
-import { supabase } from "./supabase";
+import { supabase } from "./supabase/client";
 
 type BackupMetadata = {
   id: string;

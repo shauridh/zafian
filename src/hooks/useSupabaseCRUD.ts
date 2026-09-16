@@ -38,7 +38,7 @@ export function useSupabaseCRUD<T extends { id: string }>(
 
       const { data: result, error: fetchError } = await query;
       if (fetchError) throw fetchError;
-      setData(result || []);
+      setData((result as unknown as T[]) || []);
     } catch (err: any) {
       console.error(`Error fetching ${tableName}:`, err);
       setError(err.message);
@@ -55,12 +55,12 @@ export function useSupabaseCRUD<T extends { id: string }>(
     async (item: Omit<T, "id">) => {
       const { data: result, error } = await supabase
         .from(tableName)
-        .insert(item)
+        .insert(item as any)
         .select()
         .single();
       if (error) throw error;
-      setData((prev) => [...prev, result]);
-      return result;
+      setData((prev) => [...prev, result as unknown as T]);
+      return result as unknown as T;
     },
     [tableName]
   );
@@ -69,13 +69,13 @@ export function useSupabaseCRUD<T extends { id: string }>(
     async (id: string, updates: Partial<T>) => {
       const { data: result, error } = await supabase
         .from(tableName)
-        .update(updates)
+        .update(updates as any)
         .eq("id", id)
         .select()
         .single();
       if (error) throw error;
-      setData((prev) => prev.map((item) => (item.id === id ? result : item)));
-      return result;
+      setData((prev) => prev.map((item) => (item.id === id ? (result as unknown as T) : item)));
+      return result as unknown as T;
     },
     [tableName]
   );
