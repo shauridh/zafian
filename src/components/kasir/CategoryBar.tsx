@@ -25,7 +25,7 @@ export default function CategoryBar({
           "min-w-[80px] cursor-pointer whitespace-nowrap",
           selectedId === null
             ? "bg-sabana text-white shadow-lg shadow-sabana/30"
-            : "bg-white text-gray-700 hover:bg-sabana-50 border border-gray-200"
+            : "bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 hover:bg-sabana-50 dark:hover:bg-sabana/10 border border-gray-200 dark:border-[#333]"
         )}
       >
         <span className="text-2xl">📋</span>
@@ -40,7 +40,7 @@ export default function CategoryBar({
             "min-w-[80px] cursor-pointer whitespace-nowrap",
             selectedId === cat.id
               ? "bg-sabana text-white shadow-lg shadow-sabana/30"
-              : "bg-white text-gray-700 hover:bg-sabana-50 border border-gray-200"
+              : "bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 hover:bg-sabana-50 dark:hover:bg-sabana/10 border border-gray-200 dark:border-[#333]"
           )}
         >
           <span className="text-2xl">{cat.icon}</span>

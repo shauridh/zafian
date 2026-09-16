@@ -67,14 +67,14 @@ export default function ProductGrid({
             onClick={() => !isDisabled && onSelect(product)}
             disabled={isDisabled}
             className={clsx(
-              "product-card p-2 bg-white border rounded-lg text-left",
+              "product-card p-2 bg-white dark:bg-[#1a1a1a] border rounded-lg text-left",
               isDisabled
-                ? "opacity-40 cursor-not-allowed border-gray-200"
-                : "border-gray-200 hover:border-sabana"
+                ? "opacity-40 cursor-not-allowed border-gray-200 dark:border-[#333]"
+                : "border-gray-200 dark:border-[#333] hover:border-sabana"
             )}
           >
             {/* Product Icon/Image */}
-            <div className="w-full aspect-square bg-sabana-50 rounded-md mb-1.5 flex items-center justify-center overflow-hidden">
+            <div className="w-full aspect-square bg-sabana-50 dark:bg-sabana/5 rounded-md mb-1.5 flex items-center justify-center overflow-hidden">
               {product.image_url ? (
                 <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
               ) : (
@@ -83,7 +83,7 @@ export default function ProductGrid({
             </div>
 
             {/* Product Name */}
-            <h3 className="font-semibold text-[11px] leading-tight text-gray-900 line-clamp-2 min-h-[2rem]">
+            <h3 className="font-semibold text-[11px] leading-tight text-gray-900 dark:text-gray-100 line-clamp-2 min-h-[2rem]">
               {product.name}
             </h3>
 

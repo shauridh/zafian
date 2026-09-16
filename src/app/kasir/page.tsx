@@ -253,7 +253,7 @@ export default function KasirPage() {
   return (
     <div className="h-screen flex flex-col bg-cream overflow-hidden">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between shrink-0">
+      <header className="bg-white dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-[#333] px-3 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xl">🍗</span>
           <h1 className="font-heading font-bold text-lg text-sabana hidden sm:block">SABANA POS</h1>
@@ -266,21 +266,21 @@ export default function KasirPage() {
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-success animate-pulse" : "bg-danger"}`} />
-            <span className={`text-xs font-medium hidden sm:block ${isOnline ? "text-gray-600" : "text-danger"}`}>
+            <span className={`text-xs font-medium hidden sm:block ${isOnline ? "text-gray-600 dark:text-gray-400" : "text-danger"}`}>
               {isOnline ? "Online" : "Offline"}
             </span>
           </div>
-          <div className="text-xs font-mono text-gray-500 hidden sm:block">
+          <div className="text-xs font-mono text-gray-500 dark:text-gray-400 hidden sm:block">
             {new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false })}
           </div>
-          <button onClick={() => setShowRecentOrders(true)} className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors text-sm" title="Order Hari Ini">
+          <button onClick={() => setShowRecentOrders(true)} className="p-2 rounded-lg bg-gray-100 dark:bg-[#333] hover:bg-gray-200 dark:hover:bg-[#444] text-gray-600 dark:text-gray-400 transition-colors text-sm" title="Order Hari Ini">
             📋
           </button>
-          <div className="flex items-center gap-1.5 bg-sabana-50 px-2 py-1 rounded-lg">
+          <div className="flex items-center gap-1.5 bg-sabana-50 dark:bg-sabana/10 px-2 py-1 rounded-lg">
             <div className="w-6 h-6 rounded-full bg-sabana text-white flex items-center justify-center text-xs font-bold">
               {cashierName?.charAt(0) || "K"}
             </div>
-            <span className="text-xs font-medium text-gray-700 hidden sm:block">{cashierName || "Kasir"}</span>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 hidden sm:block">{cashierName || "Kasir"}</span>
           </div>
           {/* Shift indicator */}
           {isShiftOpen && (
@@ -305,14 +305,14 @@ export default function KasirPage() {
       {/* Main */}
       <div className="flex-1 flex overflow-hidden min-h-0">
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <div className="px-3 py-2 bg-white border-b border-gray-100 space-y-2 shrink-0">
+          <div className="px-3 py-2 bg-white dark:bg-[#1a1a1a] border-b border-gray-100 dark:border-[#333] space-y-2 shrink-0">
             <ServiceModeSelector selected={serviceMode} onSelect={setServiceMode} />
             {serviceMode === 'dine_in' && (
               <TableSelector selectedTable={selectedTable} onSelect={setSelectedTable} visible={true} />
             )}
             <div className="relative">
               <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <input type="text" placeholder="Cari produk..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sabana text-sm" />
+              <input type="text" placeholder="Cari produk..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 dark:border-[#444] bg-white dark:bg-[#262626] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sabana text-sm" />
             </div>
             <CategoryBar categories={categories} selectedId={selectedCategory} onSelect={(id) => { setSelectedCategory(id); setSearchQuery(""); }} />
           </div>

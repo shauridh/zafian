@@ -36,7 +36,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center p-4">
+    <div className="min-h-screen bg-cream dark:bg-[#0f0f0f] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -44,11 +44,11 @@ export default function LoginPage() {
             🍗
           </div>
           <h1 className="font-heading font-bold text-3xl text-sabana">SABANA</h1>
-          <p className="text-gray-500 mt-1">Fried Chicken POS</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Fried Chicken POS</p>
         </div>
 
         {/* Cashier Selection */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-4">
+        <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-gray-200 dark:border-[#333] shadow-sm mb-4">
           <h2 className="font-heading font-semibold text-gray-900 mb-4">Pilih Kasir</h2>
           <div className="grid grid-cols-2 gap-3">
             {MOCK_CASHIERS.map((cashier) => (
@@ -76,7 +76,7 @@ export default function LoginPage() {
 
         {/* PIN Input */}
         {selectedCashier && (
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+          <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-gray-200 dark:border-[#333] shadow-sm">
             <h2 className="font-heading font-semibold text-gray-900 mb-4 text-center">
               Masukkan PIN
             </h2>
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 <div
                   key={i}
                   className={`w-4 h-4 rounded-full transition-all ${
-                    i < pin.length ? "bg-sabana scale-125" : "bg-gray-200"
+                    i < pin.length ? "bg-sabana scale-125" : "bg-gray-200 dark:bg-[#444]"
                   }`}
                 />
               ))}
@@ -108,8 +108,8 @@ export default function LoginPage() {
                       onClick={() => handlePinPress(digit)}
                       className={`h-16 rounded-xl text-2xl font-semibold transition-all active:scale-95 ${
                         digit === "backspace"
-                          ? "bg-gray-100 text-gray-600"
-                          : "bg-gray-50 text-gray-900 hover:bg-sabana-50 border border-gray-200"
+                          ? "bg-gray-100 dark:bg-[#333] text-gray-600 dark:text-gray-400"
+                          : "bg-gray-50 dark:bg-[#262626] text-gray-900 dark:text-gray-100 hover:bg-sabana-50 dark:hover:bg-sabana/10 border border-gray-200 dark:border-[#333]"
                       }`}
                     >
                       {digit === "backspace" ? "⌫" : digit}
@@ -131,13 +131,13 @@ export default function LoginPage() {
           </button>
           <button
             onClick={() => router.push("/order")}
-            className="text-sm text-gray-500 hover:text-sabana transition-colors"
+            className="text-sm text-gray-500 dark:text-gray-400 hover:text-sabana transition-colors"
           >
             🛒 Customer Portal
           </button>
           <button
             onClick={() => router.push("/admin/dashboard")}
-            className="text-sm text-gray-500 hover:text-sabana transition-colors"
+            className="text-sm text-gray-500 dark:text-gray-400 hover:text-sabana transition-colors"
           >
             📊 Admin
           </button>

@@ -93,11 +93,11 @@ export default function OpenShiftPage() {
             🍗
           </div>
           <h1 className="font-heading font-bold text-2xl text-sabana">Buka Kasir</h1>
-          <p className="text-gray-500 text-sm mt-1">Isi modal awal sebelum mulai transaksi</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Isi modal awal sebelum mulai transaksi</p>
         </div>
 
         {/* Date & Time */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm mb-4 text-center">
+        <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-4 border border-gray-200 dark:border-[#333] shadow-sm mb-4 text-center">
           <p className="text-sm text-gray-500">Tanggal</p>
           <p className="font-semibold text-gray-900">
             {now ? now.toLocaleDateString("id-ID", {
@@ -121,7 +121,7 @@ export default function OpenShiftPage() {
               <div className="w-6 h-6 border-2 border-sabana border-t-transparent rounded-full animate-spin" />
             </div>
           ) : cashiers.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">Tidak ada kasir ditemukan</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Tidak ada kasir ditemukan</p>
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {cashiers.map((cashier) => (

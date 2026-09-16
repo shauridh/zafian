@@ -80,7 +80,7 @@ export default function Numpad({
                   "active:scale-95 cursor-pointer",
                   isActive
                     ? "bg-sabana text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-sabana hover:text-white"
+                    : "bg-gray-100 dark:bg-[#333] text-gray-700 dark:text-gray-300 hover:bg-sabana hover:text-white"
                 )}
               >
                 {qa.label}
@@ -99,11 +99,11 @@ export default function Numpad({
               onClick={() => handlePress(digit)}
               className={clsx(
                 "numpad-btn",
-                digit === "clear" && "bg-gray-100 text-danger text-lg",
-                digit === "backspace" && "bg-gray-100 text-gray-600 text-lg",
+                digit === "clear" && "bg-gray-100 dark:bg-[#333] text-danger text-lg",
+                digit === "backspace" && "bg-gray-100 dark:bg-[#333] text-gray-600 dark:text-gray-400 text-lg",
                 digit !== "clear" &&
                   digit !== "backspace" &&
-                  "bg-white text-gray-900 hover:bg-sabana-50 border border-gray-200",
+                  "bg-white dark:bg-[#262626] text-gray-900 dark:text-gray-100 hover:bg-sabana-50 dark:hover:bg-sabana/10 border border-gray-200 dark:border-[#444]",
                 "shadow-sm hover:shadow-md"
               )}
             >

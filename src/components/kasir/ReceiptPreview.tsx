@@ -139,11 +139,11 @@ ${discount > 0 ? `║  Diskon:${"".padEnd(19)}-${formatRupiah(discount).padStart
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="md">
       <div className="p-6">
-        <h2 className="text-xl font-heading font-bold text-center mb-4">🧾 Struk Pesanan</h2>
+        <h2 className="text-xl font-heading font-bold text-center mb-4 text-gray-900 dark:text-gray-100">🧾 Struk Pesanan</h2>
 
         {/* Receipt Preview */}
-        <div className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 mb-6 overflow-x-auto">
-          <pre className="receipt-preview text-xs leading-relaxed text-gray-800 whitespace-pre">
+        <div className="bg-white dark:bg-[#1a1a1a] border-2 border-dashed border-gray-300 dark:border-[#555] rounded-xl p-4 mb-6 overflow-x-auto">
+          <pre className="receipt-preview text-xs leading-relaxed text-gray-800 dark:text-gray-200 whitespace-pre">
             {receiptText}
           </pre>
         </div>
@@ -178,8 +178,8 @@ ${discount > 0 ? `║  Diskon:${"".padEnd(19)}-${formatRupiah(discount).padStart
           {/* Browser Print */}
           <button
             onClick={handlePrintBrowser}
-            className="flex flex-col items-center gap-1 py-4 rounded-xl bg-gray-100 text-gray-700 
-                       font-semibold hover:bg-gray-200 transition-all"
+            className="flex flex-col items-center gap-1 py-4 rounded-xl bg-gray-100 dark:bg-[#333] text-gray-700 dark:text-gray-300
+                       font-semibold hover:bg-gray-200 dark:hover:bg-[#444] transition-all"
           >
             <span className="text-xl">📄</span>
             <span className="text-xs">Print Browser</span>
@@ -198,8 +198,8 @@ ${discount > 0 ? `║  Diskon:${"".padEnd(19)}-${formatRupiah(discount).padStart
           {/* Download */}
           <button
             onClick={handleDownload}
-            className="flex flex-col items-center gap-1 py-4 rounded-xl bg-gray-100 text-gray-700 
-                       font-semibold hover:bg-gray-200 transition-all"
+            className="flex flex-col items-center gap-1 py-4 rounded-xl bg-gray-100 dark:bg-[#333] text-gray-700 dark:text-gray-300
+                       font-semibold hover:bg-gray-200 dark:hover:bg-[#444] transition-all"
           >
             <span className="text-xl">💾</span>
             <span className="text-xs">Download</span>
@@ -223,13 +223,13 @@ ${discount > 0 ? `║  Diskon:${"".padEnd(19)}-${formatRupiah(discount).padStart
               }
             }}
             disabled={cancelling}
-            className="w-full py-2.5 mt-2 rounded-xl border-2 border-red-200 text-danger font-semibold text-sm hover:bg-red-50 transition-colors disabled:opacity-50"
+            className="w-full py-2.5 mt-2 rounded-xl border-2 border-red-200 dark:border-red-500/30 text-danger font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50"
           >
             {cancelling ? "Membatalkan..." : "❌ Batalkan Order"}
           </button>
         )}
 
-        <button onClick={onClose} className="w-full py-3 text-gray-500 font-medium hover:text-gray-700">
+        <button onClick={onClose} className="w-full py-3 text-gray-500 dark:text-gray-400 font-medium hover:text-gray-700 dark:hover:text-gray-200">
           ✕ Tutup
         </button>
       </div>

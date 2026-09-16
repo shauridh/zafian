@@ -204,7 +204,7 @@ export default function CloseShiftPage() {
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <div className="text-center">
           <div className="w-10 h-10 border-3 border-sabana border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-500 text-sm">Memuat data shift...</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Memuat data shift...</p>
         </div>
       </div>
     );
@@ -218,14 +218,14 @@ export default function CloseShiftPage() {
           <div className="w-16 h-16 mx-auto bg-danger rounded-2xl flex items-center justify-center text-3xl mb-3 shadow-lg">
             🔴
           </div>
-          <h1 className="font-heading font-bold text-2xl text-gray-900">Tutup Kasir</h1>
-          <p className="text-gray-500 text-sm mt-1">Hitung kas dan tutup shift hari ini</p>
+          <h1 className="font-heading font-bold text-2xl text-gray-900 dark:text-gray-100">Tutup Kasir</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Hitung kas dan tutup shift hari ini</p>
         </div>
 
         {/* Shift Info */}
-        <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm mb-4">
-          <h3 className="font-heading font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-sabana-100 flex items-center justify-center text-sm">📋</span>
+        <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 border border-gray-200 dark:border-[#333] shadow-sm mb-4">
+          <h3 className="font-heading font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-sabana-100 dark:bg-sabana/20 flex items-center justify-center text-sm">📋</span>
             Info Shift
           </h3>
           <div className="grid grid-cols-2 gap-3 text-sm">
@@ -287,9 +287,9 @@ export default function CloseShiftPage() {
           </p>
 
           {/* Visual cash total */}
-          <div className="bg-gray-50 rounded-xl p-4 text-center border border-gray-200 mb-4">
-            <p className="text-xs text-gray-500 mb-1">Total Kas Aktual</p>
-            <p className="text-3xl font-mono font-bold text-gray-900">
+          <div className="bg-gray-50 dark:bg-[#262626] rounded-xl p-4 text-center border border-gray-200 dark:border-[#333] mb-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Kas Aktual</p>
+            <p className="text-3xl font-mono font-bold text-gray-900 dark:text-gray-100">
               {formatRupiah(actualCash)}
             </p>
           </div>
@@ -304,8 +304,8 @@ export default function CloseShiftPage() {
                   <div
                     className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
                       isEditing
-                        ? "bg-sabana-50 border-2 border-sabana"
-                        : "bg-gray-50 hover:bg-gray-100 border-2 border-transparent"
+                        ? "bg-sabana-50 dark:bg-sabana/10 border-2 border-sabana"
+                        : "bg-gray-50 dark:bg-[#262626] hover:bg-gray-100 dark:hover:bg-[#333] border-2 border-transparent"
                     }`}
                     onClick={() => setEditingDenom(isEditing ? null : denom.value)}
                   >
@@ -427,14 +427,14 @@ export default function CloseShiftPage() {
         </div>
 
         {/* Notes */}
-        <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm mb-4">
-          <label className="block text-sm font-medium text-gray-600 mb-2">📝 Catatan (opsional)</label>
+        <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 border border-gray-200 dark:border-[#333] shadow-sm mb-4">
+          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">📝 Catatan (opsional)</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Catatan selisih, keluhan, dll..."
             rows={2}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sabana text-sm resize-none"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[#444] bg-white dark:bg-[#262626] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sabana text-sm resize-none"
           />
         </div>
 
@@ -442,8 +442,8 @@ export default function CloseShiftPage() {
         <div className="flex gap-3 mb-4">
           <button
             onClick={() => router.push("/kasir")}
-            className="px-6 py-4 rounded-2xl border-2 border-gray-200 text-gray-600
-                       font-semibold hover:bg-gray-50 active:scale-95 transition-all"
+            className="px-6 py-4 rounded-2xl border-2 border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400
+                       font-semibold hover:bg-gray-50 dark:hover:bg-[#333] active:scale-95 transition-all"
           >
             ← Kembali
           </button>
@@ -467,8 +467,8 @@ export default function CloseShiftPage() {
 
         {/* Warning if cash counting not done */}
         {actualCash === 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center mb-4">
-            <p className="text-sm text-yellow-700 font-medium">
+          <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20 rounded-xl p-3 text-center mb-4">
+            <p className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">
               ⚠️ Hitung kas terlebih dahulu sebelum menutup shift
             </p>
           </div>

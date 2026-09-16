@@ -31,10 +31,10 @@ export default function TableSelector({ selectedTable, onSelect, visible }: Tabl
   if (!visible) return null;
 
   return (
-    <div className="bg-white rounded-xl p-3 border border-gray-200 mb-2">
+    <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-3 border border-gray-200 dark:border-[#333] mb-2">
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-semibold text-gray-600">🪑 Pilih Meja</p>
-        <button onClick={() => onSelect(null)} className="text-[10px] text-gray-400 hover:text-gray-600">Tidak pakai meja</button>
+        <button onClick={() => onSelect(null)} className="text-[10px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">Tidak pakai meja</button>
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
         {TABLES.map((table) => (
@@ -44,13 +44,13 @@ export default function TableSelector({ selectedTable, onSelect, visible }: Tabl
             className={clsx(
               "flex flex-col items-center gap-0.5 p-2 rounded-lg border-2 transition-all text-center",
               selectedTable === table.id
-                ? "border-sabana bg-sabana-50 shadow-sm"
-                : "border-gray-200 hover:border-gray-300"
+                ? "border-sabana bg-sabana-50 dark:bg-sabana/10 shadow-sm"
+                : "border-gray-200 dark:border-[#333] hover:border-gray-300 dark:hover:border-[#444]"
             )}
           >
             <span className="text-lg">{selectedTable === table.id ? "🪑" : "⬜"}</span>
-            <span className="text-[10px] font-semibold text-gray-900">{table.name}</span>
-            <span className="text-[9px] text-gray-400">{table.seats} kursi</span>
+            <span className="text-[10px] font-semibold text-gray-900 dark:text-gray-100">{table.name}</span>
+            <span className="text-[9px] text-gray-400 dark:text-gray-500">{table.seats} kursi</span>
           </button>
         ))}
       </div>

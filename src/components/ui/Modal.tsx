@@ -44,7 +44,7 @@ export default function Modal({
       {/* Modal */}
       <div
         className={clsx(
-          "relative bg-white rounded-2xl shadow-2xl animate-scale-in max-h-[90vh] overflow-hidden",
+          "relative bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl animate-scale-in max-h-[90vh] overflow-hidden",
           {
             "w-full max-w-sm": size === "sm",
             "w-full max-w-md": size === "md",
@@ -56,19 +56,19 @@ export default function Modal({
       >
         {/* Header */}
         {(title || showClose) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-[#333]">
             {title && (
-              <h2 className="text-lg font-heading font-semibold text-gray-900">
+              <h2 className="text-lg font-heading font-semibold text-gray-900 dark:text-gray-100">
                 {title}
               </h2>
             )}
             {showClose && (
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#333] transition-colors"
               >
                 <svg
-                  className="w-5 h-5 text-gray-500"
+                  className="w-5 h-5 text-gray-500 dark:text-gray-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"

@@ -33,7 +33,7 @@ export default function ServiceModeSelector({
             onClick={() => onSelect(mode.id)}
             className={clsx(
               "service-btn flex items-center gap-2",
-              isActive ? "text-white shadow-lg" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+              isActive ? "text-white shadow-lg" : "bg-white dark:bg-[#1e1e1e] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#333] hover:border-gray-300 dark:hover:border-[#444]"
             )}
             style={
               isActive
