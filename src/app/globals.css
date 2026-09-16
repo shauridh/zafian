@@ -1,0 +1,139 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #EA580C;
+  --color-primary-light: #FB923C;
+  --color-primary-dark: #C2410C;
+  --color-success: #16A34A;
+  --color-warning: #FACC15;
+  --color-danger: #DC2626;
+  --color-bg: #FFFBEB;
+  --color-surface: #FFFFFF;
+  --color-text: #1C1917;
+  --color-muted: #F5F5F4;
+  --color-border: #E7E5E4;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Numpad button styles */
+.numpad-btn {
+  @apply flex items-center justify-center rounded-xl text-2xl font-semibold 
+         transition-all duration-150 cursor-pointer select-none;
+  min-width: 72px;
+  min-height: 72px;
+}
+
+.numpad-btn:active {
+  transform: scale(0.95);
+}
+
+/* Product card touch feedback */
+.product-card {
+  @apply relative overflow-hidden rounded-xl border-2 border-transparent
+         transition-all duration-150 cursor-pointer;
+}
+
+.product-card:active {
+  @apply border-sabana scale-95;
+  transform-origin: center;
+}
+
+/* Cart item animation */
+.cart-item-enter {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Service mode button */
+.service-btn {
+  @apply px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 
+         cursor-pointer border-2;
+  min-height: 44px;
+}
+
+.service-btn.active {
+  @apply text-white shadow-lg;
+}
+
+/* Stock indicator */
+.stock-dot {
+  @apply w-2.5 h-2.5 rounded-full;
+}
+
+/* Receipt preview */
+.receipt-preview {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
+
+/* Toast notifications */
+.toast-enter {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Tablet optimizations (11 inch) */
+@media (min-width: 768px) and (max-width: 1200px) {
+  .numpad-btn {
+    min-width: 64px;
+    min-height: 64px;
+    font-size: 1.5rem;
+  }
+}
+
+/* Hide scrollbar for category bar */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,0 +1,125 @@
+"use client";
+
+import React, { useCallback, useRef } from "react";
+import clsx from "clsx";
+
+interface NumpadProps {
+  value: string;
+  onChange: (value: string) => void;
+  maxLength?: number;
+  showQuickAmounts?: boolean;
+  quickAmounts?: { label: string; value: number }[];
+}
+
+export default function Numpad({
+  value,
+  onChange,
+  maxLength = 15,
+  showQuickAmounts = false,
+  quickAmounts = [],
+}: NumpadProps) {
+  // Track whether last input was from quick amount or numpad
+  const lastInputType = useRef<"quick" | "numpad" | null>(null);
+
+  const handleQuickAmount = useCallback(
+    (amount: number) => {
+      lastInputType.current = "quick";
+      onChange(String(amount));
+    },
+    [onChange]
+  );
+
+  const handlePress = useCallback(
+    (digit: string) => {
+      if (digit === "backspace") {
+        lastInputType.current = "numpad";
+        onChange(value.slice(0, -1));
+        return;
+      }
+      if (digit === "clear") {
+        lastInputType.current = null;
+        onChange("");
+        return;
+      }
+      if (value.length >= maxLength) return;
+      if (!/^\d+$/.test(digit)) return;
+
+      // If last input was a quick amount, reset to just this digit
+      if (lastInputType.current === "quick") {
+        lastInputType.current = "numpad";
+        onChange(digit);
+        return;
+      }
+
+      lastInputType.current = "numpad";
+      onChange(value + digit);
+    },
+    [value, maxLength, onChange]
+  );
+
+  const buttons = [
+    ["1", "2", "3"],
+    ["4", "5", "6"],
+    ["7", "8", "9"],
+    ["clear", "0", "backspace"],
+  ];
+
+  return (
+    <div className="space-y-3">
+      {/* Quick amount buttons */}
+      {showQuickAmounts && (
+        <div className="flex flex-wrap gap-2">
+          {quickAmounts.map((qa) => {
+            const isActive = value === String(qa.value);
+            return (
+              <button
+                key={qa.label}
+                onClick={() => handleQuickAmount(qa.value)}
+                className={clsx(
+                  "px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150",
+                  "active:scale-95 cursor-pointer",
+                  isActive
+                    ? "bg-sabana text-white shadow-md"
+                    : "bg-gray-100 text-gray-700 hover:bg-sabana hover:text-white"
+                )}
+              >
+                {qa.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Numpad grid */}
+      <div className="grid grid-cols-3 gap-2">
+        {buttons.map((row, rowIdx) =>
+          row.map((digit) => (
+            <button
+              key={`${rowIdx}-${digit}`}
+              onClick={() => handlePress(digit)}
+              className={clsx(
+                "numpad-btn",
+                digit === "clear" && "bg-gray-100 text-danger text-lg",
+                digit === "backspace" && "bg-gray-100 text-gray-600 text-lg",
+                digit !== "clear" &&
+                  digit !== "backspace" &&
+                  "bg-white text-gray-900 hover:bg-sabana-50 border border-gray-200",
+                "shadow-sm hover:shadow-md"
+              )}
+            >
+              {digit === "backspace" ? (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
+                </svg>
+              ) : digit === "clear" ? (
+                "C"
+              ) : (
+                digit
+              )}
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
