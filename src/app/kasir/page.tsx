@@ -335,7 +335,7 @@ export default function KasirPage() {
   if (!isShiftOpen) return null;
 
   return (
-    <div className="h-screen flex flex-col bg-cream overflow-hidden">
+    <div className="h-screen flex flex-col bg-cream dark:bg-[#0f0f0f] overflow-hidden tablet-safe">
       {/* Header */}
       <header className="bg-white dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-[#333] px-3 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
@@ -405,6 +405,7 @@ export default function KasirPage() {
             <CategoryBar categories={categories} selectedId={selectedCategory} onSelect={(id) => { setSelectedCategory(id); setSearchQuery(""); }} />
           </div>
           <div className="flex-1 overflow-y-auto p-3 min-h-0">
+            {/* Product grid uses CSS grid for tablet */}
             {prodLoading ? (
               <div className="flex items-center justify-center h-32 text-gray-400">
                 <div className="text-center">
@@ -413,7 +414,9 @@ export default function KasirPage() {
                 </div>
               </div>
             ) : (
+              <div className="product-grid-tablet">
               <ProductGrid products={filteredProducts} stock={stockMap} onSelect={handleProductSelect} searchQuery={searchQuery} />
+            </div>
             )}
           </div>
         </div>

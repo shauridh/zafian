@@ -232,12 +232,180 @@ h1, h2, h3, h4, h5, h6 {
   animation: slideUp 0.3s ease-out;
 }
 
-/* Tablet optimizations (11 inch) */
-@media (min-width: 768px) and (max-width: 1200px) {
+/* ============================================
+   TABLET OPTIMIZATIONS
+   Target: Redmi Pad 2 (11", 1200x2000)
+           Huawei MatePad FE 11 (10.4", 1200x2000)
+   Portrait: ~800px CSS width
+   Landscape: ~1200px CSS width
+   ============================================ */
+
+/* General tablet (portrait 800px + landscape 1200px) */
+@media (min-width: 768px) and (max-width: 1280px) {
+  /* Numpad */
   .numpad-btn {
     min-width: 64px;
     min-height: 64px;
     font-size: 1.5rem;
+  }
+
+  /* Larger touch targets */
+  button, a, [role="button"] {
+    min-height: 44px;
+  }
+
+  /* Product grid - 3 columns on tablet portrait */
+  .product-grid-tablet {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  /* Category pills - larger */
+  .category-pill {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+
+  /* Cart sidebar width */
+  .cart-sidebar-tablet {
+    width: 360px;
+  }
+}
+
+/* Tablet portrait (800px) — Redmi Pad 2 portrait */
+@media (min-width: 768px) and (max-width: 900px) {
+  /* POS layout adjustments */
+  .pos-header {
+    padding: 8px 16px;
+  }
+
+  /* Product cards - slightly larger */
+  .product-card {
+    padding: 12px;
+  }
+
+  /* Cart - full width bottom sheet on tablet portrait */
+  .cart-tablet-portrait {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 50vh;
+    border-radius: 24px 24px 0 0;
+    z-index: 30;
+  }
+
+  /* Service mode buttons */
+  .service-btn {
+    padding: 12px 24px;
+    font-size: 0.95rem;
+  }
+
+  /* Search bar */
+  .search-input {
+    padding: 12px 16px;
+    font-size: 1rem;
+  }
+
+  /* Admin sidebar - hidden on portrait */
+  .admin-sidebar {
+    width: 260px;
+  }
+
+  /* Table selector chips */
+  .table-chip {
+    min-width: 52px;
+    min-height: 52px;
+  }
+}
+
+/* Tablet landscape (1024px-1280px) — both tablets landscape */
+@media (min-width: 1024px) and (max-width: 1280px) {
+  /* POS: show cart sidebar but narrower */
+  .pos-layout {
+    flex-direction: row;
+  }
+
+  /* Product grid - 4 columns */
+  .product-grid-tablet {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  /* Cart sidebar */
+  .cart-sidebar-tablet {
+    width: 320px;
+    min-width: 320px;
+  }
+
+  /* Admin pages - 2 column grid */
+  .admin-grid-tablet {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Larger numpad for tablet */
+  .numpad-btn {
+    min-width: 72px;
+    min-height: 72px;
+    font-size: 1.6rem;
+  }
+
+  /* Payment modal - centered */
+  .payment-modal-tablet {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+}
+
+/* Specific tablet touch optimizations */
+@media (pointer: coarse) and (min-width: 768px) {
+  /* All interactive elements must be at least 48px */
+  button, a, input, select, textarea, [role="button"] {
+    min-height: 48px;
+  }
+
+  /* Checkbox/radio - larger */
+  input[type="checkbox"], input[type="radio"] {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Tab buttons - larger hit area */
+  .tab-btn {
+    padding: 14px 28px;
+    font-size: 0.95rem;
+  }
+
+  /* Table selector - bigger chips */
+  .table-chip {
+    min-width: 56px;
+    min-height: 56px;
+    font-size: 1rem;
+  }
+
+  /* Numpad - extra large for tablet */
+  .numpad-btn {
+    min-width: 80px;
+    min-height: 80px;
+    font-size: 1.75rem;
+    border-radius: 16px;
+  }
+
+  /* Quick amount buttons */
+  .quick-amount-btn {
+    padding: 14px 20px;
+    font-size: 0.9rem;
+    min-height: 48px;
+  }
+}
+
+/* Safe area for tablets with rounded corners */
+@supports (padding: env(safe-area-inset-top)) {
+  .tablet-safe {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 
@@ -254,3 +422,18 @@ h1, h2, h3, h4, h5, h6 {
 @media print {
   .dark body { background: white !important; color: black !important; }
 }
+
+/* --- Brand color dynamic override --- */
+:root {
+  --brand-color: #F97316;
+  --brand-color-dark: #F97316;
+}
+
+.dark .bg-sabana { background-color: var(--brand-color-dark) !important; }
+.dark .text-sabana { color: var(--brand-color-dark) !important; }
+.dark .border-sabana { border-color: var(--brand-color-dark) !important; }
+.dark .ring-sabana { --tw-ring-color: var(--brand-color-dark) !important; }
+.dark .from-sabana { --tw-gradient-from: var(--brand-color-dark) !important; }
+.dark .to-sabana-dark { --tw-gradient-to: var(--brand-color-dark) !important; }
+.dark .hover\:bg-sabana-dark:hover { background-color: var(--brand-color-dark) !important; }
+.dark .shadow-sabana\/30 { --tw-shadow-color: var(--brand-color-dark) !important; }
