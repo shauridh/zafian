@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 import CategoryBar from "@/components/kasir/CategoryBar";
 import ProductGrid from "@/components/kasir/ProductGrid";
 import Cart from "@/components/kasir/Cart";
@@ -77,6 +78,25 @@ const MOCK_STOCK: Record<string, number> = {
 
 const ONLINE_FOOD_MODES = ["gofood", "grabfood", "shopeefood"];
 
+// Cash In/Out types
+type CashInOut = {
+  id: string;
+  type: "in" | "out";
+  amount: number;
+  note: string;
+  created_at: string;
+};
+
+// Pre-order types
+interface PreOrderData {
+  isPreOrder: boolean;
+  eventName: string;
+  eventDate: string;
+  dpAmount: number;
+  dpPaid: boolean;
+  remainingPayment: string;
+}
+
 export default function KasirPage() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // null = show all
@@ -91,6 +111,13 @@ export default function KasirPage() {
   const [showRecentOrders, setShowRecentOrders] = useState(false);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
   const [stock, setStock] = useState(MOCK_STOCK);
+  const [showCashInOut, setShowCashInOut] = useState(false);
+  const [cashInOutType, setCashInOutType] = useState<"in" | "out">("in");
+  const [cashInOutAmount, setCashInOutAmount] = useState("");
+  const [cashInOutNote, setCashInOutNote] = useState("");
+  const [cashInOutList, setCashInOutList] = useState<CashInOut[]>([]);
+  const [showPreOrder, setShowPreOrder] = useState(false);
+  const [preOrder, setPreOrder] = useState<PreOrderData>({ isPreOrder: false, eventName: "", eventDate: "", dpAmount: 0, dpPaid: false, remainingPayment: "cash" });
 
   // Offline-first data (Dexie → Supabase fallback)
   const isOnline = useOnlineStatus();
@@ -246,6 +273,62 @@ export default function KasirPage() {
     clearCart();
   };
 
+  // Cash In/Out handler
+  const handleCashInOut = () => {
+    const amount = parseInt(cashInOutAmount) || 0;
+    if (amount <= 0) return alert("Jumlah harus lebih dari 0!");
+    const newEntry: CashInOut = {
+      id: Date.now().toString(),
+      type: cashInOutType,
+      amount,
+      note: cashInOutNote || (cashInOutType === "in" ? "Cash In" : "Cash Out"),
+      created_at: new Date().toISOString(),
+    };
+    setCashInOutList((prev) => [...prev, newEntry]);
+    setCashInOutAmount("");
+    setCashInOutNote("");
+    setShowCashInOut(false);
+  };
+
+  // Save order without payment (bill in / temporary save)
+  const handleSaveOrder = async () => {
+    if (items.length === 0) return alert("Keranjang kosong!");
+    setSaving(true);
+    try {
+      const orderItems = items.map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.price,
+        discount: 0,
+        subtotal: item.price * item.quantity,
+      }));
+      const { orderId } = await saveOrderOfflineFirst(
+        {
+          outlet_id: "00000000-0000-0000-0000-000000000001",
+          cashier_id: useShiftStore.getState().cashierId || "",
+          shift_id: useShiftStore.getState().shiftId,
+          service_mode: serviceMode,
+          total: getTotal(),
+          final_total: getTotal(),
+          payment_method: "pending",
+          amount_paid: 0,
+          change_amount: 0,
+          status: "saved",
+          customer_name: preOrder.isPreOrder ? preOrder.eventName : undefined,
+          notes: preOrder.isPreOrder ? `Pre-Order: ${preOrder.eventName} | DP: ${preOrder.dpAmount}` : undefined,
+        },
+        orderItems
+      );
+      alert(`Pesanan tersimpan! ID: ${orderId.slice(0, 8)}...`);
+      clearCart();
+      setPreOrder({ isPreOrder: false, eventName: "", eventDate: "", dpAmount: 0, dpPaid: false, remainingPayment: "cash" });
+    } catch (err: any) {
+      alert("Gagal menyimpan: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const dataReady = !catLoading && !prodLoading;
 
   // Don't render if no shift is open (will redirect)
@@ -277,6 +360,10 @@ export default function KasirPage() {
           <button onClick={() => setShowRecentOrders(true)} className="p-2 rounded-lg bg-gray-100 dark:bg-[#333] hover:bg-gray-200 dark:hover:bg-[#444] text-gray-600 dark:text-gray-400 transition-colors text-sm" title="Order Hari Ini">
             📋
           </button>
+          <button onClick={() => setShowCashInOut(true)} className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 transition-colors text-sm" title="Cash In/Out">
+            💰
+          </button>
+          <ThemeToggle />
           <div className="flex items-center gap-1.5 bg-sabana-50 dark:bg-sabana/10 px-2 py-1 rounded-lg">
             <div className="w-6 h-6 rounded-full bg-sabana text-white flex items-center justify-center text-xs font-bold">
               {cashierName?.charAt(0) || "K"}
@@ -330,13 +417,29 @@ export default function KasirPage() {
             )}
           </div>
         </div>
-        <div className="w-[340px] border-l border-gray-200 p-2 hidden lg:flex flex-col shrink-0">
+        <div className="w-[340px] border-l border-gray-200 dark:border-[#333] p-2 hidden lg:flex flex-col shrink-0">
           <Cart onCheckout={() => setShowPayment(true)} />
+          {items.length > 0 && (
+            <div className="flex gap-2 mt-2 px-1">
+              <button onClick={handleSaveOrder} disabled={saving} className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-xs font-bold hover:bg-blue-600 transition-colors disabled:opacity-50">💾 Simpan</button>
+              <button onClick={() => setShowPreOrder(true)} className="flex-1 py-2.5 bg-purple-500 text-white rounded-xl text-xs font-bold hover:bg-purple-600 transition-colors">📅 Pre-Order</button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Mobile Cart Toggle */}
-      <div className="lg:hidden fixed bottom-4 right-4 z-20">
+      <div className="lg:hidden fixed bottom-4 right-4 z-20 flex flex-col gap-2 items-end">
+        {items.length > 0 && (
+          <>
+            <button onClick={() => setShowPreOrder(true)} className="w-12 h-12 rounded-full bg-purple-500 text-white shadow-lg flex items-center justify-center text-sm active:scale-95 transition-all" title="Pre-Order">
+              📅
+            </button>
+            <button onClick={handleSaveOrder} disabled={saving} className="w-12 h-12 rounded-full bg-blue-500 text-white shadow-lg flex items-center justify-center text-sm active:scale-95 transition-all disabled:opacity-50" title="Simpan Pesanan">
+              💾
+            </button>
+          </>
+        )}
         <button onClick={() => setShowMobileCart(true)} className="relative w-14 h-14 rounded-full bg-sabana text-white shadow-xl shadow-sabana/30 flex items-center justify-center text-xl active:scale-95 transition-all">
           🛒
           {items.length > 0 && (
@@ -360,6 +463,101 @@ export default function KasirPage() {
       <ReceiptPreview isOpen={showReceipt} onClose={handleReceiptClose} orderNumber={orderNumber} amountPaid={paymentResult.amountPaid} paymentMethod={paymentResult.method} changeAmount={paymentResult.change} savedOrderId={savedOrderId} />
       <RecentOrders isOpen={showRecentOrders} onClose={() => setShowRecentOrders(false)} />
       <OrderNotification />
+
+      {/* Cash In/Out Modal */}
+      {showCashInOut && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowCashInOut(false)} />
+          <div className="relative bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h3 className="font-heading font-bold text-lg mb-4 dark:text-gray-100">💰 Cash In / Cash Out</h3>
+            <div className="flex gap-2 mb-4">
+              <button onClick={() => setCashInOutType("in")} className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${cashInOutType === "in" ? "bg-green-500 text-white shadow-lg" : "bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400"}`}>💵 Cash In</button>
+              <button onClick={() => setCashInOutType("out")} className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${cashInOutType === "out" ? "bg-red-500 text-white shadow-lg" : "bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400"}`}>💸 Cash Out</button>
+            </div>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Jumlah (Rp)</label>
+                <input type="number" value={cashInOutAmount} onChange={(e) => setCashInOutAmount(e.target.value)} placeholder="0" className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sabana text-lg font-bold font-mono" />
+              </div>
+              <div className="flex gap-2">
+                {[10000, 20000, 50000, 100000].map((v) => (
+                  <button key={v} onClick={() => setCashInOutAmount((parseInt(cashInOutAmount || "0") + v).toString())} className="flex-1 py-2 rounded-lg bg-gray-100 dark:bg-[#222] text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#333]">{formatRupiah(v)}</button>
+                ))}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Catatan</label>
+                <input type="text" value={cashInOutNote} onChange={(e) => setCashInOutNote(e.target.value)} placeholder={cashInOutType === "in" ? "Uang tambahan dari modal..." : "Bayar listrik, sewa..."} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sabana text-sm" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowCashInOut(false)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400 font-semibold">Batal</button>
+              <button onClick={handleCashInOut} className={`flex-1 py-3 rounded-xl font-bold text-white ${cashInOutType === "in" ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"}`}>Simpan</button>
+            </div>
+            {/* Recent Cash In/Out */}
+            {cashInOutList.length > 0 && (
+              <div className="mt-4 border-t dark:border-[#333] pt-3 max-h-40 overflow-y-auto">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Riwayat Hari Ini</p>
+                {cashInOutList.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between py-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${entry.type === "in" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{entry.type === "in" ? "IN" : "OUT"}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]">{entry.note}</span>
+                    </div>
+                    <span className={`text-xs font-bold ${entry.type === "in" ? "text-green-600" : "text-red-600"}`}>{entry.type === "in" ? "+" : "-"}{formatRupiah(entry.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Pre-Order Modal */}
+      {showPreOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowPreOrder(false)} />
+          <div className="relative bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h3 className="font-heading font-bold text-lg mb-1 dark:text-gray-100">📅 Pre-Order Event</h3>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Pesan untuk acara dengan DP</p>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nama Acara *</label>
+                <input type="text" value={preOrder.eventName} onChange={(e) => setPreOrder({ ...preOrder, eventName: e.target.value })} placeholder="Ulang Tahun, Resepsi..." className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sabana text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Tanggal Acara</label>
+                <input type="date" value={preOrder.eventDate} onChange={(e) => setPreOrder({ ...preOrder, eventDate: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sabana text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">DP (Down Payment) *</label>
+                <input type="number" value={preOrder.dpAmount || ""} onChange={(e) => setPreOrder({ ...preOrder, dpAmount: parseInt(e.target.value) || 0 })} placeholder="0" className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sabana text-lg font-bold font-mono" />
+                <div className="flex gap-2 mt-2">
+                  {[100000, 200000, 500000].map((v) => (
+                    <button key={v} onClick={() => setPreOrder({ ...preOrder, dpAmount: v })} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${preOrder.dpAmount === v ? "bg-sabana text-white" : "bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400"}`}>{formatRupiah(v)}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Pelunasan</label>
+                <div className="flex gap-2">
+                  {["cash", "qris", "transfer"].map((m) => (
+                    <button key={m} onClick={() => setPreOrder({ ...preOrder, remainingPayment: m })} className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${preOrder.remainingPayment === m ? "bg-sabana text-white" : "bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400"}`}>{m === "cash" ? "💵 Tunai" : m === "qris" ? "📱 QRIS" : "🏦 Transfer"}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="bg-sabana-50 dark:bg-sabana/10 rounded-xl p-3 mb-4">
+              <div className="flex justify-between text-sm"><span className="text-gray-600 dark:text-gray-400">Total Order</span><span className="font-bold text-gray-800 dark:text-gray-200">{formatRupiah(getTotal())}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-600 dark:text-gray-400">DP</span><span className="font-bold text-sabana">-{formatRupiah(preOrder.dpAmount)}</span></div>
+              <div className="flex justify-between text-sm font-bold border-t dark:border-[#444] mt-1 pt-1"><span className="text-gray-800 dark:text-gray-200">Sisa Pelunasan</span><span className="text-sabana">{formatRupiah(Math.max(0, getTotal() - preOrder.dpAmount))}</span></div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowPreOrder(false)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400 font-semibold">Batal</button>
+              <button onClick={() => { setShowPreOrder(false); setPreOrder({ ...preOrder, isPreOrder: true }); }} disabled={!preOrder.eventName} className="flex-1 py-3 rounded-xl bg-sabana text-white font-bold disabled:opacity-50">Simpan Pre-Order</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -21,6 +21,8 @@ interface AppSettings {
   auto_sync_interval: number;
   receipt_footer: string;
   currency: string;
+  brand_color: string;
+  brand_color_dark: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -30,7 +32,19 @@ const DEFAULT_SETTINGS: AppSettings = {
   auto_sync_interval: 30,
   receipt_footer: "Terima kasih! Sampai jumpa! 🍗 Sabana Fried Chicken 🍗",
   currency: "IDR",
+  brand_color: "#F97316",
+  brand_color_dark: "#F97316",
 };
+
+const PRESET_COLORS = [
+  { name: "Sabana (Orange)", light: "#F97316", dark: "#F97316" },
+  { name: "Merah", light: "#DC2626", dark: "#EF4444" },
+  { name: "Biru", light: "#2563EB", dark: "#3B82F6" },
+  { name: "Hijau", light: "#16A34A", dark: "#22C55E" },
+  { name: "Ungu", light: "#9333EA", dark: "#A855F7" },
+  { name: "Pink", light: "#EC4899", dark: "#F472B6" },
+  { name: "Teal", light: "#0891B2", dark: "#06B6D4" },
+];
 
 interface CustomerPortalSettings {
   portal_tagline: string;
@@ -77,6 +91,9 @@ export default function SettingsPage() {
         if (savedSettings) {
           setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
         }
+        // Apply brand color CSS variables
+        const parsed = savedSettings ? JSON.parse(savedSettings) : DEFAULT_SETTINGS;
+        document.documentElement.style.setProperty("--brand-color", parsed.brand_color || DEFAULT_SETTINGS.brand_color);
 
         // Load portal settings
         const savedPortal = localStorage.getItem("sabana-portal-settings");
@@ -108,13 +125,21 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
-  };
-
-const handleSaveSettings = () => {
+  };const handleSaveSettings = () => {
     localStorage.setItem("sabana-app-settings", JSON.stringify(settings));
     localStorage.setItem("sabana-portal-settings", JSON.stringify(portalSettings));
+    // Apply brand color
+    document.documentElement.style.setProperty("--brand-color", settings.brand_color);
+    document.documentElement.classList.toggle("brand-dark", true);
+    document.documentElement.style.setProperty("--brand-color-dark", settings.brand_color_dark);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleApplyPreset = (preset: typeof PRESET_COLORS[0]) => {
+    setSettings({ ...settings, brand_color: preset.light, brand_color_dark: preset.dark });
+    document.documentElement.style.setProperty("--brand-color", preset.light);
+    document.documentElement.style.setProperty("--brand-color-dark", preset.dark);
   };
 
   const handleConnectPrinter = async () => {
@@ -315,6 +340,58 @@ const handleSaveSettings = () => {
           <button onClick={handleSaveSettings} className="px-6 py-2.5 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors text-sm">
             {saved ? "✅ Tersimpan!" : "Simpan Semua Pengaturan"}
           </button>
+        </div>
+      </div>
+
+      {/* Brand Color Settings */}
+      <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 border border-gray-200 dark:border-[#333] shadow-sm mb-4">
+        <h3 className="font-heading font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+          <span className="w-8 h-8 rounded-lg bg-sabana-100 dark:bg-sabana/20 flex items-center justify-center text-sm">🎨</span>
+          Warna Brand
+        </h3>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">Kustomisasi warna utama aplikasi</p>
+        
+        {/* Color Preview */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex-1 rounded-xl p-4 text-white text-center" style={{ backgroundColor: settings.brand_color }}>
+            <p className="font-bold">Preview Light</p>
+            <p className="text-xs opacity-80">{settings.brand_color}</p>
+          </div>
+          <div className="flex-1 rounded-xl p-4 text-white text-center" style={{ backgroundColor: settings.brand_color_dark }}>
+            <p className="font-bold">Preview Dark</p>
+            <p className="text-xs opacity-80">{settings.brand_color_dark}</p>
+          </div>
+        </div>
+
+        {/* Color Pickers */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Warna (Light Mode)</label>
+            <div className="flex items-center gap-2">
+              <input type="color" value={settings.brand_color} onChange={(e) => { setSettings({ ...settings, brand_color: e.target.value }); document.documentElement.style.setProperty("--brand-color", e.target.value); }} className="w-10 h-10 rounded-lg border-0 cursor-pointer" />
+              <input type="text" value={settings.brand_color} onChange={(e) => setSettings({ ...settings, brand_color: e.target.value })} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-sm font-mono" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Warna (Dark Mode)</label>
+            <div className="flex items-center gap-2">
+              <input type="color" value={settings.brand_color_dark} onChange={(e) => { setSettings({ ...settings, brand_color_dark: e.target.value }); document.documentElement.style.setProperty("--brand-color-dark", e.target.value); }} className="w-10 h-10 rounded-lg border-0 cursor-pointer" />
+              <input type="text" value={settings.brand_color_dark} onChange={(e) => setSettings({ ...settings, brand_color_dark: e.target.value })} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-sm font-mono" />
+            </div>
+          </div>
+        </div>
+
+        {/* Preset Colors */}
+        <div>
+          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Preset Warna</label>
+          <div className="flex gap-2 flex-wrap">
+            {PRESET_COLORS.map((preset) => (
+              <button key={preset.name} onClick={() => handleApplyPreset(preset)} className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-xs font-medium transition-all ${settings.brand_color === preset.light ? "border-sabana bg-sabana-50 dark:bg-sabana/10" : "border-gray-200 dark:border-[#444] hover:border-gray-300 dark:hover:border-[#555]"}`}>
+                <span className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.light }} />
+                <span className="text-gray-700 dark:text-gray-300">{preset.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
