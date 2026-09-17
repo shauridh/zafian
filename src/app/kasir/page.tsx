@@ -10,6 +10,7 @@ import PaymentModal from "@/components/kasir/PaymentModal";
 import ReceiptPreview from "@/components/kasir/ReceiptPreview";
 import RecentOrders from "@/components/kasir/RecentOrders";
 import TableSelector from "@/components/kasir/TableSelector";
+import OrderNotification from "@/components/kasir/OrderNotification";
 import { useCartStore } from "@/stores/cartStore";
 import { useShiftStore } from "@/stores/shiftStore";
 import { useOfflineCategories, useOfflineProducts, useOnlineStatus, saveOrderOfflineFirst } from "@/hooks/useOfflineData";
@@ -358,6 +359,7 @@ export default function KasirPage() {
       <PaymentModal isOpen={showPayment} onClose={() => setShowPayment(false)} onComplete={handlePaymentComplete} saving={saving} />
       <ReceiptPreview isOpen={showReceipt} onClose={handleReceiptClose} orderNumber={orderNumber} amountPaid={paymentResult.amountPaid} paymentMethod={paymentResult.method} changeAmount={paymentResult.change} savedOrderId={savedOrderId} />
       <RecentOrders isOpen={showRecentOrders} onClose={() => setShowRecentOrders(false)} />
+      <OrderNotification />
     </div>
   );
 }
