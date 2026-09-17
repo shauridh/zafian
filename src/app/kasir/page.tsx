@@ -7,8 +7,7 @@ import CategoryBar from "@/components/kasir/CategoryBar";
 import ProductGrid from "@/components/kasir/ProductGrid";
 import Cart from "@/components/kasir/Cart";
 import ServiceModeSelector from "@/components/kasir/ServiceModeSelector";
-import PaymentModal from "@/components/kasir/PaymentModal";
-import ReceiptPreview from "@/components/kasir/ReceiptPreview";
+import PaymentReceiptModal from "@/components/kasir/PaymentReceiptModal";
 import RecentOrders from "@/components/kasir/RecentOrders";
 import TableSelector from "@/components/kasir/TableSelector";
 import OrderNotification from "@/components/kasir/OrderNotification";
@@ -310,8 +309,15 @@ export default function KasirPage() {
       )}
 
       {/* Modals */}
-      <PaymentModal isOpen={showPayment} onClose={() => setShowPayment(false)} onComplete={handlePaymentComplete} saving={saving} />
-      <ReceiptPreview isOpen={showReceipt} onClose={handleReceiptClose} orderNumber={orderNumber} amountPaid={paymentResult.amountPaid} paymentMethod={paymentResult.method} changeAmount={paymentResult.change} savedOrderId={savedOrderId} />
+      <PaymentReceiptModal
+        isOpen={showPayment || showReceipt}
+        onClose={() => { setShowPayment(false); setShowReceipt(false); }}
+        onComplete={handlePaymentComplete}
+        saving={saving}
+        orderNumber={orderNumber}
+        paymentResult={showReceipt ? paymentResult : undefined}
+        savedOrderId={savedOrderId}
+      />
       <RecentOrders isOpen={showRecentOrders} onClose={() => setShowRecentOrders(false)} />
       <OrderNotification />
 

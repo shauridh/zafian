@@ -20,3 +20,8 @@
  ○ Compiling /kasir/shift/close ...
  ✓ Compiled /kasir/shift/close in 1093ms (737 modules)
  ✓ Compiled in 599ms (361 modules)
+ ✓ Compiled / in 450ms (380 modules)
+ GET / 200 in 782ms
+ ✓ Compiled in 896ms (737 modules)
+ ✓ Compiled in 630ms (361 modules)
+ ✓ Compiled in 978ms (737 modules)
