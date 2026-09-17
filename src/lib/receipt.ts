@@ -57,6 +57,7 @@ export function buildReceiptLines(d: ReceiptData, w: number = RECEIPT_WIDTH_58):
   };
 
   const method = (d.paymentMethod || "").toUpperCase();
+  const methodLabel = method === "CASH" ? "TUNAI" : method === "ESTIMATE" ? "ESTIMASI" : method;
   const lines: string[] = [];
 
   lines.push(sep("="));
@@ -85,7 +86,7 @@ export function buildReceiptLines(d: ReceiptData, w: number = RECEIPT_WIDTH_58):
   lines.push(labelLine("KEMBALIAN", rp(d.change), w));
 
   lines.push(sep("-"));
-  lines.push(`  Metode: ${method}`);
+  lines.push(`  Metode: ${methodLabel}`);
   lines.push(sep("="));
 
   lines.push(center(d.footer || "Terima kasih!"));
