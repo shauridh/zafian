@@ -440,12 +440,9 @@ INSERT INTO categories (id, name, icon, color, sort_order) VALUES
   ('10000000-0000-0000-0000-000000000007', 'Minuman', '🥤', '#0891B2', 7),
   ('10000000-0000-0000-0000-000000000008', 'Paket', '📦', '#BE185D', 8);
 
--- Users
+-- Users (single admin account)
 INSERT INTO users (id, name, role, outlet_id, pin) VALUES
-  ('30000000-0000-0000-0000-000000000001', 'Ahmad', 'cashier', '00000000-0000-0000-0000-000000000001', '1234'),
-  ('30000000-0000-0000-0000-000000000002', 'Rina', 'cashier', '00000000-0000-0000-0000-000000000001', '1234'),
-  ('30000000-0000-0000-0000-000000000003', 'Budi', 'admin', '00000000-0000-0000-0000-000000000001', '1234'),
-  ('30000000-0000-0000-0000-000000000004', 'Sari', 'manager', '00000000-0000-0000-0000-000000000001', '1234');
+  ('30000000-0000-0000-0000-000000000001', 'Sabana', 'admin', '00000000-0000-0000-0000-000000000001', '080802');
 
 -- Products (33 items dari Excel HPP Reguler)
 INSERT INTO products (id, category_id, name, price, hpp, unit, sku) VALUES
