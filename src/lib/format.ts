@@ -1,11 +1,6 @@
-// Format number as Indonesian Rupiah
-export function formatRupiah(amount: number): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+// Format number as Indonesian Rupiah (plain space, locale-stable separators)
+export function formatRupiah(amount: number, prefix = "Rp"): string {
+  return `${prefix} ${Math.round(amount).toLocaleString("id-ID")}`;
 }
 
 // Format number with thousand separators (no currency symbol)

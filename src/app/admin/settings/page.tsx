@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { getPrinter, isBluetoothAvailable } from "@/lib/printer";
+import { getReceiptSettings, saveReceiptSettings } from "@/lib/settings";
 import NotificationSettings from "@/components/admin/NotificationSettings";
 import ThemeToggle from "@/components/ThemeToggle";
 import BackupSettings from "@/components/admin/BackupSettings";
@@ -44,7 +45,7 @@ export default function SettingsPage() {
   const [printerConnected, setPrinterConnected] = useState(false);
   const [printerConnecting, setPrinterConnecting] = useState(false);
   const [features, setFeatures] = useState<FeatureToggles>(DEFAULT_FEATURES);
-  const [receiptData, setReceiptData] = useState({ outletName: "SABANA FRIED CHICKEN", outletAddress: "Jl. Contoh No. 123", outletPhone: "0812-xxxx-xxxx", footer: "Terima kasih! Sampai jumpa! 🍗", showLogo: true, showTime: true, showQRIS: false });
+  const [receiptData, setReceiptData] = useState<{ outletName: string; outletAddress: string; outletPhone: string; footer: string; showLogo: boolean; showTime: boolean; showQRIS: boolean; paperWidth?: "58" | "80" }>({ outletName: "SABANA FRIED CHICKEN", outletAddress: "Jl. Contoh No. 123", outletPhone: "0812-xxxx-xxxx", footer: "Terima kasih! Sampai jumpa! 🍗", showLogo: true, showTime: true, showQRIS: false, paperWidth: "58" });
   const [brandColor, setBrandColor] = useState("#F97316");
   const [brandColorDark, setBrandColorDark] = useState("#F97316");
   const [portalTagline, setPortalTagline] = useState("Sabana");
@@ -64,8 +65,8 @@ export default function SettingsPage() {
         if (f) setFeatures({ ...DEFAULT_FEATURES, ...JSON.parse(f) });
         const pt = localStorage.getItem("sabana-portal-settings");
         if (pt) { const p = JSON.parse(pt); setPortalTagline(p.portal_tagline || "Sabana"); setPortalSubtitle(p.portal_subtitle || ""); setPortalWelcome(p.portal_welcome || ""); setPortalFooter(p.portal_footer || ""); }
-        const rc = localStorage.getItem("sabana-receipt-settings");
-        if (rc) setReceiptData((r) => ({ ...r, ...JSON.parse(rc) }));
+        const rc = getReceiptSettings();
+        if (rc) setReceiptData((r) => ({ ...r, ...rc, showQRIS: rc.showQR ?? r.showQRIS }));
       } catch (err) { console.error(err); } finally { setLoading(false); }
     }
     fetchData();
@@ -75,7 +76,7 @@ export default function SettingsPage() {
     localStorage.setItem("sabana-app-settings", JSON.stringify({ receipt_footer: receiptData.footer, brand_color: brandColor, brand_color_dark: brandColorDark }));
     localStorage.setItem("sabana-features", JSON.stringify(features));
     localStorage.setItem("sabana-portal-settings", JSON.stringify({ portal_tagline: portalTagline, portal_subtitle: portalSubtitle, portal_welcome: portalWelcome, portal_footer: portalFooter }));
-    localStorage.setItem("sabana-receipt-settings", JSON.stringify(receiptData));
+    saveReceiptSettings({ ...receiptData, showQR: receiptData.showQRIS });
     document.documentElement.style.setProperty("--brand-color", brandColor);
     document.documentElement.style.setProperty("--brand-color-dark", brandColorDark);
     setSaved(true); setTimeout(() => setSaved(false), 2000);
@@ -179,7 +180,7 @@ export default function SettingsPage() {
                 </div>
               )}
               <div><label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Lebar Kertas</label>
-                <div className="flex gap-2">{(["58", "80"] as const).map((w) => (<button key={w} onClick={() => { const s = { ...receiptData }; localStorage.setItem("sabana-receipt-settings", JSON.stringify(s)); }} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${w === "58" ? "border-sabana bg-sabana-50 text-sabana" : "border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400"}`}>{w}mm</button>))}</div>
+                <div className="flex gap-2">{(["58", "80"] as const).map((w) => (<button key={w} onClick={() => { setReceiptData((r) => ({ ...r, paperWidth: w })); saveReceiptSettings({ ...receiptData, paperWidth: w, showQR: receiptData.showQRIS }); }} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${(receiptData.paperWidth ?? "58") === w ? "border-sabana bg-sabana-50 text-sabana" : "border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400"}`}>{w}mm</button>))}</div>
               </div>
               <button onClick={handleTestPrint} disabled={!printerConnected} className="w-full mt-4 py-3 bg-blue-500 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">🖨️ Test Print</button>
             </div>

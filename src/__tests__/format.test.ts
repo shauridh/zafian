@@ -1,4 +1,4 @@
-import { formatRupiah, DENOMINATIONS } from "@/lib/format";
+import { formatRupiah, CASH_DENOMINATIONS } from "@/lib/format";
 
 describe("formatRupiah", () => {
   it("formats zero correctly", () => {
@@ -22,24 +22,17 @@ describe("formatRupiah", () => {
   });
 });
 
-describe("DENOMINATIONS", () => {
+describe("CASH_DENOMINATIONS", () => {
   it("has 8 denominations", () => {
-    expect(DENOMINATIONS).toHaveLength(8);
+    expect(CASH_DENOMINATIONS).toHaveLength(8);
   });
 
   it("has correct values", () => {
-    expect(DENOMINATIONS[0].value).toBe(100000);
-    expect(DENOMINATIONS[1].value).toBe(50000);
-    expect(DENOMINATIONS[2].value).toBe(20000);
-    expect(DENOMINATIONS[3].value).toBe(10000);
-    expect(DENOMINATIONS[4].value).toBe(5000);
-    expect(DENOMINATIONS[5].value).toBe(2000);
-    expect(DENOMINATIONS[6].value).toBe(1000);
-    expect(DENOMINATIONS[7].value).toBe(500);
+    expect(CASH_DENOMINATIONS.map((d) => d.value)).toEqual([100000, 50000, 20000, 10000, 5000, 2000, 1000, 500]);
   });
 
   it("has correct labels", () => {
-    expect(DENOMINATIONS[0].label).toBe("100.000");
-    expect(DENOMINATIONS[7].label).toBe("500");
+    expect(CASH_DENOMINATIONS[0].label).toBe("100K");
+    expect(CASH_DENOMINATIONS[7].label).toBe("500");
   });
 });

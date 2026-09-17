@@ -8,6 +8,7 @@ import { useShiftStore } from "@/stores/shiftStore";
 import { formatRupiah, formatDateTime, generateOrderNumber, SERVICE_MODE_LABELS } from "@/lib/format";
 import { QRCodeSVG } from "qrcode.react";
 import { buildReceiptLines } from "@/lib/receipt";
+import { getReceiptSettings } from "@/lib/settings";
 import { getActivePromos, calculateBestDiscount, type PromoResult } from "@/lib/promos";
 import { getPrinter, isBluetoothAvailable } from "@/lib/printer";
 
@@ -38,9 +39,7 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
   const [printing, setPrinting] = useState(false);
   const hasBT = isBluetoothAvailable();
 
-  const [rSettings] = useState(() => {
-    try { const s = localStorage.getItem("sabana-receipt-settings"); return s ? JSON.parse(s) : {}; } catch { return {}; }
-  });
+  const [rSettings] = useState(() => getReceiptSettings());
 
   React.useEffect(() => {
     if (!isOpen || isOnlineFood || isPaid) return;
@@ -114,10 +113,10 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 flex w-full max-w-[820px] h-auto max-h-[92vh] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 flex flex-col md:flex-row w-full max-w-[820px] md:h-auto max-h-[94vh] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl overflow-hidden">
 
         {/* === LEFT: Payment === */}
-        <div className="flex-1 flex flex-col min-h-0 min-w-0">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 md:max-h-[76vh]">
           {/* Header */}
           <div className="px-3 py-2 border-b border-gray-200 dark:border-[#333] shrink-0 flex items-center justify-between">
             <div>
@@ -208,8 +207,8 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
           </div>
         </div>
 
-        {/* === RIGHT: Live Receipt — selalu tampil === */}
-        <div className="hidden sm:flex flex-col w-[270px] border-l border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] min-h-0">
+        {/* === RIGHT: Live Receipt — selalu tampil (samping di tablet, bawah di layar kecil) === */}
+        <div className="flex flex-col md:w-[270px] max-h-[26vh] md:max-h-[76vh] border-t md:border-t-0 md:border-l border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] min-h-0 shrink-0">
           <div className="px-3 py-2 border-b border-gray-200 dark:border-[#333] shrink-0 flex items-center justify-between">
             <h3 className="font-heading font-bold text-xs text-gray-900 dark:text-gray-100">🧾 Struk</h3>
             <span className={clsx("text-[9px] font-bold px-1.5 py-0.5 rounded-full", isPaid ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-200 text-gray-500 dark:bg-[#333] dark:text-gray-400")}>

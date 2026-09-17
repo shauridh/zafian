@@ -4,30 +4,28 @@ import { useCartStore } from "@/stores/cartStore";
 beforeEach(() => {
   useCartStore.setState({
     items: [],
-    serviceMode: "take_away",
-    selectedTable: null,
+    serviceMode: "dine_in",
+    discount: 0,
+    discountType: "fixed",
   });
 });
 
-describe("Cart Store", () => {
-  const mockProduct = {
-    id: "1",
-    name: "Ayam Reguler",
-    price: 18000,
-    hpp: 12000,
-    image: "/images/ayam.jpg",
-    category_id: "cat1",
-    is_active: true,
-    min_stock: 10,
-  };
+const mockProduct = {
+  id: "1",
+  product_id: "1",
+  name: "Ayam Reguler",
+  price: 18000,
+  image_url: "/images/ayam.jpg",
+};
 
+describe("Cart Store", () => {
   it("adds item to cart", () => {
     const { addItem } = useCartStore.getState();
     addItem(mockProduct);
 
     const { items } = useCartStore.getState();
     expect(items).toHaveLength(1);
-    expect(items[0].productId).toBe("1");
+    expect(items[0].id).toBe("1");
     expect(items[0].quantity).toBe(1);
   });
 
@@ -41,22 +39,13 @@ describe("Cart Store", () => {
     expect(items[0].quantity).toBe(2);
   });
 
-  it("removes item from cart", () => {
+  it("removes item", () => {
     const { addItem, removeItem } = useCartStore.getState();
     addItem(mockProduct);
     removeItem("1");
 
     const { items } = useCartStore.getState();
     expect(items).toHaveLength(0);
-  });
-
-  it("updates quantity", () => {
-    const { addItem, updateQuantity } = useCartStore.getState();
-    addItem(mockProduct);
-    updateQuantity("1", 5);
-
-    const { items } = useCartStore.getState();
-    expect(items[0].quantity).toBe(5);
   });
 
   it("removes item when quantity is 0", () => {
@@ -71,7 +60,7 @@ describe("Cart Store", () => {
   it("clears cart", () => {
     const { addItem, clearCart } = useCartStore.getState();
     addItem(mockProduct);
-    addItem({ ...mockProduct, id: "2", name: "Nasi Putih" });
+    addItem({ ...mockProduct, id: "2", product_id: "2", name: "Nasi Putih" });
     clearCart();
 
     const { items } = useCartStore.getState();
@@ -87,13 +76,24 @@ describe("Cart Store", () => {
     expect(getSubtotal()).toBe(36000); // 18000 * 2
   });
 
-  it("calculates total HPP correctly", () => {
-    const { addItem } = useCartStore.getState();
+  it("calculates total with fixed discount", () => {
+    const { addItem, setDiscount } = useCartStore.getState();
     addItem(mockProduct);
     addItem(mockProduct);
+    setDiscount(6000, "fixed");
 
-    const { getTotalHPP } = useCartStore.getState();
-    expect(getTotalHPP()).toBe(24000); // 12000 * 2
+    const { getTotal } = useCartStore.getState();
+    expect(getTotal()).toBe(30000); // 36000 - 6000
+  });
+
+  it("calculates total with percentage discount", () => {
+    const { addItem, setDiscount } = useCartStore.getState();
+    addItem(mockProduct);
+    addItem(mockProduct);
+    setDiscount(50, "percentage");
+
+    const { getTotal } = useCartStore.getState();
+    expect(getTotal()).toBe(18000); // 36000 * 50%
   });
 
   it("sets service mode", () => {
@@ -104,21 +104,13 @@ describe("Cart Store", () => {
     expect(serviceMode).toBe("dine_in");
   });
 
-  it("sets selected table", () => {
-    const { setSelectedTable } = useCartStore.getState();
-    setSelectedTable("5");
-
-    const { selectedTable } = useCartStore.getState();
-    expect(selectedTable).toBe("5");
-  });
-
   it("counts items correctly", () => {
     const { addItem } = useCartStore.getState();
     addItem(mockProduct);
     addItem(mockProduct);
-    addItem({ ...mockProduct, id: "2", name: "Nasi Putih" });
+    addItem({ ...mockProduct, id: "2", product_id: "2", name: "Nasi Putih" });
 
     const { getItemCount } = useCartStore.getState();
-    expect(getItemCount()).toBe(3); // 2 + 1
+    expect(getItemCount()).toBe(3);
   });
 });
