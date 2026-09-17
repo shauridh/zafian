@@ -2,7 +2,11 @@
  * Thermal Bluetooth Printer Integration
  * Uses Web Bluetooth API to connect to ESC/POS compatible thermal printers (58mm/80mm)
  * Compatible with Chinese thermal printers (Xprinter, etc.)
+ *
+ * Receipt CONTENT is built by lib/receipt.ts (single source of truth);
+ * this file only handles BLE transport + ESC/POS styling commands.
  */
+import { buildReceiptLines, RECEIPT_WIDTH_58, type ReceiptData } from "@/lib/receipt";
 
 // ESC/POS Command Constants
 const ESC = 0x1b;
@@ -138,7 +142,7 @@ class ThermalPrinter {
   }
 
   // Print a line with left/right alignment on same line
-  private async printLine(left: string, right: string, maxWidth = 32): Promise<void> {
+  private async printLine(left: string, right: string, maxWidth = RECEIPT_WIDTH_58): Promise<void> {
     // Truncate left if too long
     const maxLeft = maxWidth - right.length - 1;
     const truncatedLeft = left.length > maxLeft ? left.slice(0, maxLeft - 1) + "…" : left;
@@ -148,32 +152,16 @@ class ThermalPrinter {
   }
 
   // Print separator line using ASCII-safe characters
-  private async printSeparator(char = "-", maxWidth = 32): Promise<void> {
+  private async printSeparator(char = "-", maxWidth = RECEIPT_WIDTH_58): Promise<void> {
     await this.sendText(char.repeat(maxWidth) + "\n");
   }
 
-  // Truncate text to fit within maxWidth
   private truncate(text: string, maxWidth: number): string {
     if (text.length <= maxWidth) return text;
     return text.slice(0, maxWidth - 1) + "\u2026"; // ellipsis
   }
 
-  async printReceipt(data: {
-    items: { name: string; qty: number; price: number }[];
-    subtotal: number;
-    discount?: number;
-    total: number;
-    amountPaid: number;
-    change: number;
-    paymentMethod: string;
-    cashierName: string;
-    serviceMode: string;
-    orderNumber: string;
-    date: string;
-    outletName?: string;
-    outletAddress?: string;
-    outletPhone?: string;
-  }): Promise<boolean> {
+  async printReceipt(data: ReceiptData & { width?: number }): Promise<boolean> {
     if (!this.isConnected) {
       const connected = await this.connect();
       if (!connected) return false;
@@ -184,67 +172,26 @@ class ThermalPrinter {
       await this.send(COMMANDS.INIT);
       await new Promise(r => setTimeout(r, 200));
 
-      const W = 32; // 58mm = 32 chars, 80mm = 48 chars
+      const W = data.width ?? RECEIPT_WIDTH_58; // 58mm = 32 chars, 80mm = 48 chars
+      const lines = buildReceiptLines(data, W);
 
-      // === HEADER ===
-      const name = this.truncate(data.outletName || "SABANA FRIED CHICKEN", W);
-      await this.sendText(name, { center: true, bold: true, doubleHeight: true });
+      // Header (first content line after top rule) — bold + double height
+      const headerIdx = 1; // lines[0] is the top "=" rule
+      const header = lines[headerIdx] ?? "";
+      const body = lines.filter((_, idx) => idx !== 0 && idx !== headerIdx);
+
+      await this.sendText(header.trim(), { center: true, bold: true, doubleHeight: true });
       await new Promise(r => setTimeout(r, 50));
-      
-      if (data.outletAddress) {
-        await this.sendText(this.truncate(data.outletAddress, W), { center: true });
-      }
-      if (data.outletPhone) {
-        await this.sendText(this.truncate(data.outletPhone, W), { center: true });
-      }
-      
-      await this.printSeparator("=", W);
 
-      // === ORDER INFO ===
-      await this.sendText(`  ${this.truncate(data.date, W - 2)}`);
-      await new Promise(r => setTimeout(r, 20));
-      await this.sendText(`  ${this.truncate(data.orderNumber, W - 2)}`);
-      await this.sendText(`  Kasir: ${this.truncate(data.cashierName, W - 8)}`);
-      await this.sendText(`  ${this.truncate(data.serviceMode, W - 2)}`);
-      
-      await this.printSeparator("-", W);
-
-      // === ITEMS ===
-      for (const item of data.items) {
-        const itemTotal = (item.price * item.qty).toLocaleString("id-ID");
-        const left = `${item.qty}x ${item.name}`;
-        await this.printLine(left, `Rp ${itemTotal}`, W);
+      for (const line of body) {
+        const isRule = /^[-=]+$/.test(line.trim());
+        if (isRule) {
+          await this.printSeparator(line.trim()[0] || "-", W);
+        } else {
+          await this.sendText(`${line}\n`);
+        }
         await new Promise(r => setTimeout(r, 10));
       }
-
-      await this.printSeparator("-", W);
-
-      // === TOTALS ===
-      await this.printLine("Subtotal:", `Rp ${data.subtotal.toLocaleString("id-ID")}`, W);
-      
-      if (data.discount && data.discount > 0) {
-        await this.printLine("Diskon:", `-Rp ${data.discount.toLocaleString("id-ID")}`, W);
-      }
-      
-      await this.printLine("TOTAL:", `Rp ${data.total.toLocaleString("id-ID")}`, W);
-      await new Promise(r => setTimeout(r, 50));
-      
-      await this.sendText("", { bold: false });
-      await this.printLine("BAYAR:", `Rp ${data.amountPaid.toLocaleString("id-ID")}`, W);
-      await this.printLine("KEMBALIAN:", `Rp ${data.change.toLocaleString("id-ID")}`, W);
-      
-      await this.printSeparator("-", W);
-
-      const method = data.paymentMethod.toUpperCase();
-      await this.sendText(`  Metode: ${method}`);
-      
-      await this.printSeparator("=", W);
-
-      // === FOOTER ===
-      await this.sendText("Terima kasih!", { center: true });
-      await this.sendText("Sampai jumpa!", { center: true });
-      await new Promise(r => setTimeout(r, 50));
-      await this.sendText("Sabana Fried Chicken", { center: true, bold: true });
 
       // Feed paper and cut
       await this.send([...COMMANDS.FEED_LINES(3)]);

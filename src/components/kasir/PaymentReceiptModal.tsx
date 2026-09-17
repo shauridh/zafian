@@ -7,6 +7,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { useShiftStore } from "@/stores/shiftStore";
 import { formatRupiah, formatDateTime, generateOrderNumber, SERVICE_MODE_LABELS } from "@/lib/format";
 import { QRCodeSVG } from "qrcode.react";
+import { buildReceiptLines } from "@/lib/receipt";
 import { getActivePromos, calculateBestDiscount, type PromoResult } from "@/lib/promos";
 import { getPrinter, isBluetoothAvailable } from "@/lib/printer";
 
@@ -73,11 +74,13 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
       if (!paymentResult) return;
       const ok = await p.printReceipt({
         items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
-        subtotal: total, total, amountPaid: paymentResult.amountPaid, change: paymentResult.change,
+        subtotal: total, discount: promo?.discount_amount, total,
+        amountPaid: paymentResult.amountPaid, change: paymentResult.change,
         paymentMethod: paymentResult.method, cashierName: cashierName || "Kasir",
         serviceMode: SERVICE_MODE_LABELS[serviceMode] || serviceMode,
         orderNumber: savedOrderId || `#${orderNumber}`, date: formatDateTime(new Date()),
         outletName: rSettings.outletName, outletAddress: rSettings.outletAddress, outletPhone: rSettings.outletPhone,
+        footer: rSettings.footer,
       });
       setPrintSt(ok ? "ok" : "err");
     } catch { setPrintSt("err"); }
@@ -86,32 +89,25 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
   };
 
   // Receipt lines — live before payment, final after payment
-  const rLines = useMemo(() => {
-    const W = 35;
-    const p = (s: string, w: number) => s.length > w ? s.slice(0, w - 1) + "\u2026" : s.padEnd(w);
-    const sep = (c: string) => c.repeat(W);
-    const effTotal = fTotal;
-    const effPaid = isPaid && paymentResult ? paymentResult.amountPaid : (pm === "cash" ? paid : effTotal);
-    const effChange = isPaid && paymentResult ? paymentResult.change : (pm === "cash" ? Math.max(0, paid - fTotal) : 0);
-    const m = isPaid && paymentResult
-      ? (paymentResult.method === "cash" ? "TUNAI" : paymentResult.method === "estimate" ? "ESTIMASI" : paymentResult.method.toUpperCase())
-      : (isOnlineFood ? "ESTIMASI" : pm === "cash" ? "TUNAI" : "QRIS");
-    return [
-      sep("="), `  ${p(rSettings.outletName || "SABANA FRIED CHICKEN", W - 4)}`,
-      rSettings.outletAddress ? `  ${p(rSettings.outletAddress, W - 4)}` : null,
-      rSettings.outletPhone ? `  Telp: ${p(rSettings.outletPhone, W - 7)}` : null,
-      sep("-"), `  ${p(formatDateTime(new Date()), W - 4)}`, `  ${p(savedOrderId?.slice(0, 28) || generateOrderNumber(orderNumber, serviceMode), W - 4)}`,
-      `  Kasir: ${p(cashierName || "Kasir", W - 9)}`, `  ${p(SERVICE_MODE_LABELS[serviceMode] || serviceMode, W - 4)}`,
-      sep("-"),
-      ...items.map(i => `  ${p(`${i.quantity}x ${i.name}`, W - formatRupiah(i.price * i.quantity).length - 2)}${formatRupiah(i.price * i.quantity)}`),
-      sep("-"), `  Subtotal:${" ".repeat(W - 21)}${formatRupiah(total)}`,
-      `  TOTAL:${" ".repeat(W - 19)}${formatRupiah(effTotal)}`,
-      `  BAYAR:${" ".repeat(W - 18)}${formatRupiah(effPaid)}`,
-      `  KEMBALIAN:${" ".repeat(W - 20)}${formatRupiah(effChange)}`,
-      sep("-"), `  Metode: ${m}`, sep("="),
-      `  ${p(rSettings.footer || "Terima kasih!", W - 4)}`, `  Sabana Fried Chicken`,
-    ].filter(Boolean);
-  }, [isPaid, paymentResult, items, total, fTotal, paid, pm, isOnlineFood, orderNumber, serviceMode, savedOrderId, cashierName, rSettings]);
+  const rLines = useMemo(() => buildReceiptLines({
+    items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
+    subtotal: total,
+    discount: promo?.discount_amount,
+    total: fTotal,
+    amountPaid: isPaid && paymentResult ? paymentResult.amountPaid : (pm === "cash" ? paid : fTotal),
+    change: isPaid && paymentResult ? paymentResult.change : (pm === "cash" ? Math.max(0, paid - fTotal) : 0),
+    paymentMethod: isPaid && paymentResult
+      ? paymentResult.method
+      : (isOnlineFood ? "estimate" : pm),
+    cashierName: cashierName || "Kasir",
+    serviceMode: SERVICE_MODE_LABELS[serviceMode] || serviceMode,
+    orderNumber: savedOrderId || generateOrderNumber(orderNumber, serviceMode),
+    date: formatDateTime(new Date()),
+    outletName: rSettings.outletName,
+    outletAddress: rSettings.outletAddress,
+    outletPhone: rSettings.outletPhone,
+    footer: rSettings.footer,
+  }), [isPaid, paymentResult, items, total, fTotal, paid, pm, isOnlineFood, promo, orderNumber, serviceMode, savedOrderId, cashierName, rSettings]);
 
   if (!isOpen) return null;
 
