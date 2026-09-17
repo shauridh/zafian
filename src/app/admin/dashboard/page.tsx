@@ -276,7 +276,7 @@ export default function DashboardPage() {
               </button>
               <button
                 onClick={() => {
-                  openShift({ opening_float: openingFloat, notes: openingNotes });
+                  openShift("30000000-0000-0000-0000-000000000001", "Sabana", openingFloat);
                   setShowPOSModal(false);
                   router.push("/kasir");
                 }}
