@@ -131,7 +131,7 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
           <div className="flex-1 overflow-y-auto p-2.5 min-h-0">
             {isPaid ? (
               /* === PAID — langsung tombol Transaksi Baru, tanpa panel tambahan === */
-              <div className="flex flex-col items-center justify-center h-full gap-2.5 py-2">
+              <div className="flex flex-col items-center justify-center min-h-full gap-2.5 py-2">
                 <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-2xl">✅</div>
                 <div className="text-center">
                   <p className="font-bold text-green-700 dark:text-green-300 text-sm">Pembayaran Berhasil</p>
@@ -195,16 +195,21 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
                     <p className="text-[9px] text-gray-400">QR berlaku 15 menit</p>
                   </div>
                 )}
-
-                <div className="flex gap-1.5 pt-0.5">
-                  <button onClick={onClose} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400 text-[10px] font-semibold">Batal</button>
-                  <button onClick={doComplete} disabled={!enough || saving} className={clsx("flex-1 py-2 rounded-xl font-bold text-xs transition-all", saving ? "bg-gray-400 text-white" : enough ? "bg-green-600 text-white shadow hover:bg-green-700" : "bg-gray-200 text-gray-400 cursor-not-allowed")}>
-                    {saving ? "Menyimpan..." : "✅ BAYAR"}
-                  </button>
-                </div>
               </div>
             )}
           </div>
+
+          {/* Action bar — sticky di bawah, tidak pernah terpotong scroll */}
+          {!isPaid && (
+            <div className="px-2.5 py-2 border-t border-gray-200 dark:border-[#333] shrink-0 bg-white dark:bg-[#1a1a1a]">
+              <div className="flex gap-1.5">
+                <button onClick={onClose} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400 text-[10px] font-semibold">Batal</button>
+                <button onClick={doComplete} disabled={!enough || saving} className={clsx("flex-1 py-2 rounded-xl font-bold text-xs transition-all", saving ? "bg-gray-400 text-white" : enough ? "bg-green-600 text-white shadow hover:bg-green-700" : "bg-gray-200 text-gray-400 cursor-not-allowed")}>
+                  {saving ? "Menyimpan..." : "✅ BAYAR"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* === RIGHT: Live Receipt — selalu tampil (samping di tablet, bawah di layar kecil) === */}
