@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Poppins, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { PWASetup } from "@/components/PWASetup";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import OfflineProvider from "@/components/OfflineProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -60,6 +61,7 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <PWASetup />
+          <PWAInstallPrompt />
           <OfflineProvider>{children}</OfflineProvider>
         </ThemeProvider>
       </body>
