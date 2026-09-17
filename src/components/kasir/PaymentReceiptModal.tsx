@@ -7,14 +7,13 @@ import { useCartStore } from "@/stores/cartStore";
 import { useShiftStore } from "@/stores/shiftStore";
 import { formatRupiah, formatDateTime, generateOrderNumber, SERVICE_MODE_LABELS } from "@/lib/format";
 import { QRCodeSVG } from "qrcode.react";
-import { findCustomerByPhone, earnPoints, getCustomerTier, type LoyaltyCustomer } from "@/lib/loyalty";
 import { getActivePromos, calculateBestDiscount, type PromoResult } from "@/lib/promos";
 import { getPrinter, isBluetoothAvailable } from "@/lib/printer";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (paymentMethod: string, amountPaid: number, loyaltyCustomer?: LoyaltyCustomer | null) => void;
+  onComplete: (paymentMethod: string, amountPaid: number) => void;
   saving?: boolean;
   orderNumber?: number;
   paymentResult?: { method: string; amountPaid: number; change: number };
@@ -33,10 +32,6 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
   const [pm, setPm] = useState<"cash" | "qris">("cash");
   const [cashIn, setCashIn] = useState("");
   const [platId, setPlatId] = useState("");
-  const [phone, setPhone] = useState("");
-  const [loyal, setLoyal] = useState<LoyaltyCustomer | null>(null);
-  const [loyalErr, setLoyalErr] = useState("");
-  const [loyalLoading, setLoyalLoading] = useState(false);
   const [promo, setPromo] = useState<PromoResult | null>(null);
   const [printSt, setPrintSt] = useState<"idle" | "ok" | "err">("idle");
   const [printing, setPrinting] = useState(false);
@@ -51,7 +46,7 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
     (async () => { try { const p = await getActivePromos(); setPromo(calculateBestDiscount(p, total)); } catch {} })();
   }, [isOpen, total, isOnlineFood, isPaid]);
 
-  React.useEffect(() => { if (isOpen && !isPaid) { setLoyal(null); setPhone(""); setLoyalErr(""); setCashIn(""); setPm("cash"); } }, [isOpen, isPaid]);
+  React.useEffect(() => { if (isOpen && !isPaid) { setCashIn(""); setPm("cash"); } }, [isOpen, isPaid]);
 
   const fTotal = total - (promo?.discount_amount || 0);
   const paid = parseInt(cashIn) || 0;
@@ -65,18 +60,10 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
   ], [fTotal]);
 
   const doComplete = useCallback(() => {
-    if (isOnlineFood) onComplete("estimate", total, loyal);
-    else if (pm === "qris") onComplete("qris", fTotal, loyal);
-    else if (enough) onComplete("cash", paid, loyal);
-  }, [isOnlineFood, pm, enough, fTotal, total, paid, loyal, onComplete]);
-
-  const doLoyalty = async () => {
-    if (!phone || phone.length < 8) { setLoyalErr("Nomor HP tidak valid"); return; }
-    setLoyalLoading(true); setLoyalErr("");
-    const c = await findCustomerByPhone(phone);
-    if (c) setLoyal(c); else setLoyalErr("Tidak ditemukan");
-    setLoyalLoading(false);
-  };
+    if (isOnlineFood) onComplete("estimate", total);
+    else if (pm === "qris") onComplete("qris", fTotal);
+    else if (enough) onComplete("cash", paid);
+  }, [isOnlineFood, pm, enough, fTotal, total, paid, onComplete]);
 
   const doPrintBT = async () => {
     setPrinting(true); setPrintSt("idle");
@@ -98,36 +85,40 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
     setPrinting(false);
   };
 
-  // Receipt text
+  // Receipt lines — live before payment, final after payment
   const rLines = useMemo(() => {
-    if (!isPaid || !paymentResult) return [];
-    const W = 35, now = new Date();
+    const W = 35;
     const p = (s: string, w: number) => s.length > w ? s.slice(0, w - 1) + "\u2026" : s.padEnd(w);
     const sep = (c: string) => c.repeat(W);
-    const m = paymentResult.method === "cash" ? "TUNAI" : paymentResult.method === "estimate" ? "ESTIMASI" : paymentResult.method.toUpperCase();
+    const effTotal = fTotal;
+    const effPaid = isPaid && paymentResult ? paymentResult.amountPaid : (pm === "cash" ? paid : effTotal);
+    const effChange = isPaid && paymentResult ? paymentResult.change : (pm === "cash" ? Math.max(0, paid - fTotal) : 0);
+    const m = isPaid && paymentResult
+      ? (paymentResult.method === "cash" ? "TUNAI" : paymentResult.method === "estimate" ? "ESTIMASI" : paymentResult.method.toUpperCase())
+      : (isOnlineFood ? "ESTIMASI" : pm === "cash" ? "TUNAI" : "QRIS");
     return [
       sep("="), `  ${p(rSettings.outletName || "SABANA FRIED CHICKEN", W - 4)}`,
       rSettings.outletAddress ? `  ${p(rSettings.outletAddress, W - 4)}` : null,
       rSettings.outletPhone ? `  Telp: ${p(rSettings.outletPhone, W - 7)}` : null,
-      sep("-"), `  ${p(formatDateTime(now), W - 4)}`, `  ${p(savedOrderId?.slice(0, 28) || generateOrderNumber(orderNumber, serviceMode), W - 4)}`,
+      sep("-"), `  ${p(formatDateTime(new Date()), W - 4)}`, `  ${p(savedOrderId?.slice(0, 28) || generateOrderNumber(orderNumber, serviceMode), W - 4)}`,
       `  Kasir: ${p(cashierName || "Kasir", W - 9)}`, `  ${p(SERVICE_MODE_LABELS[serviceMode] || serviceMode, W - 4)}`,
       sep("-"),
       ...items.map(i => `  ${p(`${i.quantity}x ${i.name}`, W - formatRupiah(i.price * i.quantity).length - 2)}${formatRupiah(i.price * i.quantity)}`),
       sep("-"), `  Subtotal:${" ".repeat(W - 21)}${formatRupiah(total)}`,
-      `  TOTAL:${" ".repeat(W - 19)}${formatRupiah(total)}`,
-      `  BAYAR:${" ".repeat(W - 18)}${formatRupiah(paymentResult.amountPaid)}`,
-      `  KEMBALIAN:${" ".repeat(W - 20)}${formatRupiah(paymentResult.change)}`,
+      `  TOTAL:${" ".repeat(W - 19)}${formatRupiah(effTotal)}`,
+      `  BAYAR:${" ".repeat(W - 18)}${formatRupiah(effPaid)}`,
+      `  KEMBALIAN:${" ".repeat(W - 20)}${formatRupiah(effChange)}`,
       sep("-"), `  Metode: ${m}`, sep("="),
       `  ${p(rSettings.footer || "Terima kasih!", W - 4)}`, `  Sabana Fried Chicken`,
     ].filter(Boolean);
-  }, [isPaid, paymentResult]);
+  }, [isPaid, paymentResult, items, total, fTotal, paid, pm, isOnlineFood, orderNumber, serviceMode, savedOrderId, cashierName, rSettings]);
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 flex w-full max-w-[900px] h-[85vh] max-h-[600px] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 flex w-full max-w-[820px] h-auto max-h-[92vh] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl overflow-hidden">
 
         {/* === LEFT: Payment === */}
         <div className="flex-1 flex flex-col min-h-0 min-w-0">
@@ -144,21 +135,23 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
 
           <div className="flex-1 overflow-y-auto p-2.5 min-h-0">
             {isPaid ? (
-              /* === PAID === */
-              <div className="flex flex-col items-center justify-center h-full gap-3">
-                <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-3xl">✅</div>
+              /* === PAID — langsung tombol Transaksi Baru, tanpa panel tambahan === */
+              <div className="flex flex-col items-center justify-center h-full gap-2.5 py-2">
+                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-2xl">✅</div>
                 <div className="text-center">
-                  <p className="font-bold text-green-700 dark:text-green-300">Pembayaran Berhasil</p>
+                  <p className="font-bold text-green-700 dark:text-green-300 text-sm">Pembayaran Berhasil</p>
                   <p className="text-xs text-gray-500 mt-0.5">{formatRupiah(paymentResult!.amountPaid)} · {paymentResult!.method === "cash" ? "TUNAI" : paymentResult!.method.toUpperCase()}</p>
                   <p className="text-xs text-green-600 font-semibold mt-0.5">Kembalian: {formatRupiah(paymentResult!.change)}</p>
                 </div>
-                <div className="flex gap-2 w-full max-w-[200px]">
-                  <button onClick={doPrintBT} disabled={printing} className={clsx("flex-1 py-2 rounded-lg text-[10px] font-bold transition-all",
-                    printSt === "ok" ? "bg-green-500 text-white" : printSt === "err" ? "bg-red-500 text-white" : "bg-sabana text-white"
-                  )}>{printSt === "ok" ? "✅ Tercetak" : printing ? "..." : "🖨️ Print"}</button>
-                  <button onClick={() => window.print()} className="flex-1 py-2 rounded-lg text-[10px] font-bold bg-gray-100 dark:bg-[#333] text-gray-600 dark:text-gray-400">📄 Browser</button>
+                <div className="flex gap-2 w-full max-w-[240px] pt-1">
+                  {hasBT && (
+                    <button onClick={doPrintBT} disabled={printing} className={clsx("flex-1 py-2.5 rounded-xl text-[11px] font-bold transition-all",
+                      printSt === "ok" ? "bg-green-500 text-white" : printSt === "err" ? "bg-red-500 text-white" : "bg-sabana text-white shadow-lg shadow-sabana/30"
+                    )}>{printSt === "ok" ? "✅ Tercetak" : printing ? "..." : "🖨️ Print BT"}</button>
+                  )}
+                  <button onClick={() => window.print()} className="flex-1 py-2.5 rounded-xl text-[11px] font-bold bg-gray-100 dark:bg-[#333] text-gray-600 dark:text-gray-400">📄 Browser</button>
                 </div>
-                <button onClick={onClose} className="w-full max-w-[200px] py-2.5 rounded-xl bg-sabana text-white font-bold text-xs hover:bg-sabana-dark shadow-lg shadow-sabana/30">
+                <button onClick={onClose} className="w-full max-w-[240px] py-3 rounded-xl bg-green-600 text-white font-bold text-sm hover:bg-green-700 shadow-lg shadow-green-600/30">
                   🛒 Transaksi Baru
                 </button>
               </div>
@@ -181,23 +174,6 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
             ) : (
               /* === CASH/QRIS === */
               <div className="space-y-2">
-                {/* Loyalty */}
-                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-1.5 border border-purple-100 dark:border-purple-800">
-                  {loyal ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white text-[9px] font-bold">{loyal.name?.charAt(0) || "?"}</div>
-                      <span className="flex-1 text-[10px] font-semibold truncate">{loyal.name} · {getCustomerTier(loyal.points).icon}</span>
-                      <button onClick={() => setLoyal(null)} className="text-[9px] text-gray-400">✕</button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <input type="tel" value={phone} onChange={e => { setPhone(e.target.value); setLoyalErr(""); }} onKeyDown={e => e.key === "Enter" && doLoyalty()} placeholder="No. HP (poin)" className="flex-1 px-2 py-1 rounded border border-purple-200 dark:border-purple-700 text-[9px] bg-white dark:bg-[#222]" />
-                      <button onClick={doLoyalty} disabled={loyalLoading} className="px-2 py-1 bg-purple-600 text-white rounded text-[9px] font-bold">{loyalLoading ? "..." : "Cari"}</button>
-                    </div>
-                  )}
-                  {loyalErr && <p className="text-[8px] text-red-500">{loyalErr}</p>}
-                </div>
-
                 {/* Payment method */}
                 <div className="flex gap-1.5">
                   <button onClick={() => setPm("cash")} className={clsx("flex-1 py-2 rounded-xl font-bold text-xs border-2 transition-all", pm === "cash" ? "bg-sabana text-white border-sabana shadow" : "bg-white dark:bg-[#222] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#444]")}>💵 TUNAI</button>
@@ -236,22 +212,16 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
           </div>
         </div>
 
-        {/* === RIGHT: Receipt === */}
-        <div className="hidden sm:flex flex-col w-[260px] border-l border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] min-h-0">
+        {/* === RIGHT: Live Receipt — selalu tampil === */}
+        <div className="hidden sm:flex flex-col w-[270px] border-l border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] min-h-0">
           <div className="px-3 py-2 border-b border-gray-200 dark:border-[#333] shrink-0 flex items-center justify-between">
             <h3 className="font-heading font-bold text-xs text-gray-900 dark:text-gray-100">🧾 Struk</h3>
-            {isPaid && <button onClick={doPrintBT} disabled={printing} className={clsx("px-2 py-0.5 rounded text-[9px] font-bold", printSt === "ok" ? "bg-green-500 text-white" : "bg-sabana text-white")}>{printSt === "ok" ? "✅" : "🖨️"} Print</button>}
+            <span className={clsx("text-[9px] font-bold px-1.5 py-0.5 rounded-full", isPaid ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-200 text-gray-500 dark:bg-[#333] dark:text-gray-400")}>
+              {isPaid ? "FINAL" : "PREVIEW"}
+            </span>
           </div>
           <div className="flex-1 overflow-y-auto p-2 min-h-0">
-            {isPaid ? (
-              <pre className="text-[8px] leading-[1.4] text-gray-800 dark:text-gray-200 whitespace-pre font-mono">{rLines.join("\n")}</pre>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                <span className="text-3xl mb-2 opacity-30">🧾</span>
-                <p className="text-[10px]">Struk muncul</p>
-                <p className="text-[10px]">setelah pembayaran</p>
-              </div>
-            )}
+            <pre className="text-[8px] leading-[1.4] text-gray-800 dark:text-gray-200 whitespace-pre font-mono">{rLines.join("\n")}</pre>
           </div>
         </div>
       </div>

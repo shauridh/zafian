@@ -48,7 +48,7 @@ export default function KasirPage() {
   const [orderNumber, setOrderNumber] = useState(1);
   const [savedOrderId, setSavedOrderId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [paymentResult, setPaymentResult] = useState({ method: "cash", amountPaid: 0, change: 0 });
+  const [paymentResult, setPaymentResult] = useState<{ method: string; amountPaid: number; change: number } | undefined>(undefined);
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [showRecentOrders, setShowRecentOrders] = useState(false);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
@@ -106,7 +106,7 @@ export default function KasirPage() {
     addItem({ id: product.id, product_id: product.id, name: product.name, price: product.price, image_url: product.image_url });
   };
 
-  const handlePaymentComplete = async (method: string, amountPaid: number, loyaltyCustomer?: any) => {
+  const handlePaymentComplete = async (method: string, amountPaid: number) => {
     const total = getTotal();
     const isOnlineFood = ONLINE_FOOD_MODES.includes(serviceMode);
     const finalMethod = isOnlineFood ? "estimate" : method;
@@ -130,14 +130,6 @@ export default function KasirPage() {
       );
 
       setSavedOrderId(orderId);
-
-      if (loyaltyCustomer?.id && orderId) {
-        try {
-          const { earnPoints } = await import("@/lib/loyalty");
-          const result = await earnPoints(loyaltyCustomer.id, orderId, total);
-          if (result.points_earned > 0) console.log(`[POS] Loyalty: +${result.points_earned} poin`);
-        } catch (err) { console.error("[POS] Loyalty error:", err); }
-      }
 
       const newStock = { ...stockMap };
       items.forEach((item) => { if (newStock[item.product_id] !== undefined) newStock[item.product_id] = Math.max(0, newStock[item.product_id] - item.quantity); });
@@ -311,7 +303,11 @@ export default function KasirPage() {
       {/* Modals */}
       <PaymentReceiptModal
         isOpen={showPayment || showReceipt}
-        onClose={() => { setShowPayment(false); setShowReceipt(false); }}
+        onClose={() => {
+          // Tutup modal — jika sudah bayar, keranjang dikosongkan (Transaksi Baru)
+          if (showReceipt || paymentResult) { setShowReceipt(false); clearCart(); setPaymentResult(undefined); setSavedOrderId(null); }
+          setShowPayment(false);
+        }}
         onComplete={handlePaymentComplete}
         saving={saving}
         orderNumber={orderNumber}
