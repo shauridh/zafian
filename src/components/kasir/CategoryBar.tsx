@@ -16,35 +16,34 @@ export default function CategoryBar({
   onSelect,
 }: CategoryBarProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-      {/* Semua button */}
+    <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
       <button
         onClick={() => onSelect(null)}
         className={clsx(
-          "flex flex-col items-center gap-1 px-4 py-3 rounded-xl transition-all duration-200",
-          "min-w-[80px] cursor-pointer whitespace-nowrap",
+          "flex flex-col items-center gap-0.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200",
+          "min-w-[56px] sm:min-w-[64px] cursor-pointer whitespace-nowrap",
           selectedId === null
             ? "bg-sabana text-white shadow-lg shadow-sabana/30"
             : "bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 hover:bg-sabana-50 dark:hover:bg-sabana/10 border border-gray-200 dark:border-[#333]"
         )}
       >
-        <span className="text-2xl">📋</span>
-        <span className="text-xs font-semibold">Semua</span>
+        <span className="text-base sm:text-lg">📋</span>
+        <span className="text-[9px] sm:text-[10px] font-semibold">Semua</span>
       </button>
       {categories.map((cat) => (
         <button
           key={cat.id}
           onClick={() => onSelect(cat.id)}
           className={clsx(
-            "flex flex-col items-center gap-1 px-4 py-3 rounded-xl transition-all duration-200",
-            "min-w-[80px] cursor-pointer whitespace-nowrap",
+            "flex flex-col items-center gap-0.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200",
+            "min-w-[56px] sm:min-w-[64px] cursor-pointer whitespace-nowrap",
             selectedId === cat.id
               ? "bg-sabana text-white shadow-lg shadow-sabana/30"
               : "bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 hover:bg-sabana-50 dark:hover:bg-sabana/10 border border-gray-200 dark:border-[#333]"
           )}
         >
-          <span className="text-2xl">{cat.icon}</span>
-          <span className="text-xs font-semibold">{cat.name}</span>
+          <span className="text-base sm:text-lg">{cat.icon}</span>
+          <span className="text-[9px] sm:text-[10px] font-semibold">{cat.name}</span>
         </button>
       ))}
     </div>

@@ -7,6 +7,7 @@ import { SERVICE_MODE_LABELS, SERVICE_MODE_COLORS } from "@/lib/format";
 interface ServiceModeSelectorProps {
   selected: string;
   onSelect: (mode: string) => void;
+  excludeModes?: string[];
 }
 
 const SERVICE_MODES = [
@@ -20,10 +21,13 @@ const SERVICE_MODES = [
 export default function ServiceModeSelector({
   selected,
   onSelect,
+  excludeModes = [],
 }: ServiceModeSelectorProps) {
+  const modes = SERVICE_MODES.filter((m) => !excludeModes.includes(m.id));
+
   return (
     <div className="flex flex-wrap gap-2">
-      {SERVICE_MODES.map((mode) => {
+      {modes.map((mode) => {
         const isActive = selected === mode.id;
         const color = SERVICE_MODE_COLORS[mode.id];
 

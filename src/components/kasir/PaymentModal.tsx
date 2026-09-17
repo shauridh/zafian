@@ -38,13 +38,11 @@ export default function PaymentModal({
   const [loyaltyCustomer, setLoyaltyCustomer] = useState<LoyaltyCustomer | null>(null);
   const [loyaltySearching, setLoyaltySearching] = useState(false);
   const [loyaltyError, setLoyaltyError] = useState("");
-  const [pointsEarned, setPointsEarned] = useState<number | null>(null);
 
   // Promo
   const [promoResult, setPromoResult] = useState<PromoResult | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
 
-  // Fetch promos when modal opens
   React.useEffect(() => {
     if (!isOpen || isOnlineFood) return;
     async function checkPromos() {
@@ -59,13 +57,11 @@ export default function PaymentModal({
     checkPromos();
   }, [isOpen, total, isOnlineFood]);
 
-  // Reset state when modal opens
   React.useEffect(() => {
     if (isOpen) {
       setLoyaltyCustomer(null);
       setPhoneInput("");
       setLoyaltyError("");
-      setPointsEarned(null);
     }
   }, [isOpen]);
 
@@ -74,18 +70,13 @@ export default function PaymentModal({
   const change = paymentMethod === "cash" ? Math.max(0, amountPaid - finalTotal) : 0;
   const isEnough = isOnlineFood || paymentMethod === "qris" || amountPaid >= finalTotal;
 
-  // Loyalty search
   const handleLoyaltySearch = async () => {
     if (!phoneInput || phoneInput.length < 8) { setLoyaltyError("Masukkan nomor HP yang valid"); return; }
     setLoyaltySearching(true);
     setLoyaltyError("");
     const customer = await findCustomerByPhone(phoneInput);
-    if (customer) {
-      setLoyaltyCustomer(customer);
-      setLoyaltyError("");
-    } else {
-      setLoyaltyError("Customer tidak ditemukan. Ketik nama untuk daftar baru.");
-    }
+    if (customer) { setLoyaltyCustomer(customer); setLoyaltyError(""); }
+    else { setLoyaltyError("Customer tidak ditemukan. Ketik nama untuk daftar baru."); }
     setLoyaltySearching(false);
   };
 
@@ -101,29 +92,24 @@ export default function PaymentModal({
   );
 
   const handleComplete = useCallback(() => {
-    if (isOnlineFood) {
-      onComplete("estimate", total, loyaltyCustomer);
-    } else if (paymentMethod === "qris") {
-      onComplete("qris", finalTotal, loyaltyCustomer);
-    } else if (isEnough) {
-      onComplete("cash", amountPaid, loyaltyCustomer);
-    }
+    if (isOnlineFood) { onComplete("estimate", total, loyaltyCustomer); }
+    else if (paymentMethod === "qris") { onComplete("qris", finalTotal, loyaltyCustomer); }
+    else if (isEnough) { onComplete("cash", amountPaid, loyaltyCustomer); }
   }, [isOnlineFood, paymentMethod, isEnough, finalTotal, total, amountPaid, loyaltyCustomer, onComplete]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg" showClose={false}>
-      <div className="p-6">
+      <div className="p-3 sm:p-4">
         {/* Header */}
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-heading font-bold text-gray-900 mb-1">
+        <div className="text-center mb-3 sm:mb-4">
+          <h2 className="text-lg sm:text-xl font-heading font-bold text-gray-900 dark:text-gray-100 mb-0.5">
             {isOnlineFood ? "📱 Estimasi Order" : "💳 Pembayaran"}
           </h2>
-          <p className="text-gray-500">
-            {items.length} item • Total:{" "}
-            <span className="text-sabana font-bold">{formatRupiah(total)}</span>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+            {items.length} item • Total: <span className="text-sabana font-bold">{formatRupiah(total)}</span>
           </p>
           {isOnlineFood && (
-            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+            <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-[10px] sm:text-xs font-medium">
               <span>ℹ️</span>
               <span>Uang masuk via platform — hanya pencatatan estimasi</span>
             </div>
@@ -132,65 +118,24 @@ export default function PaymentModal({
 
         {isOnlineFood ? (
           /* ===== ONLINE FOOD MODE ===== */
-          <div className="space-y-4">
-            {/* Platform info */}
-            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-2xl">
-                  {serviceMode === "gofood" ? "🛵" : serviceMode === "grabfood" ? "🚚" : "🛒"}
-                </span>
+          <div className="space-y-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 border border-blue-100 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">{serviceMode === "gofood" ? "🛵" : serviceMode === "grabfood" ? "🚚" : "🛒"}</span>
                 <div>
-                  <p className="font-semibold text-blue-900">
-                    {SERVICE_MODE_LABELS[serviceMode]}
-                  </p>
-                  <p className="text-sm text-blue-600">Pencatatan Estimasi</p>
+                  <p className="font-semibold text-blue-900 dark:text-blue-200 text-sm">{SERVICE_MODE_LABELS[serviceMode]}</p>
+                  <p className="text-[10px] text-blue-600 dark:text-blue-400">Pencatatan Estimasi</p>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Order ID Platform (opsional)
-                </label>
-                <input
-                  type="text"
-                  value={platformOrderId}
-                  onChange={(e) => setPlatformOrderId(e.target.value)}
-                  placeholder="Contoh: GFO-123456"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 
-                             focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-              </div>
+              <input type="text" value={platformOrderId} onChange={(e) => setPlatformOrderId(e.target.value)} placeholder="Order ID Platform (opsional)" className="w-full px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-700 dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs" />
             </div>
-
-            {/* Summary */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Estimasi Pendapatan</span>
-                <span className="text-xl font-bold text-blue-600">
-                  {formatRupiah(total)}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                Stok akan dikurangi otomatis
-              </p>
+            <div className="bg-gray-50 dark:bg-[#222] rounded-xl p-3 flex justify-between items-center">
+              <span className="text-xs text-gray-600 dark:text-gray-400">Estimasi Pendapatan</span>
+              <span className="text-base font-bold text-blue-600">{formatRupiah(total)}</span>
             </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                className="px-6 py-4 rounded-xl border-2 border-gray-200 text-gray-600 
-                           font-semibold hover:bg-gray-50 active:scale-95 transition-all"
-              >
-                ❌ Batal
-              </button>
-              <button
-                onClick={handleComplete}
-                className="flex-1 py-4 rounded-xl font-bold text-lg transition-all active:scale-95
-                           bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700"
-              >
-                ✅ CATAT PESANAN
-              </button>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="px-4 py-2.5 rounded-xl border-2 border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400 font-semibold text-sm active:scale-95">❌ Batal</button>
+              <button onClick={handleComplete} className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-blue-600 text-white shadow-lg hover:bg-blue-700 active:scale-95">✅ CATAT</button>
             </div>
           </div>
         ) : (
@@ -198,180 +143,94 @@ export default function PaymentModal({
           <>
             {/* Promo Badge */}
             {promoResult && (
-              <div className="bg-green-50 rounded-xl p-3 mb-4 border border-green-200 flex items-center gap-2">
-                <span className="text-lg">🏷️</span>
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-2 mb-2 border border-green-200 dark:border-green-800 flex items-center gap-2">
+                <span className="text-sm">🏷️</span>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-green-800">{promoResult.promo.name}</p>
-                  <p className="text-xs text-green-600">{promoResult.description}</p>
+                  <p className="text-xs font-semibold text-green-800 dark:text-green-200">{promoResult.promo.name}</p>
+                  <p className="text-[10px] text-green-600 dark:text-green-400">{promoResult.description}</p>
                 </div>
               </div>
             )}
 
-            {/* Loyalty Customer Lookup */}
-            <div className="bg-purple-50 rounded-xl p-3 mb-4 border border-purple-100">
+            {/* Loyalty */}
+            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-2 mb-2 border border-purple-100 dark:border-purple-800">
               {loyaltyCustomer ? (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                    {loyaltyCustomer.name?.charAt(0) || "?"}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-gray-900 text-sm">{loyaltyCustomer.name || "Customer"}</p>
-                      <span className="text-xs text-purple-600">{getCustomerTier(loyaltyCustomer.points).icon} {getCustomerTier(loyaltyCustomer.points).label}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs">{loyaltyCustomer.name?.charAt(0) || "?"}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-gray-900 dark:text-gray-200 text-xs truncate">{loyaltyCustomer.name || "Customer"}</p>
+                      <span className="text-[9px] text-purple-600 dark:text-purple-300">{getCustomerTier(loyaltyCustomer.points).icon} {getCustomerTier(loyaltyCustomer.points).label}</span>
                     </div>
-                    <p className="text-xs text-gray-500">📱 {loyaltyCustomer.phone} · {loyaltyCustomer.points} poin · {loyaltyCustomer.stamps % 10}/10 stamp</p>
+                    <p className="text-[9px] text-gray-500 dark:text-gray-400">📱 {loyaltyCustomer.phone} · {loyaltyCustomer.points} poin</p>
                   </div>
-                  <button onClick={() => setLoyaltyCustomer(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                  <button onClick={() => setLoyaltyCustomer(null)} className="text-[10px] text-gray-400 hover:text-gray-600">✕</button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <input type="tel" value={phoneInput} onChange={(e) => { setPhoneInput(e.target.value); setLoyaltyError(""); }} onKeyDown={(e) => e.key === "Enter" && handleLoyaltySearch()} placeholder="No. HP customer (untuk poin)" className="flex-1 px-3 py-2 rounded-lg border border-purple-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white" />
-                  <button onClick={handleLoyaltySearch} disabled={loyaltySearching} className="px-3 py-2 bg-purple-600 text-white rounded-lg text-xs font-semibold hover:bg-purple-700 disabled:opacity-50">
-                    {loyaltySearching ? "..." : "Cari"}
-                  </button>
+                <div className="flex items-center gap-1.5">
+                  <input type="tel" value={phoneInput} onChange={(e) => { setPhoneInput(e.target.value); setLoyaltyError(""); }} onKeyDown={(e) => e.key === "Enter" && handleLoyaltySearch()} placeholder="No. HP (untuk poin)" className="flex-1 px-2 py-1.5 rounded-lg border border-purple-200 dark:border-purple-700 text-[10px] sm:text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-[#222] dark:text-gray-100" />
+                  <button onClick={handleLoyaltySearch} disabled={loyaltySearching} className="px-2.5 py-1.5 bg-purple-600 text-white rounded-lg text-[10px] font-semibold hover:bg-purple-700 disabled:opacity-50">{loyaltySearching ? "..." : "Cari"}</button>
                 </div>
               )}
-              {loyaltyError && <p className="text-xs text-red-500 mt-1">{loyaltyError}</p>}
+              {loyaltyError && <p className="text-[9px] text-red-500 mt-1">{loyaltyError}</p>}
             </div>
 
             {/* Payment Method Toggle */}
-            <div className="flex gap-3 mb-6">
-              <button
-                onClick={() => setPaymentMethod("cash")}
-                className={clsx(
-                  "flex-1 py-4 rounded-xl font-semibold text-lg transition-all duration-200 cursor-pointer border-2",
-                  paymentMethod === "cash"
-                    ? "bg-sabana text-white border-sabana shadow-lg"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-sabana"
-                )}
-              >
-                💵 TUNAI
-              </button>
-              <button
-                onClick={() => setPaymentMethod("qris")}
-                className={clsx(
-                  "flex-1 py-4 rounded-xl font-semibold text-lg transition-all duration-200 cursor-pointer border-2",
-                  paymentMethod === "qris"
-                    ? "bg-blue-600 text-white border-blue-600 shadow-lg"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-blue-600"
-                )}
-              >
-                📱 QRIS
-              </button>
+            <div className="flex gap-2 mb-3">
+              <button onClick={() => setPaymentMethod("cash")} className={clsx("flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer border-2", paymentMethod === "cash" ? "bg-sabana text-white border-sabana shadow-lg" : "bg-white dark:bg-[#222] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#444]")}>💵 TUNAI</button>
+              <button onClick={() => setPaymentMethod("qris")} className={clsx("flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer border-2", paymentMethod === "qris" ? "bg-blue-600 text-white border-blue-600 shadow-lg" : "bg-white dark:bg-[#222] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#444]")}>📱 QRIS</button>
             </div>
 
             {paymentMethod === "cash" ? (
               <>
-                {/* Cash Payment */}
-                <div className="mb-4">
-                  {/* Total after promo */}
-                  {promoResult && (
-                    <div className="flex items-center justify-between mb-2 text-sm">
-                      <span className="text-gray-500 line-through">{formatRupiah(total)}</span>
-                      <span className="text-success font-semibold">-{formatRupiah(promoResult.discount_amount)}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-600">
-                      Total{promoResult ? " (sudah diskon)" : ""}
-                    </label>
-                    <span className="text-lg font-bold text-sabana">{formatRupiah(finalTotal)}</span>
+                {promoResult && (
+                  <div className="flex items-center justify-between mb-1 text-xs">
+                    <span className="text-gray-500 line-through">{formatRupiah(total)}</span>
+                    <span className="text-success font-semibold">-{formatRupiah(promoResult.discount_amount)}</span>
                   </div>
-                  <label className="block text-sm font-medium text-gray-600 mb-2">
-                    Jumlah Bayar
-                  </label>
-                  <div className="bg-gray-50 rounded-xl p-4 text-center border border-gray-200">
-                    <span className="text-3xl font-mono font-bold text-gray-900">
-                      Rp {amountPaid > 0 ? amountPaid.toLocaleString("id-ID") : "0"}
-                    </span>
-                  </div>
+                )}
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Total{promoResult ? " (diskon)" : ""}</label>
+                  <span className="text-base font-bold text-sabana">{formatRupiah(finalTotal)}</span>
+                </div>
+                <div className="bg-gray-50 dark:bg-[#222] rounded-xl p-2.5 text-center border border-gray-200 dark:border-[#444] mb-2">
+                  <span className="text-xl sm:text-2xl font-mono font-bold text-gray-900 dark:text-gray-100">Rp {amountPaid > 0 ? amountPaid.toLocaleString("id-ID") : "0"}</span>
                 </div>
 
-                {/* Numpad — quick amounts are now internal to Numpad */}
-                <Numpad
-                  value={cashInput}
-                  onChange={setCashInput}
-                  showQuickAmounts
-                  quickAmounts={quickAmounts}
-                />
+                <Numpad value={cashInput} onChange={setCashInput} showQuickAmounts quickAmounts={quickAmounts} />
 
-                {/* Change Display */}
-                <div
-                  className={clsx(
-                    "mt-4 p-4 rounded-xl text-center",
-                    change > 0
-                      ? "bg-green-50 border border-green-200"
-                      : "bg-gray-50 border border-gray-200"
-                  )}
-                >
-                  <p className="text-sm text-gray-500">Kembalian</p>
-                  <p
-                    className={clsx(
-                      "text-2xl font-heading font-bold",
-                      change > 0 ? "text-success" : "text-gray-400"
-                    )}
-                  >
-                    {formatRupiah(change)}
-                  </p>
+                <div className={clsx("mt-2 p-2.5 rounded-xl text-center", change > 0 ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800" : "bg-gray-50 dark:bg-[#222] border border-gray-200 dark:border-[#444]")}>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Kembalian</p>
+                  <p className={clsx("text-lg font-heading font-bold", change > 0 ? "text-success" : "text-gray-400")}>{formatRupiah(change)}</p>
                 </div>
               </>
             ) : (
-              /* QRIS Payment — Dynamic QR */
-              <div className="py-4">
-                <div className="bg-blue-50 rounded-xl p-3 mb-4 border border-blue-100 flex items-center gap-2">
-                  <span className="text-lg">📱</span>
+              <div className="py-2">
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-2 mb-3 border border-blue-100 dark:border-blue-800 flex items-center gap-2">
+                  <span className="text-sm">📱</span>
                   <div>
-                    <p className="text-sm font-semibold text-blue-900">Dynamic QRIS</p>
-                    <p className="text-xs text-blue-600">Scan dengan GoPay, OVO, Dana, ShopeePay, LinkAja, atau Mobile Banking</p>
+                    <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">Dynamic QRIS</p>
+                    <p className="text-[9px] text-blue-600 dark:text-blue-400">Scan dengan GoPay, OVO, Dana, ShopeePay</p>
                   </div>
                 </div>
                 <div className="flex justify-center">
-                  <QRCodeSVG
-                    value={`https://qris.sabana.id/pay?amount=${finalTotal}&order=${Date.now()}`}
-                    size={200}
-                    level="H"
-                    includeMargin={false}
-                    bgColor="#FFFFFF"
-                    fgColor="#000000"
-                  />
+                  <QRCodeSVG value={`https://qris.sabana.id/pay?amount=${finalTotal}&order=${Date.now()}`} size={160} level="H" includeMargin={false} bgColor="#FFFFFF" fgColor="#000000" />
                 </div>
-                <div className="text-center mt-3">
-                  <p className="text-sm text-gray-500">Total Pembayaran</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatRupiah(finalTotal)}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">⏱️ QR berlaku selama 15 menit</p>
+                <div className="text-center mt-2">
+                  <p className="text-xs text-gray-500">Total</p>
+                  <p className="text-lg font-bold text-blue-600">{formatRupiah(finalTotal)}</p>
+                  <p className="text-[9px] text-gray-400 mt-0.5">⏱️ QR berlaku 15 menit</p>
                 </div>
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={onClose}
-                className="px-6 py-4 rounded-xl border-2 border-gray-200 text-gray-600 
-                           font-semibold hover:bg-gray-50 active:scale-95 transition-all"
-              >
-                ❌ Batal
-              </button>
-              <button
-                onClick={handleComplete}
-                disabled={!isEnough || saving}
-                className={clsx(
-                  "flex-1 py-4 rounded-xl font-bold text-lg transition-all active:scale-95",
-                  saving
-                    ? "bg-gray-400 text-white cursor-wait"
-                    : isEnough
-                    ? "bg-success text-white shadow-lg shadow-success/30 hover:bg-green-700"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                )}
-              >
+            <div className="flex gap-2 mt-3">
+              <button onClick={onClose} className="px-4 py-2.5 rounded-xl border-2 border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400 font-semibold text-sm active:scale-95">❌ Batal</button>
+              <button onClick={handleComplete} disabled={!isEnough || saving} className={clsx("flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95", saving ? "bg-gray-400 text-white cursor-wait" : isEnough ? "bg-success text-white shadow-lg hover:bg-green-700" : "bg-gray-200 text-gray-400 cursor-not-allowed")}>
                 {saving ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Menyimpan...
-                  </span>
-                ) : (
-                  "✅ SELESAI BAYAR"
-                )}
+                  <span className="flex items-center justify-center gap-2"><span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />Menyimpan...</span>
+                ) : "✅ BAYAR"}
               </button>
             </div>
           </>

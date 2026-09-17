@@ -18,7 +18,6 @@ export default function Numpad({
   showQuickAmounts = false,
   quickAmounts = [],
 }: NumpadProps) {
-  // Track whether last input was from quick amount or numpad
   const lastInputType = useRef<"quick" | "numpad" | null>(null);
 
   const handleQuickAmount = useCallback(
@@ -44,7 +43,6 @@ export default function Numpad({
       if (value.length >= maxLength) return;
       if (!/^\d+$/.test(digit)) return;
 
-      // If last input was a quick amount, reset to just this digit
       if (lastInputType.current === "quick") {
         lastInputType.current = "numpad";
         onChange(digit);
@@ -65,10 +63,10 @@ export default function Numpad({
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Quick amount buttons */}
       {showQuickAmounts && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {quickAmounts.map((qa) => {
             const isActive = value === String(qa.value);
             return (
@@ -76,7 +74,7 @@ export default function Numpad({
                 key={qa.label}
                 onClick={() => handleQuickAmount(qa.value)}
                 className={clsx(
-                  "px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150",
+                  "px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-150",
                   "active:scale-95 cursor-pointer",
                   isActive
                     ? "bg-sabana text-white shadow-md"
@@ -91,7 +89,7 @@ export default function Numpad({
       )}
 
       {/* Numpad grid */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1.5">
         {buttons.map((row, rowIdx) =>
           row.map((digit) => (
             <button
@@ -99,8 +97,8 @@ export default function Numpad({
               onClick={() => handlePress(digit)}
               className={clsx(
                 "numpad-btn",
-                digit === "clear" && "bg-gray-100 dark:bg-[#333] text-danger text-lg",
-                digit === "backspace" && "bg-gray-100 dark:bg-[#333] text-gray-600 dark:text-gray-400 text-lg",
+                digit === "clear" && "bg-gray-100 dark:bg-[#333] text-danger text-sm sm:text-lg",
+                digit === "backspace" && "bg-gray-100 dark:bg-[#333] text-gray-600 dark:text-gray-400 text-sm sm:text-lg",
                 digit !== "clear" &&
                   digit !== "backspace" &&
                   "bg-white dark:bg-[#262626] text-gray-900 dark:text-gray-100 hover:bg-sabana-50 dark:hover:bg-sabana/10 border border-gray-200 dark:border-[#444]",
@@ -108,7 +106,7 @@ export default function Numpad({
               )}
             >
               {digit === "backspace" ? (
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
                 </svg>
               ) : digit === "clear" ? (
