@@ -91,15 +91,17 @@ export default function OrderPage() {
     try {
       const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}`;
       const { data: order, error } = await supabase.from("orders").insert({
-        order_number: orderNumber,
+        order_number_text: orderNumber,
         customer_name: customerName,
         phone: customerPhone,
         delivery_address: deliveryAddress,
         notes,
         total: totalPrice,
+        final_total: totalPrice,
         payment_method: paymentMethod,
         order_source: "customer_portal",
         status: "pending",
+        outlet_id: "00000000-0000-0000-0000-000000000001",
       }).select().single();
 
       if (error) throw error;
