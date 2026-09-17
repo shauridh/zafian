@@ -73,7 +73,19 @@ export default function ProductsPage() {
       const { data: urlData } = supabase.storage.from("images").getPublicUrl(fileName);
       setFormData((prev) => ({ ...prev, image_url: urlData.publicUrl }));
     } catch (err: any) {
-      alert("Upload error: " + err.message);
+      // If bucket not found, try to create it or use fallback
+      if (err.message?.includes("Bucket not found") || err.message?.includes("not found")) {
+        console.warn("[Upload] Storage bucket 'images' not found. Run migration-storage-bucket.sql in Supabase.");
+        // Fallback: use a data URL for preview (won't persist)
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFormData((prev) => ({ ...prev, image_url: reader.result as string }));
+        };
+        reader.readAsDataURL(file);
+        alert("⚠️ Storage bucket belum dibuat. Gambar hanya preview lokal.\n\nJalankan migration-storage-bucket.sql di Supabase SQL Editor untuk upload permanen.");
+      } else {
+        alert("Upload error: " + err.message);
+      }
     } finally {
       setUploading(false);
     }
@@ -260,14 +272,14 @@ export default function ProductsPage() {
                     <td className="px-4 py-3 text-right text-sm text-gray-500">{product.hpp ? formatRupiah(product.hpp) : "-"}</td>
                     <td className="px-4 py-3 text-sm font-mono text-gray-500">{product.sku || "-"}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${product.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                        {product.is_active ? "✅ Aktif" : "❌ Nonaktif"}
-                      </span>
+                      <button onClick={async () => { await supabase.from("products").update({ is_active: !product.is_active }).eq("id", product.id); refresh(); }} className={`relative w-10 h-6 rounded-full transition-colors ${product.is_active ? "bg-success" : "bg-gray-300"}`}>
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${product.is_active ? "left-5" : "left-1"}`} />
+                      </button>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleEdit(product)} className="px-2 py-1 text-xs rounded-lg hover:bg-gray-100">✏️</button>
-                        <button onClick={() => handleDelete(product.id)} className="px-2 py-1 text-xs rounded-lg hover:bg-red-50 text-danger">🗑️</button>
+                        <button onClick={() => handleEdit(product)} className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center text-blue-600 transition-colors" title="Edit">✏️</button>
+                        <button onClick={() => handleDelete(product.id)} className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center text-danger transition-colors" title="Hapus">🗑️</button>
                       </div>
                     </td>
                   </tr>

@@ -233,10 +233,10 @@ export default function UsersPage() {
                 {user.pin && <p>🔐 PIN: {"•".repeat(user.pin.length)}</p>}
               </div>
               <div className="flex gap-2">
-                <button onClick={() => handleEdit(user)} className="flex-1 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <button onClick={() => handleEdit(user)} className="flex-1 py-2 text-xs font-medium rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors flex items-center justify-center gap-1">
                   ✏️ Edit
                 </button>
-                <button onClick={() => handleDelete(user.id)} className="py-1.5 px-3 text-xs font-medium rounded-lg border border-gray-200 hover:bg-red-50 hover:text-danger transition-colors">
+                <button onClick={() => handleDelete(user.id)} className="py-2 px-3 text-xs font-medium rounded-lg bg-red-50 hover:bg-red-100 text-danger transition-colors flex items-center justify-center">
                   🗑️
                 </button>
               </div>
