@@ -141,24 +141,9 @@ class ThermalPrinter {
     await this.send(commands);
   }
 
-  // Print a line with left/right alignment on same line
-  private async printLine(left: string, right: string, maxWidth = RECEIPT_WIDTH_58): Promise<void> {
-    // Truncate left if too long
-    const maxLeft = maxWidth - right.length - 1;
-    const truncatedLeft = left.length > maxLeft ? left.slice(0, maxLeft - 1) + "…" : left;
-    const padding = maxWidth - truncatedLeft.length - right.length;
-    const spaces = " ".repeat(Math.max(1, padding));
-    await this.sendText(`${truncatedLeft}${spaces}${right}\n`);
-  }
-
   // Print separator line using ASCII-safe characters
   private async printSeparator(char = "-", maxWidth = RECEIPT_WIDTH_58): Promise<void> {
     await this.sendText(char.repeat(maxWidth) + "\n");
-  }
-
-  private truncate(text: string, maxWidth: number): string {
-    if (text.length <= maxWidth) return text;
-    return text.slice(0, maxWidth - 1) + "\u2026"; // ellipsis
   }
 
   async printReceipt(data: ReceiptData & { width?: number }): Promise<boolean> {
@@ -175,7 +160,8 @@ class ThermalPrinter {
       const W = data.width ?? RECEIPT_WIDTH_58; // 58mm = 32 chars, 80mm = 48 chars
       const lines = buildReceiptLines(data, W);
 
-      // Header (first content line after top rule) — bold + double height
+      // Header (first content line after top rule) — bold + double height.
+      // sendText(center:true) re-centers on the printer, so strip the margin.
       const headerIdx = 1; // lines[0] is the top "=" rule
       const header = lines[headerIdx] ?? "";
       const body = lines.filter((_, idx) => idx !== 0 && idx !== headerIdx);
@@ -188,6 +174,8 @@ class ThermalPrinter {
         if (isRule) {
           await this.printSeparator(line.trim()[0] || "-", W);
         } else {
+          // Lines come pre-padded to W by buildReceiptLines — print verbatim
+          // so the ESC/POS output matches the on-screen preview exactly.
           await this.sendText(`${line}\n`);
         }
         await new Promise(r => setTimeout(r, 10));

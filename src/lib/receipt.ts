@@ -2,6 +2,16 @@
  * Receipt formatting — single source of truth.
  * Used by the on-screen receipt preview (PaymentReceiptModal)
  * and the ESC/POS thermal printer (lib/printer.ts).
+ *
+ * Layout rules:
+ * - Money lines (items, Subtotal/TOTAL/BAYAR/KEMBALIAN) and every separator
+ *   are exactly `w` chars (32 = 58mm, 48 = 80mm), so their LEFT and RIGHT
+ *   edges align pixel-perfect with each other.
+ * - Info lines (date, order no, kasir, mode, metode) carry the same 2-space
+ *   left margin but end naturally — they are metadata, not table rows.
+ * - Centered lines are also indented 2 spaces so text optically aligns with
+ *   the info lines' left edge.
+ * - Trailing whitespace is trimmed; no line exceeds w.
  */
 
 export interface ReceiptData {
@@ -24,6 +34,18 @@ export interface ReceiptData {
 
 export const RECEIPT_WIDTH_58 = 32; // 58mm ≈ 32 chars; 80mm ≈ 48
 
+const MARGIN = "  ";
+
+/**
+ * Glyphs whose width ≠ 1 monospace column. Emoji render ~1.1–2 cols in web
+ * fonts and 2 cols on thermal printers; ellipsis and NBSP also vary.
+ * We strip them from width-critical (money/separator) lines and neutralize
+ * them elsewhere so every consumer measures the same string.
+ */
+// eslint-disable-next-line no-misleading-character-class -- unicode property ranges need the u flag
+const WIDE_GLYPHS = new RegExp("[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{FE0F}\\u{00A0}\\u{2026}]", "gu");
+const stripWide = (s: string): string => s.replace(WIDE_GLYPHS, "").trimEnd();
+
 const rp = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
 
 /** Truncate with ellipsis, never exceeding width. */
@@ -31,17 +53,12 @@ function trunc(s: string, w: number): string {
   return s.length > w ? s.slice(0, w - 1) + "\u2026" : s;
 }
 
-/** Left/right split line: "1x Burger        Rp 12.000" */
-function padLine(left: string, right: string, w: number): string {
-  const maxLeft = w - right.length - 1;
-  const l = trunc(left, Math.max(1, maxLeft));
+/** Left/right split on ONE line: left truncated, right flush to column w. */
+function splitLine(left: string, right: string, w: number): string {
+  const maxLeft = Math.max(0, w - right.length);
+  const l = trunc(left, maxLeft);
   const pad = Math.max(1, w - l.length - right.length);
-  return `${l}${" ".repeat(pad)}${right}`;
-}
-
-/** Label/value line with colon: "  TOTAL:          Rp 27.000" */
-function labelLine(label: string, value: string, w: number): string {
-  return padLine(`  ${label}:`, value, w);
+  return (l + " ".repeat(pad) + right).slice(0, w);
 }
 
 /**
@@ -50,15 +67,22 @@ function labelLine(label: string, value: string, w: number): string {
  */
 export function buildReceiptLines(d: ReceiptData, w: number = RECEIPT_WIDTH_58): string[] {
   const sep = (c: string) => c.repeat(w);
+  /** Centered but indented by the universal 2-space margin. */
   const center = (s: string) => {
-    const t = trunc(s, w);
-    const lead = Math.max(0, Math.floor((w - t.length) / 2));
-    return " ".repeat(lead) + t;
+    const t = trunc(s, w - MARGIN.length);
+    const lead = Math.floor((w - MARGIN.length - t.length) / 2);
+    return (MARGIN + " ".repeat(lead) + t).trimEnd();
   };
+  /** Label in a fixed 11-char left column, value flush right. */
+  const row = (label: string, value: string) =>
+    splitLine(trunc(MARGIN + label + ":", w - value.length), value, w);
 
   const method = (d.paymentMethod || "").toUpperCase();
   const methodLabel = method === "CASH" ? "TUNAI" : method === "ESTIMATE" ? "ESTIMASI" : method;
+  const footerText = stripWide(d.footer || "Terima kasih!");
   const lines: string[] = [];
+
+  const trimEnd = (s: string) => s.trimEnd();
 
   lines.push(sep("="));
   lines.push(center(d.outletName || "SABANA FRIED CHICKEN"));
@@ -66,30 +90,30 @@ export function buildReceiptLines(d: ReceiptData, w: number = RECEIPT_WIDTH_58):
   if (d.outletPhone) lines.push(center(`Telp: ${d.outletPhone}`));
 
   lines.push(sep("-"));
-  lines.push(`  ${trunc(d.date, w - 2)}`);
-  lines.push(`  ${trunc(d.orderNumber, w - 2)}`);
-  lines.push(`  Kasir: ${trunc(d.cashierName || "Kasir", w - 9)}`);
-  lines.push(`  ${trunc(d.serviceMode, w - 2)}`);
+  lines.push(trimEnd(MARGIN + trunc(d.date, w - MARGIN.length)));
+  lines.push(trimEnd(MARGIN + trunc(d.orderNumber, w - MARGIN.length)));
+  lines.push(trimEnd(MARGIN + `Kasir: ${trunc(d.cashierName || "Kasir", w - MARGIN.length - 8)}`));
+  lines.push(trimEnd(MARGIN + trunc(d.serviceMode, w - MARGIN.length)));
 
   lines.push(sep("-"));
   for (const i of d.items) {
-    lines.push(padLine(`${i.qty}x ${i.name}`, rp(i.price * i.qty), w));
+    lines.push(splitLine(`${i.qty}x ${i.name}`, rp(i.price * i.qty), w));
   }
 
   lines.push(sep("-"));
-  lines.push(labelLine("Subtotal", rp(d.subtotal), w));
+  lines.push(row("Subtotal", rp(d.subtotal)));
   if (d.discount && d.discount > 0) {
-    lines.push(labelLine("Diskon", `-${rp(d.discount)}`, w));
+    lines.push(row("Diskon", `-${rp(d.discount)}`));
   }
-  lines.push(labelLine("TOTAL", rp(d.total), w));
-  lines.push(labelLine("BAYAR", rp(d.amountPaid), w));
-  lines.push(labelLine("KEMBALIAN", rp(d.change), w));
+  lines.push(row("TOTAL", rp(d.total)));
+  lines.push(row("BAYAR", rp(d.amountPaid)));
+  lines.push(row("KEMBALIAN", rp(d.change)));
 
   lines.push(sep("-"));
-  lines.push(`  Metode: ${methodLabel}`);
+  lines.push(trimEnd(MARGIN + `Metode: ${methodLabel}`));
   lines.push(sep("="));
 
-  lines.push(center(d.footer || "Terima kasih!"));
+  lines.push(center(footerText));
   lines.push(center("Sabana Fried Chicken"));
 
   return lines;
