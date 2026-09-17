@@ -142,16 +142,22 @@ export default function SettingsPage() {
     document.documentElement.style.setProperty("--brand-color-dark", preset.dark);
   };
 
-  const handleConnectPrinter = async () => {
+const handleConnectPrinter = async () => {
     setPrinterConnecting(true);
     try {
       const printer = getPrinter();
+      console.log("[Settings] Starting printer connection...");
       const connected = await printer.connect();
+      console.log("[Settings] Printer connection result:", connected);
       setPrinterConnected(connected);
       if (connected) {
         setSettings({ ...settings, printer_name: "Printer Terhubung" });
+        alert("✅ Printer berhasil terhubung!");
+      } else {
+        alert("❌ Gagal terhubung ke printer. Pastikan:\n1. Printer menyala dan dalam mode pairing\n2. Menggunakan Chrome atau Edge\n3. Bluetooth aktif di tablet/laptop");
       }
     } catch (err: any) {
+      console.error("[Settings] Printer connection error:", err);
       alert("Gagal koneksi printer: " + err.message);
     } finally {
       setPrinterConnecting(false);

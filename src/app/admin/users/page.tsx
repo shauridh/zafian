@@ -144,7 +144,7 @@ export default function UsersPage() {
           <p className="text-gray-500 text-sm mt-0.5">Kelola kasir, admin, dan manager</p>
         </div>
         <button
-          onClick={() => { setShowForm(!showForm); resetForm(); }}
+          onClick={() => { if (showForm) { resetForm(); } else { setEditingId(null); setFormData({ name: "", role: "cashier", pin: "", phone: "", is_active: true }); setShowForm(true); } }}
           className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors text-sm"
         >
           + Tambah User

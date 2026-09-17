@@ -39,56 +39,79 @@ class ThermalPrinter {
   private isConnected = false;
 
   // Connect to thermal printer via Web Bluetooth
-  async connect(): Promise<boolean> {
+async connect(): Promise<boolean> {
     try {
       if (!navigator.bluetooth) {
-        throw new Error("Web Bluetooth not supported in this browser");
+        throw new Error("Web Bluetooth tidak didukung di browser ini. Gunakan Chrome/Edge.");
       }
+      
+      console.log("[Printer] Requesting Bluetooth device...");
+      
       this.device = await navigator.bluetooth.requestDevice({
-        filters: [
-          { services: [] },  // Accept all BLE devices
-          { namePrefix: "XP" },  // Xprinter
-          { namePrefix: "XT" },  // Xprinter
-          { namePrefix: "TM" },  // Epson
-          { namePrefix: "BP" },  // Bixolon
-        ],
+        acceptAllDevices: true,
         optionalServices: [
           "000018f0-0000-1000-8000-00805f9b34fb",  // Common thermal printer service
           "0000ffe0-0000-1000-8000-00805f9b34fb",  // Another common service
           "0000fee7-0000-1000-8000-00805f9b34fb",  // Chinese printers
+          "00001101-0000-1000-8000-00805f9b34fb",  // SPP (Serial Port Profile)
+          "00001800-0000-1000-8000-00805f9b34fb",  // Generic Access
+          "00001801-0000-1000-8000-00805f9b34fb",  // Generic Attribute
         ],
       });
 
-      if (!this.device?.gatt) return false;
+if (!this.device?.gatt) {
+        console.error("[Printer] Device has no GATT");
+        return false;
+      }
 
+      console.log(`[Printer] Connecting to GATT server for: ${this.device.name || "Unknown"}`);
       this.server = await this.device.gatt.connect();
       
       // Try to find the write characteristic
+      console.log("[Printer] Getting primary services...");
       const services = await this.server.getPrimaryServices();
+      console.log(`[Printer] Found ${services.length} services`);
       
       for (const service of services) {
         try {
+          console.log(`[Printer] Service: ${service.uuid}`);
           const chars = await service.getCharacteristics();
+          console.log(`[Printer] Characteristics: ${chars.length}`);
           for (const char of chars) {
+            console.log(`[Printer] Char: ${char.uuid} write=${char.properties.write} writeWithoutResponse=${char.properties.writeWithoutResponse}`);
             if (char.properties.write || char.properties.writeWithoutResponse) {
               this.characteristic = char;
               this.isConnected = true;
-              console.log(`Connected to printer: ${this.device.name || "Unknown"}`);
+              console.log(`[Printer] ✅ Connected to printer: ${this.device.name || "Unknown"}`);
               return true;
             }
           }
-        } catch {}
+        } catch (e) {
+          console.log(`[Printer] Error reading service ${service.uuid}:`, e);
+        }
       }
 
       // Fallback: try common service UUIDs
-      try {
-        const service = await this.server.getPrimaryService("000018f0-0000-1000-8000-00805f9b34fb");
-        const chars = await service.getCharacteristics();
-        this.characteristic = chars.find(c => c.properties.write || c.properties.writeWithoutResponse) || chars[0];
-        this.isConnected = true;
-        return true;
-      } catch {}
+      const fallbackUUIDs = [
+        "000018f0-0000-1000-8000-00805f9b34fb",
+        "0000ffe0-0000-1000-8000-00805f9b34fb",
+        "0000fee7-0000-1000-8000-00805f9b34fb",
+      ];
+      
+      for (const uuid of fallbackUUIDs) {
+        try {
+          const service = await this.server.getPrimaryService(uuid);
+          const chars = await service.getCharacteristics();
+          this.characteristic = chars.find(c => c.properties.write || c.properties.writeWithoutResponse) || chars[0];
+          this.isConnected = true;
+          console.log(`[Printer] ✅ Connected via fallback service: ${uuid}`);
+          return true;
+        } catch (e) {
+          console.log(`[Printer] Fallback ${uuid} failed:`, e);
+        }
+      }
 
+      console.error("[Printer] ❌ No writable characteristic found");
       return false;
     } catch (err) {
       console.error("Bluetooth connection error:", err);

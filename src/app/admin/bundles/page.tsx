@@ -83,7 +83,7 @@ export default function BundlesPage() {
           <h1 className="text-2xl font-heading font-bold text-gray-900 dark:text-gray-100">🎁 Paket/Bundling</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">Kelola paket bundling produk dari database</p>
         </div>
-        <button onClick={() => { setShowForm(!showForm); resetForm(); }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors">
+        <button onClick={() => { if (showForm) { resetForm(); } else { setEditingId(null); setShowForm(true); } }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors">
           + Tambah Paket
         </button>
       </div>

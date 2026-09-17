@@ -122,7 +122,7 @@ export default function LoyaltyPage() {
           <h1 className="text-xl md:text-2xl font-heading font-bold text-gray-900">⭐ Loyalty Program</h1>
           <p className="text-gray-500 text-sm mt-0.5">Poin & stamp untuk repeat customer</p>
         </div>
-        <button onClick={() => { setShowForm(!showForm); resetForm(); }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors text-sm">
+        <button onClick={() => { if (showForm) { resetForm(); } else { setEditingId(null); setShowForm(true); } }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors text-sm">
           + Tambah Customer
         </button>
       </div>

@@ -73,7 +73,7 @@ export default function IngredientsPage() {
           <h1 className="text-2xl font-heading font-bold text-gray-900">📦 Bahan Baku</h1>
           <p className="text-gray-500 mt-1">Kelola bahan baku dan stok dari database</p>
         </div>
-        <button onClick={() => { setShowForm(!showForm); resetForm(); }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors">
+        <button onClick={() => { if (showForm) { resetForm(); } else { setEditingId(null); setShowForm(true); } }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors">
           + Tambah Bahan Baku
         </button>
       </div>
