@@ -134,10 +134,10 @@ export default function KasirPage() {
   const { addItem, serviceMode, setServiceMode, getTotal, clearCart, items } = useCartStore();
   const { isShiftOpen, cashierName, openShift, shiftId } = useShiftStore();
 
-  // Redirect to login if no shift is open
+  // Redirect to open shift if no shift is open
   React.useEffect(() => {
     if (!isShiftOpen) {
-      router.push("/login");
+      router.push("/kasir/shift/open");
     }
   }, [isShiftOpen, router]);
 

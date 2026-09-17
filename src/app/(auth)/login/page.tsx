@@ -34,7 +34,7 @@ export default function LoginPage() {
         if (newPin === ADMIN.pin) {
           // Store login state
           localStorage.setItem("sabana-admin", JSON.stringify({ name: ADMIN.name, loggedIn: true }));
-          router.push("/kasir");
+          router.push("/admin/dashboard");
         } else {
           setError("PIN salah! Coba lagi.");
           setPin("");

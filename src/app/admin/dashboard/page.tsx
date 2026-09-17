@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@//lib/supabase/client";
 import { formatRupiah } from "@//lib/format";
+import { useShiftStore } from "@/stores/shiftStore";
 
 type TimeFilter = "today" | "week" | "month" | "year";
 
@@ -65,8 +67,13 @@ const YEARLY_SALES_MOCK = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("today");
   const [shiftInfo, setShiftInfo] = useState<any>(null);
+  const [showPOSModal, setShowPOSModal] = useState(false);
+  const [openingFloat, setOpeningFloat] = useState(350000);
+  const [openingNotes, setOpeningNotes] = useState("");
+  const { isShiftOpen, openShift } = useShiftStore();
   const [stats, setStats] = useState({ transactions: 0, revenue: 0, profit: 0, avgPerTx: 0 });
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
@@ -195,7 +202,92 @@ export default function DashboardPage() {
             {shiftInfo && ` — ${shiftInfo.id?.slice(0, 8)} (${shiftInfo.status === "active" ? "🟢 Aktif" : "🔴 Tutup"})`}
           </p>
         </div>
+        <button
+          onClick={() => {
+            if (isShiftOpen) {
+              router.push("/kasir");
+            } else {
+              setShowPOSModal(true);
+            }
+          }}
+          className="flex items-center gap-2 px-5 py-3 bg-sabana text-white rounded-2xl font-bold hover:bg-sabana-dark transition-all shadow-lg shadow-sabana/30 active:scale-95"
+        >
+          <span className="text-xl">🍗</span>
+          <span>Buka Kasir</span>
+        </button>
       </div>
+
+      {/* POS / Open Shift Modal */}
+      {showPOSModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowPOSModal(false)} />
+          <div className="relative bg-white dark:bg-[#1a1a1a] rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-sabana rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg">
+                🍗
+              </div>
+              <h2 className="font-heading font-bold text-xl dark:text-gray-100">Buka Kasir</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Isi modal awal sebelum mulai transaksi</p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Modal Awal (Rp)</label>
+                <input
+                  type="number"
+                  value={openingFloat}
+                  onChange={(e) => setOpeningFloat(parseInt(e.target.value) || 0)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sabana text-lg font-bold font-mono"
+                />
+                <div className="flex gap-2 mt-2">
+                  {[100000, 200000, 350000, 500000].map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setOpeningFloat(v)}
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                        openingFloat === v
+                          ? "bg-sabana text-white"
+                          : "bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400"
+                      }`}
+                    >
+                      {formatRupiah(v).replace("Rp", "")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Catatan (opsional)</label>
+                <input
+                  type="text"
+                  value={openingNotes}
+                  onChange={(e) => setOpeningNotes(e.target.value)}
+                  placeholder="Shift pagi, shift malam..."
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sabana text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPOSModal(false)}
+                className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400 font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => {
+                  openShift({ opening_float: openingFloat, notes: openingNotes });
+                  setShowPOSModal(false);
+                  router.push("/kasir");
+                }}
+                className="flex-1 py-3 rounded-xl bg-sabana text-white font-bold hover:bg-sabana-dark transition-colors shadow-lg"
+              >
+                🟢 Buka Kasir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Time Filter Tabs */}
       <div className="flex gap-2">
