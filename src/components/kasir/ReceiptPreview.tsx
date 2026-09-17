@@ -38,32 +38,48 @@ export default function ReceiptPreview({
   const now = new Date();
   const hasBluetooth = isBluetoothAvailable();
 
-  const receiptText = `
-╔═══════════════════════════════════╗
-║      🍗 SABANA FRIED CHICKEN      ║
-║      Jl. Contoh No. 123           ║
-║      Telp: 0812-xxxx-xxxx         ║
-╠═══════════════════════════════════╣
-║  ${formatDateTime(now).padEnd(28)}║
-║  ${savedOrderId ? savedOrderId.slice(0, 28) : generateOrderNumber(orderNumber, serviceMode).padEnd(28)}║
-║  Kasir: ${cashierName.padEnd(21)}║
-║  ${SERVICE_MODE_LABELS[serviceMode].padEnd(28)}║
-╠═══════════════════════════════════╣
-${items.map((item) => {
-  const line = `${item.quantity}x ${item.name}`;
-  const price = formatRupiah(item.price * item.quantity);
-  return `║  ${line.padEnd(20)}${price.padStart(12)} ║`;
-}).join("\n")}
-╠═══════════════════════════════════╣
-║  Subtotal:${"".padEnd(17)}${formatRupiah(total + discount).padStart(10)} ║
-${discount > 0 ? `║  Diskon:${"".padEnd(19)}-${formatRupiah(discount).padStart(9)} ║\n` : ""}║  TOTAL:${"".padEnd(20)}${formatRupiah(total).padStart(10)} ║
-║  BAYAR:${"".padEnd(21)}${formatRupiah(amountPaid).padStart(10)} ║
-║  KEMBALIAN:${"".padEnd(17)}${formatRupiah(changeAmount).padStart(10)} ║
-║  Metode: ${(paymentMethod === "cash" ? "TUNAI" : paymentMethod === "estimate" ? "ESTIMASI" : "QRIS").padEnd(19)}║
-╠═══════════════════════════════════╣
-║  Terima kasih! Sampai jumpa!      ║
-║  🍗 Sabana Fried Chicken 🍗       ║
-╚═══════════════════════════════════╝`;
+  // Load receipt settings from localStorage
+  const [receiptSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sabana-receipt-settings");
+      return saved ? JSON.parse(saved) : { outletName: "SABANA FRIED CHICKEN", outletAddress: "Jl. Contoh No. 123", outletPhone: "0812-xxxx-xxxx", footer: "Terima kasih! Sampai jumpa! 🍗" };
+    } catch { return { outletName: "SABANA FRIED CHICKEN", outletAddress: "Jl. Contoh No. 123", outletPhone: "0812-xxxx-xxxx", footer: "Terima kasih! Sampai jumpa! 🍗" }; }
+  });
+
+  const method = paymentMethod === "cash" ? "TUNAI" : paymentMethod === "estimate" ? "ESTIMASI" : "QRIS";
+  const W = 35;
+  const pad = (s: string, w: number) => s.length > w ? s.slice(0, w - 1) + "\u2026" : s.padEnd(w);
+  const sep = (c: string) => c.repeat(W);
+
+  const receiptText = [
+    sep("="),
+    `  ${pad(receiptSettings.outletName, W - 4)}`,
+    receiptSettings.outletAddress ? `  ${pad(receiptSettings.outletAddress, W - 4)}` : null,
+    receiptSettings.outletPhone ? `  Telp: ${pad(receiptSettings.outletPhone, W - 7)}` : null,
+    sep("-"),
+    `  ${pad(formatDateTime(now), W - 4)}`,
+    `  ${pad(savedOrderId ? savedOrderId.slice(0, 28) : generateOrderNumber(orderNumber, serviceMode), W - 4)}`,
+    `  Kasir: ${pad(cashierName || "Kasir", W - 9)}`,
+    `  ${pad(SERVICE_MODE_LABELS[serviceMode] || serviceMode, W - 4)}`,
+    sep("-"),
+    ...items.map((item) => {
+      const left = `${item.quantity}x ${item.name}`;
+      const right = formatRupiah(item.price * item.quantity);
+      const lPad = W - right.length - 2;
+      return `  ${pad(left, lPad)}${right}`;
+    }),
+    sep("-"),
+    `  Subtotal:${" ".repeat(W - 21)}${formatRupiah(total + discount)}`,
+    ...(discount > 0 ? [`  Diskon:${" ".repeat(W - 19)}-${formatRupiah(discount)}`] : []),
+    `  TOTAL:${" ".repeat(W - 19)}${formatRupiah(total)}`,
+    `  BAYAR:${" ".repeat(W - 18)}${formatRupiah(amountPaid)}`,
+    `  KEMBALIAN:${" ".repeat(W - 20)}${formatRupiah(changeAmount)}`,
+    sep("-"),
+    `  Metode: ${method}`,
+    sep("="),
+    `  ${pad(receiptSettings.footer || "Terima kasih!", W - 4)}`,
+    `  Sabana Fried Chicken`,
+  ].filter(Boolean).join("\n");
 
   const handlePrintBluetooth = async () => {
     setPrinting(true);
@@ -101,9 +117,9 @@ ${discount > 0 ? `║  Diskon:${"".padEnd(19)}-${formatRupiah(discount).padStart
         serviceMode: SERVICE_MODE_LABELS[serviceMode] || serviceMode,
         orderNumber: savedOrderId || `#${orderNumber}`,
         date: formatDateTime(now),
-        outletName: "SABANA FRIED CHICKEN",
-        outletAddress: "Jl. Contoh No. 123",
-        outletPhone: "Telp: 0812-xxxx-xxxx",
+        outletName: receiptSettings.outletName || "SABANA FRIED CHICKEN",
+        outletAddress: receiptSettings.outletAddress || "",
+        outletPhone: receiptSettings.outletPhone || "",
       });
 
       setPrintStatus(success ? "done" : "error");
