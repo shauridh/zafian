@@ -18,8 +18,10 @@ export default function OpenShiftPage() {
   const [saving, setSaving] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
 
-  const cashiers = users.filter((u) => u.role === "cashier");
-  const selectedCashierData = cashiers.find((c) => c.id === selectedCashier);
+  const cashiers = users.filter((u) => u.role === "cashier" || u.role === "admin" || u.role === "manager");
+  // In single-admin mode, if no cashiers from DB, use default admin
+  const effectiveCashiers = cashiers.length > 0 ? cashiers : [{ id: "30000000-0000-0000-0000-000000000001", name: "Sabana", role: "admin" }];
+  const selectedCashierData = effectiveCashiers.find((c) => c.id === selectedCashier);
   const floatAmount = parseInt(floatInput) || 0;
 
   // Real-time clock — mount on client to avoid hydration mismatch
@@ -35,6 +37,15 @@ export default function OpenShiftPage() {
       router.push("/kasir");
     }
   }, [isShiftOpen, router]);
+
+  // Auto-select cashier if only one
+  React.useEffect(() => {
+    if (!loading && effectiveCashiers.length === 1 && !selectedCashier) {
+      setSelectedCashier(effectiveCashiers[0].id);
+    }
+  }, [loading, effectiveCashiers, selectedCashier]);
+
+
 
   const handleOpenShift = async () => {
     if (!selectedCashier) {
@@ -120,11 +131,21 @@ export default function OpenShiftPage() {
             <div className="flex items-center justify-center py-4">
               <div className="w-6 h-6 border-2 border-sabana border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : cashiers.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Tidak ada kasir ditemukan</p>
+          ) : effectiveCashiers.length === 1 ? (
+            /* Single admin mode — show selected cashier */
+            <div className="flex items-center gap-3 p-3 bg-sabana-50 rounded-xl border-2 border-sabana">
+              <div className="w-10 h-10 rounded-full bg-sabana text-white flex items-center justify-center text-sm font-bold">
+                {effectiveCashiers[0].name.charAt(0)}
+              </div>
+              <div>
+                <p className="font-semibold text-sm text-gray-900">{effectiveCashiers[0].name}</p>
+                <p className="text-[10px] text-gray-500">Admin</p>
+              </div>
+              <span className="ml-auto text-sabana">✓</span>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {cashiers.map((cashier) => (
+              {effectiveCashiers.map((cashier) => (
                 <button
                   key={cashier.id}
                   onClick={() => { setSelectedCashier(cashier.id); setError(""); }}
