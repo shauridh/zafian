@@ -12,6 +12,7 @@ type NewOrder = {
   phone?: string;
   items?: { name: string; qty: number; price: number }[];
   order_number?: string;
+  order_source?: string;
 };
 
 interface OrderNotificationProps {
