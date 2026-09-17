@@ -21,6 +21,13 @@ type Order = {
   status: string;
 };
 
+const DEFAULT_PORTAL = {
+  portal_tagline: "Sabana",
+  portal_subtitle: "Ayam Goreng & Menu Favorit",
+  portal_welcome: "Masuk ke Akun Anda",
+  portal_footer: "Dengan masuk, Anda menyetujui Syarat & Ketentuan",
+};
+
 const TIER_CONFIG = {
   bronze: { name: "Bronze", color: "bg-amber-700", min: 0 },
   silver: { name: "Silver", color: "bg-gray-400", min: 500 },
@@ -37,11 +44,17 @@ export default function CustomerPortal() {
   const [error, setError] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<"profile" | "orders">("profile");
+const [activeTab, setActiveTab] = useState<"profile" | "orders">("profile");
   const [now, setNow] = useState<Date | null>(null);
+  const [portalConfig, setPortalConfig] = useState(DEFAULT_PORTAL);
 
-  useEffect(() => {
+useEffect(() => {
     setNow(new Date());
+    // Load portal settings from admin
+    const saved = localStorage.getItem("sabana-portal-settings");
+    if (saved) {
+      setPortalConfig({ ...DEFAULT_PORTAL, ...JSON.parse(saved) });
+    }
   }, []);
 
   // Send OTP via WhatsApp
@@ -197,13 +210,13 @@ export default function CustomerPortal() {
             <div className="w-24 h-24 bg-white rounded-3xl shadow-xl mx-auto mb-4 flex items-center justify-center">
               <span className="text-4xl font-extrabold text-sabana">S</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-white">Sabana</h1>
-            <p className="text-white/70 text-sm mt-1">Ayam Goreng & Menu Favorit</p>
+            <h1 className="text-3xl font-extrabold text-white">{portalConfig.portal_tagline}</h1>
+            <p className="text-white/70 text-sm mt-1">{portalConfig.portal_subtitle}</p>
           </div>
 
           {/* Login Card */}
           <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-1">Masuk ke Akun Anda</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-1">{portalConfig.portal_welcome}</h2>
             <p className="text-gray-500 text-sm mb-6">Masukkan nomor HP untuk login via WhatsApp</p>
 
             {error && (
@@ -320,7 +333,7 @@ export default function CustomerPortal() {
 
           {/* Footer */}
           <p className="text-center text-white/50 text-xs mt-6">
-            Dengan masuk, Anda menyetujui Syarat & Ketentuan
+            {portalConfig.portal_footer}
           </p>
         </div>
       </div>
