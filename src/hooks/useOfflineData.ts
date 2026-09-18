@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { db, seedFromSupabase, saveOrderLocal } from "@/lib/db";
+import { db, seedFromSupabase, saveOrderLocal, removeLocalOrder } from "@/lib/db";
 import { supabase } from "@/lib/supabase/client";
 import type { DBCategory, DBProduct } from "@/lib/db";
 
@@ -209,50 +209,46 @@ export async function saveOrderOfflineFirst(
 
   await saveOrderLocal(dbOrder, dbItems);
 
-  // If online, try to push to Supabase immediately
-  let synced = false;
+  // Online payments use one database transaction. Network failures keep the
+  // local order for retry; business failures (for example insufficient stock)
+  // are surfaced to the cashier and removed from the pending queue.
   if (navigator.onLine) {
     try {
-      const { data: savedOrder } = await supabase
-        .from("orders")
-        .insert({
-          outlet_id: order.outlet_id,
-          cashier_id: order.cashier_id,
-          shift_id: order.shift_id,
-          service_mode: order.service_mode,
-          total: order.total,
-          discount: order.discount || 0,
-          final_total: order.final_total,
-          payment_method: order.payment_method,
-          amount_paid: order.amount_paid,
-          change_amount: order.change_amount,
-          status: order.status || "completed",
-        })
-        .select()
-        .single();
-
-      if (savedOrder) {
-        // Save order items
-        const orderItemsPayload = items.map((item: any) => ({
-          order_id: savedOrder.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          discount: item.discount || 0,
-          subtotal: item.subtotal,
-        }));
-
-        await supabase.from("order_items").insert(orderItemsPayload);
-
-        // Mark local as synced
-        const { markOrderSynced } = await import("@/lib/db");
-        await markOrderSynced(orderId);
-
-        synced = true;
-        return { orderId: savedOrder.id, synced: true };
-      }
+      const remoteOrderId = typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-0000-0000-0000-000000000000`;
+      const { data: savedOrderId, error } = await supabase.rpc("complete_order_transaction", {
+        p_order_id: remoteOrderId,
+        p_outlet_id: order.outlet_id,
+        p_cashier_id: order.cashier_id,
+        p_shift_id: order.shift_id || null,
+        p_service_mode: order.service_mode,
+        p_platform_name: order.platform_name || null,
+        p_platform_order_id: order.platform_order_id || null,
+        p_total: order.total,
+        p_discount: order.discount || 0,
+        p_final_total: order.final_total,
+        p_payment_method: order.payment_method,
+        p_amount_paid: order.amount_paid || 0,
+        p_change_amount: order.change_amount || 0,
+        p_items: items,
+        p_notes: order.notes || null,
+      });
+      if (error) throw error;
+      await removeLocalOrder(orderId);
+      return { orderId: String(savedOrderId || remoteOrderId), synced: true };
     } catch (err) {
-      console.error("[OfflineFirst] Supabase push failed, will sync later:", err);
+      const message = err instanceof Error ? err.message : String(err);
+      const isMissingAtomicFunction = /function.*does not exist|complete_order_transaction/i.test(message);
+      if (isMissingAtomicFunction) {
+        throw new Error("Database belum menjalankan migration-atomic-payment.sql");
+      }
+      const isBusinessFailure = /stok|jumlah|pembayaran|total transaksi/i.test(message);
+      if (isBusinessFailure) {
+        await removeLocalOrder(orderId);
+        throw new Error(message);
+      }
+      console.error("[OfflineFirst] Atomic payment unavailable, will retry:", err);
     }
   }
 

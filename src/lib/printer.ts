@@ -39,17 +39,33 @@ class ThermalPrinter {
   private async connectDevice(device: BluetoothDevice): Promise<boolean> {
     if (!device.gatt) return false;
     this.device = device;
+    device.addEventListener("gattserverdisconnected", () => {
+      this.isConnected = false;
+      this.characteristic = null;
+      this.server = null;
+    });
     this.server = await device.gatt.connect();
-    const services = await this.server.getPrimaryServices();
+    const preferredServiceIds = [
+      "000018f0-0000-1000-8000-00805f9b34fb",
+      "0000ffe0-0000-1000-8000-00805f9b34fb",
+      "0000fee7-0000-1000-8000-00805f9b34fb",
+    ];
+    const services: BluetoothRemoteGATTService[] = [];
+    for (const serviceId of preferredServiceIds) {
+      try { services.push(await this.server.getPrimaryService(serviceId)); } catch { /* not supported */ }
+    }
+    for (const service of await this.server.getPrimaryServices()) {
+      if (!services.some((candidate) => String(candidate.uuid).toLowerCase() === String(service.uuid).toLowerCase())) services.push(service);
+    }
     for (const service of services) {
       try {
         const chars = await service.getCharacteristics();
-        const writable = chars.find((char) => char.properties.write || char.properties.writeWithoutResponse);
+        const writable = chars.find((char) => char.properties.writeWithoutResponse) || chars.find((char) => char.properties.write);
         if (writable) {
           this.characteristic = writable;
           this.isConnected = true;
           localStorage.setItem(this.deviceKey, device.id);
-          console.log(`[Printer] Connected: ${device.name || "Unknown"}`);
+          console.log(`[Printer] Connected: ${device.name || "Unknown"} / service ${service.uuid} / characteristic ${writable.uuid}`);
           return true;
         }
       } catch { /* skip unsupported service */ }
@@ -104,7 +120,7 @@ class ThermalPrinter {
         try {
           const service = await server.getPrimaryService(uuid);
           const chars = await service.getCharacteristics();
-          this.characteristic = chars.find(c => c.properties.write || c.properties.writeWithoutResponse) || chars[0];
+          this.characteristic = chars.find(c => c.properties.writeWithoutResponse) || chars.find(c => c.properties.write) || chars[0];
           this.isConnected = true;
           if (this.device) localStorage.setItem(this.deviceKey, this.device.id);
           return true;
@@ -127,19 +143,23 @@ class ThermalPrinter {
   }
 
   private async send(data: number[]): Promise<void> {
-    if (!this.characteristic) throw new Error("Printer not connected");
+    const characteristic = this.characteristic;
+    if (!characteristic) throw new Error("Printer not connected");
     const buffer = new Uint8Array(data);
-    // Larger chunks for better throughput (BLE MTU is usually 244 on modern devices)
-    const CHUNK_SIZE = 128;
+    // Prefer the no-response write used by most BLE ESC/POS printers. Small
+    // chunks avoid overflowing inexpensive printer buffers.
+    const CHUNK_SIZE = 20;
+    const WRITE_TIMEOUT_MS = 4000;
     for (let i = 0; i < buffer.length; i += CHUNK_SIZE) {
       const chunk = buffer.slice(i, i + CHUNK_SIZE);
-      try {
-        await this.characteristic.writeValueWithoutResponse(chunk);
-      } catch {
-        await this.characteristic.writeValueWithResponse(chunk);
-      }
-      // Small delay between chunks to prevent buffer overflow
-      await new Promise(r => setTimeout(r, 10));
+      const write = characteristic.properties.writeWithoutResponse
+        ? characteristic.writeValueWithoutResponse(chunk)
+        : characteristic.writeValueWithResponse(chunk);
+      await Promise.race([
+        write,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Printer write timeout")), WRITE_TIMEOUT_MS)),
+      ]);
+      await new Promise(r => setTimeout(r, 25));
     }
   }
 
@@ -175,9 +195,9 @@ class ThermalPrinter {
   }
 
   async printReceipt(data: ReceiptData & { width?: number }, options: { allowPairing?: boolean } = {}): Promise<boolean> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !this.characteristic) {
       const connected = await this.connect({ requestPermission: options.allowPairing !== false });
-      if (!connected) return false;
+      if (!connected || !this.characteristic) return false;
     }
 
     try {
@@ -217,6 +237,8 @@ class ThermalPrinter {
       return true;
     } catch (err) {
       console.error("Print error:", err);
+      this.isConnected = false;
+      this.characteristic = null;
       return false;
     }
   }

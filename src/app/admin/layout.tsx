@@ -32,6 +32,7 @@ const NAV_SECTIONS = [
     items: [
       { href: "/admin/production", label: "Produksi", icon: "🏭" },
       { href: "/admin/stock", label: "Stok", icon: "📊" },
+      { href: "/admin/stock-opname", label: "Stock Opname", icon: "📋" },
       { href: "/admin/shifts", label: "Riwayat Shift", icon: "🔄" },
     ],
   },

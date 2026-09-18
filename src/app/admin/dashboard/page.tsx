@@ -80,6 +80,7 @@ export default function DashboardPage() {
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [stockAlerts, setStockAlerts] = useState<any[]>([]);
   const [salesByPayment, setSalesByPayment] = useState<{ method: string; amount: number; pct: number }[]>([]);
+  const [busyHours, setBusyHours] = useState<{ hour: string; orders: number; revenue: number }[]>(BUSY_HOURS_MOCK);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -113,7 +114,15 @@ export default function DashboardPage() {
         .eq("status", "completed");
 
       const allOrders = orders || [];
-      const totalRevenue = allOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+      const hourMap: Record<string, { orders: number; revenue: number }> = {};
+      for (let hour = 0; hour < 24; hour += 1) hourMap[String(hour).padStart(2, "0")] = { orders: 0, revenue: 0 };
+      allOrders.forEach((order: any) => {
+        const hour = new Date(order.created_at).getHours().toString().padStart(2, "0");
+        hourMap[hour].orders += 1;
+        hourMap[hour].revenue += Number(order.final_total || order.total || 0);
+      });
+      setBusyHours(Object.entries(hourMap).map(([hour, value]) => ({ hour, ...value })));
+      const totalRevenue = allOrders.reduce((sum: number, o: any) => sum + (o.final_total || o.total || 0), 0);
       const totalHPP = allOrders.reduce((sum: number, o: any) => sum + (o.hpp_total || 0), 0);
 
       setStats({
@@ -179,7 +188,7 @@ export default function DashboardPage() {
 
   // Get chart data based on filter
   function getChartData() {
-    if (timeFilter === "today") return { type: "busy_hours" as const, data: BUSY_HOURS_MOCK };
+    if (timeFilter === "today") return { type: "busy_hours" as const, data: busyHours };
     if (timeFilter === "week") return { type: "bar" as const, data: WEEKLY_SALES_MOCK };
     if (timeFilter === "month") return { type: "bar" as const, data: MONTHLY_SALES_MOCK.map(d => ({ label: d.week, value: d.value })) };
     return { type: "bar" as const, data: YEARLY_SALES_MOCK.map(d => ({ label: d.month, value: d.value })) };
@@ -187,8 +196,8 @@ export default function DashboardPage() {
 
   const chartData = getChartData();
 
-  // Find peak hour
-  const peakHour = BUSY_HOURS_MOCK.reduce((max, h) => h.orders > max.orders ? h : max, BUSY_HOURS_MOCK[0]);
+  // Find peak hour from the selected period; today's chart is real order data.
+  const peakHour = busyHours.reduce((max, h) => h.orders > max.orders ? h : max, busyHours[0] || BUSY_HOURS_MOCK[0]);
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 dark:text-gray-100">
@@ -349,8 +358,8 @@ export default function DashboardPage() {
         {chartData.type === "busy_hours" ? (
           /* Busy Hours Chart - vertical bars with peak highlight */
           <div className="flex items-end gap-1 h-48 md:h-56">
-            {BUSY_HOURS_MOCK.map((h) => {
-              const maxOrders = Math.max(...BUSY_HOURS_MOCK.map((d) => d.orders));
+            {busyHours.map((h) => {
+              const maxOrders = Math.max(...busyHours.map((d) => d.orders), 1);
               const height = maxOrders > 0 ? (h.orders / maxOrders) * 100 : 0;
               const isPeak = h.hour === peakHour.hour;
               const isHigh = h.orders >= maxOrders * 0.75;

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useShiftStore } from "@/stores/shiftStore";
+import SyncStatusBadge from "@/components/kasir/SyncStatusBadge";
 
 interface Props {
   isOnline: boolean;
@@ -27,6 +28,7 @@ export default function POSHeader({ isOnline, dataReady, onOpenCashInOut, onOpen
         {!dataReady && (
           <span className="text-[9px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-medium animate-pulse">Syncing...</span>
         )}
+        <SyncStatusBadge />
       </div>
       <div className="flex items-center gap-1 sm:gap-2">
         <div className="flex items-center gap-1">

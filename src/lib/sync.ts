@@ -35,64 +35,44 @@ export async function syncToSupabase(): Promise<{ synced: number; errors: number
     
     for (const order of unsyncedOrders) {
       try {
-        // Skip local-only IDs (start with "local-")
-        const isLocalId = order.id.startsWith("local-");
-        
-        const orderPayload = {
-          id: isLocalId ? undefined : order.id, // Let Supabase generate UUID for local orders
-          outlet_id: order.outlet_id,
-          cashier_id: order.cashier_id,
-          shift_id: order.shift_id || null,
-          service_mode: order.service_mode,
-          platform_name: order.platform_name,
-          platform_order_id: order.platform_order_id,
-          total: order.total,
-          discount: order.discount,
-          final_total: order.final_total,
-          payment_method: order.payment_method,
-          amount_paid: order.amount_paid,
-          change_amount: order.change_amount,
-          status: order.status,
-          created_at: order.created_at,
-        };
-
-        const { data: savedOrder, error: orderError } = await supabaseClient
-          .from("orders")
-          .upsert(orderPayload, { onConflict: "id" })
-          .select()
-          .single();
-
-        if (orderError) throw orderError;
-
-        // Sync order items
         const orderItems = await db.orderItems
           .where("order_id")
           .equals(order.id)
           .and((item) => !item.synced)
           .toArray();
-
-        if (orderItems.length > 0) {
-          const itemsPayload = orderItems.map((item) => ({
-            order_id: savedOrder?.id || order.id,
-            product_id: item.product_id,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            discount: item.discount,
-            subtotal: item.subtotal,
-          }));
-
-          const { error: itemsError } = await supabaseClient
-            .from("order_items")
-            .upsert(itemsPayload);
-
-          if (itemsError) throw itemsError;
-        }
-
-        // Mark as synced
-        await markOrderSynced(order.id);
+        const remoteOrderId = crypto.randomUUID();
+        const { error: orderError } = await supabaseClient.rpc("complete_order_transaction", {
+          p_order_id: remoteOrderId,
+          p_outlet_id: order.outlet_id,
+          p_cashier_id: order.cashier_id,
+          p_shift_id: order.shift_id || null,
+          p_service_mode: order.service_mode,
+          p_platform_name: order.platform_name || null,
+          p_platform_order_id: order.platform_order_id || null,
+          p_total: order.total,
+          p_discount: order.discount || 0,
+          p_final_total: order.final_total,
+          p_payment_method: order.payment_method,
+          p_amount_paid: order.amount_paid || 0,
+          p_change_amount: order.change_amount || 0,
+          p_items: orderItems,
+          p_notes: null,
+        });
+        if (orderError) throw orderError;
+        await db.transaction("rw", [db.orders, db.orderItems], async () => {
+          await db.orderItems.where("order_id").equals(order.id).delete();
+          await db.orders.delete(order.id);
+        });
         synced++;
         console.log(`[Sync] Order ${order.id} synced`);
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await db.orders.update(order.id, {
+          sync_status: "failed",
+          sync_attempts: (order.sync_attempts || 0) + 1,
+          last_sync_error: message,
+          last_sync_at: new Date().toISOString(),
+        });
         console.error(`[Sync] Failed to sync order ${order.id}:`, err);
         errors++;
       }
@@ -129,6 +109,13 @@ export async function syncToSupabase(): Promise<{ synced: number; errors: number
         synced++;
         console.log(`[Sync] Shift ${shift.id} synced`);
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await db.shifts.update(shift.id, {
+          sync_status: "failed",
+          sync_attempts: (shift as any).sync_attempts ? (shift as any).sync_attempts + 1 : 1,
+          last_sync_error: message,
+          last_sync_at: new Date().toISOString(),
+        } as any);
         console.error(`[Sync] Failed to sync shift ${shift.id}:`, err);
         errors++;
       }

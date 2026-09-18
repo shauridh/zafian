@@ -159,75 +159,29 @@ export default function ProductionPage() {
     } finally { setSavingRecipe(false); }
   };
 
-  // Start production
+  // Start production through the atomic database function. This prevents a
+  // partial batch when one ingredient is short or a stock write fails.
   const handleStartProduction = async () => {
     if (!selectedRecipe || batchQty < 1) return;
     setProducing(true);
 
     try {
-      // 1. Create production_order
-      const { data: prodOrder, error: prodError } = await supabase
-        .from("production_orders")
-        .insert({
-          outlet_id: OUTLET_ID,
-          recipe_id: selectedRecipe.id,
-          input_quantity: batchQty,
-          status: "completed",
-          completed_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      const { data: prodOrderId, error: productionError } = await supabase.rpc("complete_production", {
+        p_outlet_id: OUTLET_ID,
+        p_recipe_id: selectedRecipe.id,
+        p_batch_quantity: batchQty,
+        p_actor_id: null,
+        p_notes: `Produksi: ${selectedRecipe.name} × ${batchQty}`,
+      });
+      if (productionError) throw productionError;
 
-      if (prodError) throw prodError;
-
-      // 2. Update finished_goods for each output
-      for (const output of selectedRecipe.outputs) {
-        const producedQty = output.quantity * batchQty;
-
-        // Get current stock
-        const { data: existing } = await supabase
-          .from("finished_goods")
-          .select("quantity")
-          .eq("product_id", output.product_id)
-          .eq("outlet_id", OUTLET_ID)
-          .single();
-
-        const currentQty = existing?.quantity || 0;
-        const newQty = currentQty + producedQty;
-
-        // Upsert finished_goods
-        await supabase.from("finished_goods").upsert(
-          {
-            product_id: output.product_id,
-            outlet_id: OUTLET_ID,
-            quantity: newQty,
-            min_quantity: 10,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "product_id,outlet_id" }
-        );
-
-        // Log to stock_ledger
-        await supabase.from("stock_ledger").insert({
-          product_id: output.product_id,
-          type: "production_in",
-          quantity: producedQty,
-          reference_type: "production_order",
-          reference_id: prodOrder?.id,
-          notes: `Produksi: ${selectedRecipe.name} × ${batchQty}`,
-          outlet_id: OUTLET_ID,
-          created_at: new Date().toISOString(),
-        });
-      }
-
-      // 3. Log production history
       const outputsSummary = selectedRecipe.outputs
         .map((o) => `${o.product_name}: ${o.quantity * batchQty}`)
         .join(", ");
 
       setProductionHistory((prev) => [
         {
-          id: prodOrder?.id || Date.now().toString(),
+          id: prodOrderId || Date.now().toString(),
           recipe_name: selectedRecipe.name,
           input_quantity: batchQty,
           status: "completed",

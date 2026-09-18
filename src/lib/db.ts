@@ -57,6 +57,8 @@ export interface DBShift {
   synced: boolean;
 }
 
+export type SyncStatus = "pending" | "syncing" | "synced" | "failed";
+
 export interface DBOrder {
   id: string;
   shift_id?: string;
@@ -73,6 +75,10 @@ export interface DBOrder {
   change_amount: number;
   status: string;
   synced: boolean;
+  sync_status?: SyncStatus;
+  sync_attempts?: number;
+  last_sync_error?: string;
+  last_sync_at?: string;
   created_at: string;
 }
 
@@ -237,6 +243,14 @@ export async function getUnsyncedOrders() {
  */
 export async function getUnsyncedOrderItems(orderId: string) {
   return db.orderItems.where({ order_id: orderId, synced: false }).toArray();
+}
+
+/** Remove a local order after it has been committed atomically online. */
+export async function removeLocalOrder(orderId: string) {
+  await db.transaction("rw", [db.orders, db.orderItems], async () => {
+    await db.orderItems.where("order_id").equals(orderId).delete();
+    await db.orders.delete(orderId);
+  });
 }
 
 /**

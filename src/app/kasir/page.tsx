@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
+import { db } from "@/lib/db";
 import ThemeToggle from "@/components/ThemeToggle";
 import CategoryBar from "@/components/kasir/CategoryBar";
 import ProductGrid from "@/components/kasir/ProductGrid";
@@ -42,6 +44,8 @@ export default function KasirPage() {
   const [showCashInOut, setShowCashInOut] = useState(false);
   const [showPreOrder, setShowPreOrder] = useState(false);
   const [preOrder, setPreOrder] = useState<PreOrderData>(EMPTY_PREORDER);
+  const [showBestSellers, setShowBestSellers] = useState(false);
+  const [bestSellerCounts, setBestSellerCounts] = useState<Record<string, number>>({});
 
   const isOnline = useOnlineStatus();
   const { categories: dbCategories, loading: catLoading } = useOfflineCategories();
@@ -59,6 +63,36 @@ export default function KasirPage() {
     }
   }, [isShiftOpen, router]);
 
+  // Load completed quantities for the active shift. Local Dexie keeps this
+  // working offline; Supabase fills in orders synced from the current shift.
+  React.useEffect(() => {
+    let cancelled = false;
+    async function loadBestSellers() {
+      if (!shiftId) { setBestSellerCounts({}); return; }
+      const counts: Record<string, number> = {};
+      try {
+        const localOrders = await db.orders.where("shift_id").equals(shiftId).filter((order) => order.status === "completed").toArray();
+        const localIds = localOrders.map((order) => order.id);
+        if (localIds.length) {
+          const localItems = await db.orderItems.where("order_id").anyOf(localIds).toArray();
+          localItems.forEach((item) => { counts[item.product_id] = (counts[item.product_id] || 0) + item.quantity; });
+        }
+
+        const { data: remoteOrders } = await supabase.from("orders").select("id").eq("shift_id", shiftId).eq("status", "completed");
+        const remoteIds = (remoteOrders || []).map((order) => order.id);
+        if (remoteIds.length) {
+          const { data: remoteItems } = await supabase.from("order_items").select("product_id,quantity").in("order_id", remoteIds);
+          (remoteItems || []).forEach((item) => { counts[item.product_id] = (counts[item.product_id] || 0) + Number(item.quantity || 0); });
+        }
+      } catch (error) {
+        console.warn("Best seller data unavailable:", error);
+      }
+      if (!cancelled) setBestSellerCounts(counts);
+    }
+    void loadBestSellers();
+    return () => { cancelled = true; };
+  }, [shiftId, isShiftOpen]);
+
   const stockMap = useMemo(() => {
     const map: Record<string, number> = {};
     dbProducts.forEach((p, i) => {
@@ -73,19 +107,31 @@ export default function KasirPage() {
   }, [dbProducts, stock]);
 
   const filteredProducts = useMemo(() => {
-    const list = allProducts.filter((p) => p.is_active);
+    let list = allProducts.filter((p) => p.is_active);
     if (searchQuery) {
-      return list.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku?.toLowerCase().includes(searchQuery.toLowerCase()));
+      list = list.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku?.toLowerCase().includes(searchQuery.toLowerCase()));
     }
     if (selectedCategory) {
       return list.filter((p) => p.category_id === selectedCategory);
     }
+    if (showBestSellers) {
+      const ranked = list.filter((product) => (bestSellerCounts[product.id] || 0) > 0).sort((a, b) => (bestSellerCounts[b.id] || 0) - (bestSellerCounts[a.id] || 0));
+      return ranked.length ? ranked.slice(0, 8) : list;
+    }
     return list;
-  }, [allProducts, selectedCategory, searchQuery]);
+  }, [allProducts, selectedCategory, searchQuery, showBestSellers, bestSellerCounts]);
 
   const handleProductSelect = (product: Product) => {
     if ((stockMap[product.id] ?? 0) <= 0) return;
     addItem({ id: product.id, product_id: product.id, name: product.name, price: product.price, image_url: product.image_url });
+  };
+
+  const recordShiftSale = () => {
+    setBestSellerCounts((current) => {
+      const next = { ...current };
+      items.forEach((item) => { next[item.product_id] = (next[item.product_id] || 0) + item.quantity; });
+      return next;
+    });
   };
 
   const handlePaymentComplete = async (method: string, amountPaid: number) => {
@@ -116,18 +162,16 @@ export default function KasirPage() {
       const newStock = { ...stockMap };
       items.forEach((item) => { if (newStock[item.product_id] !== undefined) newStock[item.product_id] = Math.max(0, newStock[item.product_id] - item.quantity); });
       setStock(newStock);
+      recordShiftSale();
       setPaymentResult({ method: finalMethod, amountPaid: finalAmountPaid, change: finalChange });
       setShowPayment(false);
       setShowReceipt(true);
       setOrderNumber((n) => n + 1);
     } catch (err: any) {
-      const newStock = { ...stockMap };
-      items.forEach((item) => { if (newStock[item.product_id] !== undefined) newStock[item.product_id] = Math.max(0, newStock[item.product_id] - item.quantity); });
-      setStock(newStock);
-      setPaymentResult({ method: finalMethod, amountPaid: finalAmountPaid, change: finalChange });
-      setShowPayment(false);
-      setShowReceipt(true);
-      setOrderNumber((n) => n + 1);
+      // Never show a successful receipt when the atomic transaction rejected.
+      // Network errors remain in Dexie for retry, while stock/business errors
+      // are surfaced here and the cart stays intact for correction.
+      alert(`Pembayaran belum tersimpan: ${err?.message || "periksa koneksi dan stok produk"}`);
     } finally { setSaving(false); }
   };
 
@@ -135,21 +179,24 @@ export default function KasirPage() {
     if (items.length === 0) return alert("Keranjang kosong!");
     setSaving(true);
     try {
-      const orderItems = items.map((item) => ({ product_id: item.product_id, quantity: item.quantity, unit_price: item.price, discount: 0, subtotal: item.price * item.quantity }));
-      const { orderId } = await saveOrderOfflineFirst(
-        {
-          outlet_id: "00000000-0000-0000-0000-000000000001",
-          cashier_id: useShiftStore.getState().cashierId || "",
-          shift_id: useShiftStore.getState().shiftId,
-          service_mode: serviceMode, total: getTotal(), final_total: getTotal(), payment_method: "pending", amount_paid: 0, change_amount: 0, status: "saved",
-          customer_name: preOrder.isPreOrder ? preOrder.eventName : undefined,
-          notes: preOrder.isPreOrder ? `Pre-Order: ${preOrder.eventName} | DP: ${preOrder.dpAmount}` : undefined,
-        }, orderItems
-      );
-      alert(`Pesanan tersimpan! ID: ${orderId.slice(0, 8)}...`);
+      const payload = {
+        items: items.map((item) => ({ product_id: item.product_id, name: item.name, quantity: item.quantity, unit_price: item.price, subtotal: item.price * item.quantity })),
+        service_mode: serviceMode,
+        total: getTotal(),
+        pre_order: preOrder.isPreOrder ? preOrder : null,
+      };
+      const { data, error } = await supabase.from("saved_orders").insert({
+        outlet_id: "00000000-0000-0000-0000-000000000001",
+        shift_id: useShiftStore.getState().shiftId,
+        cashier_id: useShiftStore.getState().cashierId || null,
+        label: preOrder.isPreOrder ? preOrder.eventName : `Bill ${new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`,
+        payload,
+      }).select("id").single();
+      if (error) throw error;
+      alert(`Pesanan tersimpan! ID: ${data.id.slice(0, 8)}...`);
       clearCart();
       setPreOrder(EMPTY_PREORDER);
-    } catch (err: any) { alert("Gagal menyimpan: " + err.message); } finally { setSaving(false); }
+    } catch (err: any) { alert("Gagal menyimpan bill: " + (err?.message || "database belum menjalankan migration phase-1-5")); } finally { setSaving(false); }
   };
 
   const dataReady = !catLoading && !prodLoading;
@@ -179,7 +226,7 @@ export default function KasirPage() {
                 <input type="text" placeholder="Cari produk..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-8 pr-3 py-1.5 sm:py-2 rounded-lg border border-gray-200 dark:border-[#444] bg-white dark:bg-[#262626] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sabana text-xs sm:text-sm" />
               </div>
             )}
-            <CategoryBar categories={categories} selectedId={selectedCategory} onSelect={(id) => { setSelectedCategory(id); setSearchQuery(""); }} />
+            <CategoryBar categories={categories} selectedId={selectedCategory} onSelect={(id) => { setSelectedCategory(id); setSearchQuery(""); if (id !== null) setShowBestSellers(false); }} showBestSellers={showBestSellers} onToggleBestSellers={() => setShowBestSellers((active) => !active)} bestSellerCount={Object.keys(bestSellerCounts).length} />
           </div>
 
           {/* Product grid */}

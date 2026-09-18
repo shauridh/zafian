@@ -68,26 +68,39 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
     else if (enough) onComplete("cash", paid);
   }, [isOnlineFood, pm, enough, fTotal, total, paid, onComplete]);
 
+  const withPrintTimeout = <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => Promise.race([
+    promise,
+    new Promise<T>((_, reject) => window.setTimeout(() => reject(new Error("Waktu koneksi printer habis")), timeoutMs)),
+  ]);
+
   const doPrintBT = async (automatic = false) => {
-    setPrinting(true); setPrintSt("idle");
+    // Automatic printing must never block the cashier-facing action button.
+    // Manual printing still shows a busy state while the printer responds.
+    if (!automatic) setPrinting(true);
+    setPrintSt("idle");
     try {
       const p = getPrinter();
-      if (!(await p.connect({ requestPermission: !automatic }))) { setPrintSt("err"); setTimeout(() => setPrintSt("idle"), 2000); return; }
-      if (!paymentResult) return;
-      const ok = await p.printReceipt({
-        items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
-        subtotal: total, discount: promo?.discount_amount, total,
-        amountPaid: paymentResult.amountPaid, change: paymentResult.change,
-        paymentMethod: paymentResult.method, cashierName: cashierName || "Kasir",
-        serviceMode: SERVICE_MODE_LABELS[serviceMode] || serviceMode,
-        orderNumber: savedOrderId || `#${orderNumber}`, date: formatDateTime(new Date()),
-        outletName: rSettings.outletName, outletAddress: rSettings.outletAddress, outletPhone: rSettings.outletPhone,
-        footer: rSettings.footer,
-      });
-      setPrintSt(ok ? "ok" : "err");
+      const connected = await withPrintTimeout(p.connect({ requestPermission: !automatic }), automatic ? 2500 : 10000);
+      if (!connected || !paymentResult) {
+        setPrintSt("err");
+      } else {
+        const ok = await withPrintTimeout(p.printReceipt({
+          items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
+          subtotal: total, discount: promo?.discount_amount, total,
+          amountPaid: paymentResult.amountPaid, change: paymentResult.change,
+          paymentMethod: paymentResult.method, cashierName: cashierName || "Kasir",
+          serviceMode: SERVICE_MODE_LABELS[serviceMode] || serviceMode,
+          orderNumber: savedOrderId || `#${orderNumber}`, date: formatDateTime(new Date()),
+          outletName: rSettings.outletName, outletAddress: rSettings.outletAddress, outletPhone: rSettings.outletPhone,
+          footer: rSettings.footer,
+        }), automatic ? 10000 : 20000);
+        setPrintSt(ok ? "ok" : "err");
+      }
     } catch { setPrintSt("err"); }
-    setTimeout(() => setPrintSt("idle"), 2000);
-    setPrinting(false);
+    finally {
+      setTimeout(() => setPrintSt("idle"), 2000);
+      setPrinting(false);
+    }
   };
 
   const shareReceipt = async () => {
@@ -169,8 +182,8 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={hasBT ? () => void doPrintBT() : () => window.print()} disabled={printing} className={clsx("rounded-xl py-2.5 text-[10px] font-bold transition-all", printSt === "ok" ? "bg-green-500 text-white" : printSt === "err" ? "bg-red-500 text-white" : "bg-sabana text-white shadow-lg shadow-sabana/30")}>
-                {printSt === "ok" ? "✅ Tercetak" : printing ? "Mencetak..." : hasBT ? "🖨️ Print BT" : "🖨️ Print"}
+              <button onClick={hasBT ? () => void doPrintBT() : () => window.print()} disabled={printing} aria-busy={printing} className={clsx("rounded-xl py-2.5 text-[10px] font-bold transition-all", printSt === "ok" ? "bg-green-500 text-white" : printSt === "err" ? "bg-red-500 text-white" : "bg-sabana text-white shadow-lg shadow-sabana/30")}>
+                {printSt === "ok" ? "✅ Tercetak" : printSt === "err" ? "⚠️ Print gagal" : hasBT ? "🖨️ Print BT" : "🖨️ Print"}
               </button>
               <button onClick={shareReceipt} className={clsx("rounded-xl py-2.5 text-[10px] font-bold", shareStatus === "ok" ? "bg-green-100 text-green-700" : shareStatus === "err" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600 dark:bg-[#333] dark:text-gray-300")}>
                 {shareStatus === "ok" ? "✅ Tersalin" : shareStatus === "err" ? "Gagal" : "📤 Bagikan"}

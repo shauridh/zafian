@@ -59,6 +59,9 @@ export default function SettingsPage() {
         const { data: outletData } = await supabase.from("outlets").select("*").eq("id", "00000000-0000-0000-0000-000000000001").single();
         if (outletData) setOutlet(outletData);
         setPrinterStatus(isBluetoothAvailable() ? "available" : "unavailable");
+        if (isBluetoothAvailable()) {
+          void getPrinter().reconnect().then((connected) => setPrinterConnected(connected));
+        }
         const s = localStorage.getItem("sabana-app-settings");
         if (s) { const p = JSON.parse(s); setReceiptData((r) => ({ ...r, footer: p.receipt_footer || r.footer })); setBrandColor(p.brand_color || "#F97316"); setBrandColorDark(p.brand_color_dark || "#F97316"); }
         const f = localStorage.getItem("sabana-features");
@@ -91,14 +94,15 @@ export default function SettingsPage() {
     const printer = getPrinter();
     if (!printerConnected) { alert("Hubungkan printer terlebih dahulu!"); return; }
     try {
-      await printer.printReceipt({
+      const ok = await printer.printReceipt({
         items: [{ name: "Ayam Reguler", qty: 1, price: 89000 }, { name: "Nasi Putih", qty: 2, price: 5000 }, { name: "Kentang Goreng", qty: 1, price: 8000 }],
         subtotal: 107000, total: 107000, amountPaid: 110000, change: 3000,
         paymentMethod: "Tunai", cashierName: "Sabana", serviceMode: "Dine In", orderNumber: "TEST-001",
         date: new Date().toLocaleString("id-ID"), outletName: receiptData.outletName,
         outletAddress: receiptData.outletAddress, outletPhone: receiptData.outletPhone,
       });
-      alert("✅ Test print berhasil!");
+      setPrinterConnected(ok);
+      alert(ok ? "✅ Test print berhasil dikirim ke printer." : "❌ Data tidak berhasil dikirim. Periksa printer, koneksi, dan characteristic BLE.");
     } catch (e: any) { alert("Gagal cetak: " + e.message); }
   };
 
