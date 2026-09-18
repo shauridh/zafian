@@ -53,6 +53,7 @@ export default function ProductsPage() {
     is_active: true,
     is_available: true,
   });
+  const [filters, setFilters] = useState({ name: "", category: "", sku: "", status: "" });
 
   const resetForm = () => {
     setFormData({
@@ -141,6 +142,14 @@ export default function ProductsPage() {
   };
 
   const getCategoryName = (id: string) => categories.find((c) => c.id === id)?.name || "-";
+  const filteredProducts = products.filter((product) => {
+    const category = getCategoryName(product.category_id).toLowerCase();
+    const status = product.is_active ? "aktif" : "nonaktif";
+    return product.name.toLowerCase().includes(filters.name.toLowerCase())
+      && category.includes(filters.category.toLowerCase())
+      && (product.sku || "").toLowerCase().includes(filters.sku.toLowerCase())
+      && (!filters.status || status === filters.status);
+  });
 
   return (
     <div className="p-6">
@@ -246,17 +255,17 @@ export default function ProductsPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Gambar</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Nama</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Kategori</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Nama<input aria-label="Filter nama produk" value={filters.name} onChange={(e) => setFilters({ ...filters, name: e.target.value })} placeholder="Cari nama" className="mt-1 w-full min-w-28 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Kategori<input aria-label="Filter kategori produk" value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })} placeholder="Cari kategori" className="mt-1 w-full min-w-28 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Harga</th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">HPP</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">SKU</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">SKU<input aria-label="Filter SKU produk" value={filters.sku} onChange={(e) => setFilters({ ...filters, sku: e.target.value })} placeholder="Cari SKU" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Status<select aria-label="Filter status produk" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana"><option value="">Semua</option><option value="aktif">Aktif</option><option value="nonaktif">Nonaktif</option></select></th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3">
                       {product.image_url ? (
@@ -286,6 +295,7 @@ export default function ProductsPage() {
                     </td>
                   </tr>
                 ))}
+                {filteredProducts.length === 0 && <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-400">Tidak ada produk yang sesuai filter.</td></tr>}
               </tbody>
             </table>
           </div>

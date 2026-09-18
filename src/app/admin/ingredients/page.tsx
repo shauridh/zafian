@@ -38,6 +38,7 @@ export default function IngredientsPage() {
   const [formData, setFormData] = useState({
     name: "", sku: "", unit: "pack", purchase_unit: "pack", usage_unit: "gram", conversion_factor: 1, purchase_price: 0, stock_quantity: 0, min_stock: 0, supplier: "",
   });
+  const [filters, setFilters] = useState({ name: "", sku: "", unit: "", status: "", supplier: "" });
 
   const resetForm = () => {
     setFormData({ name: "", sku: "", unit: "pack", purchase_unit: "pack", usage_unit: "gram", conversion_factor: 1, purchase_price: 0, stock_quantity: 0, min_stock: 0, supplier: "" });
@@ -75,6 +76,15 @@ export default function IngredientsPage() {
     if (item.stock_quantity <= item.min_stock) return { label: "Rendah", color: "bg-yellow-100 text-yellow-700" };
     return { label: "Cukup", color: "bg-green-100 text-green-700" };
   };
+
+  const filteredIngredients = ingredients.filter((item) => {
+    const status = getStockStatus(item).label.toLowerCase();
+    return item.name.toLowerCase().includes(filters.name.toLowerCase())
+      && (item.sku || "").toLowerCase().includes(filters.sku.toLowerCase())
+      && `${item.purchase_unit || item.unit} ${item.usage_unit || item.unit}`.toLowerCase().includes(filters.unit.toLowerCase())
+      && status.includes(filters.status.toLowerCase())
+      && (item.supplier || "").toLowerCase().includes(filters.supplier.toLowerCase());
+  });
 
   const handleBulkFile = async (file: File | undefined) => {
     if (!file) return;
@@ -156,7 +166,7 @@ export default function IngredientsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Satuan *</label>
-              <select value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sabana">
+              <select value={formData.purchase_unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value, purchase_unit: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sabana">
                 <option value="pack">Pack</option>
                 <option value="pouch">Pouch</option>
                 <option value="kg">Kg</option>
@@ -212,20 +222,20 @@ export default function IngredientsPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Nama</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">SKU</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Konversi</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Nama<input aria-label="Filter nama bahan baku" value={filters.name} onChange={(e) => setFilters({ ...filters, name: e.target.value })} placeholder="Cari nama" className="mt-1 w-full min-w-28 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">SKU<input aria-label="Filter SKU bahan baku" value={filters.sku} onChange={(e) => setFilters({ ...filters, sku: e.target.value })} placeholder="Cari SKU" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Konversi<input aria-label="Filter satuan bahan baku" value={filters.unit} onChange={(e) => setFilters({ ...filters, unit: e.target.value })} placeholder="Satuan" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">HPP / Satuan Resep</th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Harga Beli</th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Stok</th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Min Stok</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Supplier</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Status<input aria-label="Filter status stok bahan baku" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} placeholder="Cukup / habis" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Supplier<input aria-label="Filter supplier bahan baku" value={filters.supplier} onChange={(e) => setFilters({ ...filters, supplier: e.target.value })} placeholder="Cari supplier" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {ingredients.map((item) => {
+                {filteredIngredients.map((item) => {
                   const status = getStockStatus(item);
                   return (
                     <tr key={item.id} className="hover:bg-gray-50 transition-colors">
@@ -250,7 +260,10 @@ export default function IngredientsPage() {
                   );
                 })}
                 {ingredients.length === 0 && (
-                  <tr><td colSpan={9} className="px-6 py-12 text-center text-gray-400">Belum ada bahan baku. Klik "Tambah Bahan Baku" untuk menambahkan.</td></tr>
+                  <tr><td colSpan={10} className="px-6 py-12 text-center text-gray-400">Belum ada bahan baku. Klik "Tambah Bahan Baku" untuk menambahkan.</td></tr>
+                )}
+                {ingredients.length > 0 && filteredIngredients.length === 0 && (
+                  <tr><td colSpan={10} className="px-6 py-10 text-center text-sm text-gray-400">Tidak ada bahan baku yang sesuai filter.</td></tr>
                 )}
               </tbody>
             </table>
