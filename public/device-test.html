@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Device Test — Redmi Pad 2 / MatePad 11</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #111; color: #eee; margin: 0; padding: 16px; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .sub { font-size: 12px; color: #999; margin-bottom: 12px; }
+  .row { display: flex; gap: 24px; align-items: flex-start; }
+  .frame-box { border: 1px solid #444; padding: 8px; }
+  .frame-box h2 { font-size: 13px; margin: 0 0 6px; color: #7fd17f; }
+  iframe { border: 0; background: #fff; transform-origin: top left; }
+  pre { font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
+  .ok { color: #7fd17f; } .bad { color: #ff7f7f; } .warn { color: #ffd17f; }
+</style>
+</head>
+<body>
+<h1>Device Test — dimensi tablet asli (CSS viewport)</h1>
+<div class="sub">Redmi Pad 2 / MatePad 11: 800×1280 portrait · 1280×800 landscape. Alur nyata dijalankan di dalam tiap iframe.</div>
+<div class="row">
+  <div class="frame-box">
+    <h2>800 × 1280 (portrait)</h2>
+    <iframe id="fPortrait" width="800" height="1280" style="transform: scale(0.4);"></iframe>
+  </div>
+  <div class="frame-box">
+    <h2>1280 × 800 (landscape)</h2>
+    <iframe id="fLandscape" width="1280" height="800" style="transform: scale(0.4);"></iframe>
+  </div>
+</div>
+<pre id="out">Menjalankan…</pre>
+<script>
+(function () {
+  // ---- Seed shift store (localStorage dibagi per-origin, seed sebelum app boot) ----
+  localStorage.setItem("sabana-shift-store", JSON.stringify({
+    state: { isShiftOpen: true, shiftId: "SH-DEVTEST", cashierId: "30000000-0000-0000-0000-000000000001",
+             cashierName: "Sabana", openingFloat: 350000, openedAt: new Date().toISOString() },
+    version: 0
+  }));
+  // Bersihkan cart dari sesi sebelumnya
+  localStorage.removeItem("sabana-cart-store");
+
+  var out = [];
+  function log(s, cls) { out.push('<span class="' + (cls || '') + '">' + s + '</span>'); document.getElementById('out').innerHTML = out.join('\n'); }
+
+  function qByText(root, text, tag) {
+    var els = root.querySelectorAll(tag || 'button');
+    for (var i = 0; i < els.length; i++) {
+      var r = els[i].getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && els[i].textContent.trim().indexOf(text) !== -1) return els[i];
+    }
+    return null;
+  }
+  function waitFor(fn, timeout, label) {
+    return new Promise(function (res, rej) {
+      var t0 = Date.now();
+      (function poll() {
+        var v;
+        try { v = fn(); } catch (e) { v = null; }
+        if (v) return res(v);
+        if (Date.now() - t0 > timeout) return rej(new Error('timeout: ' + label));
+        setTimeout(poll, 250);
+      })();
+    });
+  }
+
+  function measureModal(doc, W, H) {
+    var r = { W: W, H: H };
+    // Horizontal overflow di halaman POS
+    r.posHScroll = doc.documentElement.scrollWidth > doc.documentElement.clientWidth + 1;
+    r.posScrollW = doc.documentElement.scrollWidth;
+    // Modal pembayaran
+    var modal = doc.querySelector('[class*="fixed"][class*="inset-0"]');
+    if (!modal) return { error: 'modal tidak ditemukan' };
+    var panel = modal.querySelector('.relative');
+    var pr = panel ? panel.getBoundingClientRect() : null;
+    r.modalFits = pr ? (pr.width <= W + 1 && pr.height <= H + 1) : null;
+    r.modalRect = pr ? { x: Math.round(pr.x), y: Math.round(pr.y), w: Math.round(pr.width), h: Math.round(pr.height) } : null;
+    // Scroll di dalam panel kiri (payment) & kanan (receipt)
+    var scrollables = [];
+    panel && panel.querySelectorAll('*').forEach(function (el) {
+      if (el.scrollHeight > el.clientHeight + 2 && el.clientHeight > 40 &&
+          /(auto|scroll)/.test(getComputedStyle(el).overflowY)) {
+        scrollables.push({ tag: el.className.slice(0, 40), sh: el.scrollHeight, ch: el.clientHeight });
+      }
+    });
+    r.innerScrollables = scrollables;
+    // Tombol aksi utama setelah bayar ("Transaksi Baru") — harus fully visible
+    var tb = qByText(doc, 'Transaksi Baru');
+    if (tb) {
+      var tr = tb.getBoundingClientRect();
+      r.primaryAction = { text: 'Transaksi Baru', fullyVisible: tr.y >= 0 && tr.bottom <= H + 1 && tr.x >= 0 && tr.right <= W + 1 };
+    }
+    // Panel struk setelah bayar
+    var receipt = qByText(doc, 'Struk', 'div,section,aside,h3,p');
+    var receiptPanel = null;
+    panel && panel.querySelectorAll('div').forEach(function (d) {
+      if (d.textContent.indexOf('TOTAL') !== -1 && d.textContent.indexOf('KEMBALIAN') !== -1) receiptPanel = d;
+    });
+    if (receiptPanel) {
+      var rc = receiptPanel.getBoundingClientRect();
+      r.receiptPanel = { w: Math.round(rc.width), h: Math.round(rc.height), visible: rc.height > 50 };
+    }
+    // BAYAR (pre-paid) — butuh alur kedua; diukur saat muncul
+    var bayar = null;
+    panel && panel.querySelectorAll('button').forEach(function (b) {
+      if (b.textContent.trim() === '✅ BAYAR') bayar = b;
+    });
+    if (bayar) {
+      var br = bayar.getBoundingClientRect();
+      r.bayarBtn = { fullyVisible: br.y >= 0 && br.bottom <= H + 1 };
+    }
+    return r;
+  }
+
+  async function drive(iframe, label, W, H) {
+    var doc, win;
+    var res = { label: label };
+    try {
+      iframe.src = '/kasir';
+      await waitFor(function () {
+        return iframe.contentDocument && iframe.contentDocument.querySelectorAll('button.product-card:not(:disabled)').length > 0;
+      }, 25000, 'POS loaded + produk');
+      doc = iframe.contentDocument;
+      win = iframe.contentWindow;
+
+      // Reset service mode ke Dine In (kartu pertama ServiceModeSelector)
+      var modeBtns = doc.querySelectorAll('button');
+      for (var m = 0; m < modeBtns.length; m++) {
+        var mt = modeBtns[m].textContent.replace(/\s+/g, ' ').trim();
+        if (mt === '🍽️Dine In' || mt === 'Dine In') { modeBtns[m].click(); break; }
+      }
+      // Tambah satu produk ke keranjang (prasyarat bayar)
+      var card = doc.querySelector('button.product-card:not(:disabled)');
+      card.click();
+      await new Promise(function (r) { setTimeout(r, 400); });
+
+      // Pre-paid measurement: buka modal
+      var bayarClick = null;
+      if (W === 800) {
+        // portrait: sidebar hidden (lg breakpoint 1024) → FAB path
+        // FAB: teks persis "🛒" / "🛒<angka>" (badge) — bukan tombol mode 🛒ShopeeFood
+        var fab = null;
+        doc.querySelectorAll('button').forEach(function (b) {
+          if (/^🛒\d*$/.test(b.textContent.trim()) && b.getBoundingClientRect().height > 0) fab = b;
+        });
+        if (fab) fab.click();
+        await waitFor(function () { return doc.querySelector('[class*="z-30"]'); }, 5000, 'drawer open');
+        var drawer = doc.querySelector('[class*="z-30"]');
+        bayarClick = qByText(drawer, '💳 BAYAR');
+      } else {
+        // landscape: sidebar visible
+        var sidebar = doc.querySelector('aside') || doc.body;
+        bayarClick = qByText(sidebar, '💳 BAYAR') || qByText(doc, '💳 BAYAR');
+      }
+      bayarClick.click();
+      await waitFor(function () { return qByText(doc, 'UANG PAS'); }, 5000, 'payment modal');
+      var pre = measureModal(doc, W, H);
+      res.prePaid = {
+        posHScroll: pre.posHScroll, modalFits: pre.modalFits, modalRect: pre.modalRect,
+        bayarBtn: pre.bayarBtn, innerScrollables: (pre.innerScrollables || []).length
+      };
+
+      // Bayar: TUNAI (default) → UANG PAS → BAYAR
+      var uangPas = qByText(doc, 'UANG PAS'); uangPas && uangPas.click();
+      await new Promise(function (r) { setTimeout(r, 300); });
+      var bayarBtn = null;
+      doc.querySelectorAll('button').forEach(function (b) { if (b.textContent.trim() === '✅ BAYAR') bayarBtn = b; });
+      bayarBtn.click();
+      await waitFor(function () { return qByText(doc, 'Transaksi Baru'); }, 15000, 'paid state');
+      await new Promise(function (r) { setTimeout(r, 400); });
+      var post = measureModal(doc, W, H);
+      res.postPaid = {
+        modalFits: post.modalFits, modalRect: post.modalRect,
+        primaryAction: post.primaryAction, receiptPanel: post.receiptPanel,
+        innerScrollables: (post.innerScrollables || []).map(function (s) { return s.sh + '>' + s.ch; })
+      };
+    } catch (e) {
+      res.error = e.message;
+    }
+    return res;
+  }
+
+  function fmt(res) {
+    if (res.error) return '<span class="bad">' + res.label + ': ERROR — ' + res.error + '</span>';
+    var lines = ['<b>' + res.label + '</b>'];
+    var pre = res.prePaid, post = res.postPaid;
+    lines.push('POS horizontal scroll: ' + (pre.posHScroll ? '<span class="bad">YA ✗</span>' : '<span class="ok">tidak ✓</span>'));
+    lines.push('Modal fits viewport (pre): ' + (pre.modalFits ? '<span class="ok">✓</span>' : '<span class="bad">✗ ' + JSON.stringify(pre.modalRect) + '</span>'));
+    lines.push('Tombol BAYAR visible (pre): ' + (pre.bayarBtn && pre.bayarBtn.fullyVisible ? '<span class="ok">✓</span>' : '<span class="bad">✗ TERPOTONG</span>'));
+    lines.push('Scrollables internal (pre): ' + pre.innerScrollables);
+    lines.push('Modal fits viewport (post): ' + (post.modalFits ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'));
+    if (post.primaryAction) lines.push('Transaksi Baru fully visible: ' + (post.primaryAction.fullyVisible ? '<span class="ok">✓</span>' : '<span class="bad">✗ TERPOTONG</span>'));
+    if (post.receiptPanel) lines.push('Panel struk: ' + post.receiptPanel.w + '×' + post.receiptPanel.h + (post.receiptPanel.visible ? ' <span class="ok">tampil ✓</span>' : ' <span class="bad">tidak tampil ✗</span>'));
+    lines.push('Scrollables internal (post): ' + (post.innerScrollables.length ? '<span class="warn">' + post.innerScrollables.join(', ') + '</span>' : '<span class="ok">tidak ada ✓</span>'));
+    return lines.join('\n');
+  }
+
+  var fp = document.getElementById('fPortrait'), fl = document.getElementById('fLandscape');
+  var rp_keep;
+  // Serial: portrait dulu, lalu landscape (localStorage cart shared)
+  drive(fp, 'Redmi Pad 2 / MatePad 11 — 800×1280 portrait', 800, 1280)
+    .then(function (rp) {
+      rp_keep = rp;
+      log(fmt(rp));
+      window.__resPortrait = rp;
+      return drive(fl, 'Redmi Pad 2 / MatePad 11 — 1280×800 landscape', 1280, 800);
+    })
+    .then(function (rl) {
+      log(fmt(rp_keep) + '\n\n' + fmt(rl));
+      window.__resLandscape = rl;
+      window.__done = true;
+    })
+    .catch(function (e) { log('FATAL: ' + e.message, 'bad'); window.__done = true; });
+})();
+</script>
+</body>
+</html>
