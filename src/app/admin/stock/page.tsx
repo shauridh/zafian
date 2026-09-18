@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { formatRupiah } from "@/lib/format";
+import ModalShell from "@/components/ui/ModalShell";
 
 interface Product {
   id: string;
@@ -416,8 +417,8 @@ export default function StockPage() {
 
       {/* Adjust Modal */}
       {showAdjustModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+        <ModalShell open={Boolean(showAdjustModal)} onClose={() => setShowAdjustModal(null)} className="max-w-sm">
+          <div className="p-6">
             <h3 className="font-heading font-bold text-lg text-gray-900 mb-1">📦 Sesuaikan Stok</h3>
             <p className="text-sm text-gray-500 mb-4">
               {stockData.find((s) => s.id === showAdjustModal)?.name}
@@ -483,7 +484,7 @@ export default function StockPage() {
               </button>
             </div>
           </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

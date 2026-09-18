@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { formatRupiah } from "@/lib/format";
+import ModalShell from "@/components/ui/ModalShell";
 
 type Product = {
   id: string;
@@ -237,10 +238,8 @@ export default function OrderPage() {
 
       {/* Cart Drawer */}
       {showCart && (
-        <div className="fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowCart(false)} />
-          <div className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white dark:bg-[#1a1a1a] shadow-xl">
-            <div className="flex flex-col h-full">
+        <ModalShell open={showCart} onClose={() => setShowCart(false)} className="h-[min(680px,calc(100vh-32px))] max-w-md">
+            <div className="flex h-full flex-col">
               <div className="px-4 py-4 border-b border-gray-200 dark:border-[#333] flex items-center justify-between">
                 <h2 className="font-heading font-bold text-lg dark:text-gray-100">🛒 Keranjang ({totalItems})</h2>
                 <button onClick={() => setShowCart(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-[#333] rounded-lg text-gray-400">✕</button>
@@ -283,15 +282,13 @@ export default function OrderPage() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Checkout Modal */}
       {showCheckout && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowCheckout(false)} />
-          <div className="relative bg-white dark:bg-[#1a1a1a] rounded-t-3xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+        <ModalShell open={showCheckout} onClose={() => setShowCheckout(false)} className="max-w-lg">
+          <div className="p-5">
             <h2 className="font-heading font-bold text-xl mb-4 dark:text-gray-100">📦 Checkout</h2>
 
             {/* Order Summary */}
@@ -346,7 +343,7 @@ export default function OrderPage() {
               Kembali ke Menu
             </button>
           </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Floating Cart Button */}

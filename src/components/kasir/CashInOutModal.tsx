@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { formatRupiah } from "@/lib/format";
+import ModalShell from "@/components/ui/ModalShell";
 
 type CashInOut = {
   id: string;
@@ -36,9 +37,8 @@ export default function CashInOutModal({ isOpen, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-xs p-4 shadow-2xl">
+    <ModalShell open={isOpen} onClose={onClose} className="max-w-xs">
+      <div className="p-4">
         <h3 className="font-heading font-bold text-base mb-3 dark:text-gray-100">💰 Cash In / Cash Out</h3>
         <div className="flex gap-2 mb-3">
           <button onClick={() => setType("in")} className={`flex-1 py-2 rounded-xl font-bold text-xs transition-all ${type === "in" ? "bg-green-500 text-white shadow-lg" : "bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400"}`}>💵 Cash In</button>
@@ -72,6 +72,6 @@ export default function CashInOutModal({ isOpen, onClose }: Props) {
           </div>
         )}
       </div>
-    </div>
+    </ModalShell>
   );
 }

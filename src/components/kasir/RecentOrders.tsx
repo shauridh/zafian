@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { formatRupiah, SERVICE_MODE_LABELS } from "@/lib/format";
+import ModalShell from "@/components/ui/ModalShell";
 
 interface RecentOrder {
   id: string;
@@ -81,8 +82,8 @@ export default function RecentOrders({ isOpen, onClose }: RecentOrdersProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col shadow-xl">
+    <ModalShell open={isOpen} onClose={onClose} className="max-w-md">
+      <div className="flex max-h-[calc(100vh-48px)] flex-col">
         <div className="p-4 border-b border-gray-200 dark:border-[#333] flex items-center justify-between">
           <h3 className="font-heading font-bold text-lg text-gray-900 dark:text-gray-100">📋 Order Hari Ini</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#333] flex items-center justify-center hover:bg-gray-200 dark:hover:bg-[#444] text-gray-500 dark:text-gray-400">✕</button>
@@ -126,6 +127,6 @@ export default function RecentOrders({ isOpen, onClose }: RecentOrdersProps) {
           )}
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

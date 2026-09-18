@@ -1,6 +1,7 @@
 "use client";
 
 import Cart from "@/components/kasir/Cart";
+import ModalShell from "@/components/ui/ModalShell";
 
 interface Props {
   isOpen: boolean;
@@ -13,11 +14,10 @@ export default function MobileCartDrawer({ isOpen, onClose, onCheckout }: Props)
   if (!isOpen) return null;
 
   return (
-    <div className="lg:hidden fixed inset-0 z-30">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="absolute right-0 top-0 bottom-0 w-[320px] sm:w-[340px] max-w-[85vw]">
+    <div className="lg:hidden">
+      <ModalShell open={isOpen} onClose={onClose} className="h-[min(680px,calc(100vh-32px))] max-w-[420px]">
         <Cart onCheckout={() => { onClose(); onCheckout(); }} />
-      </div>
+      </ModalShell>
     </div>
   );
 }

@@ -158,6 +158,28 @@ h1, h2, h3, h4, h5, h6 {
   transform: scale(0.95);
 }
 
+/* Payment modal keeps the entire cash workflow visible without a nested scrollbar. */
+.payment-modal-compact .numpad-btn {
+  min-width: 48px !important;
+  min-height: 48px !important;
+  font-size: 1.15rem !important;
+  border-radius: 10px;
+}
+
+.payment-modal-compact .numpad-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.payment-modal-compact .space-y-2,
+.payment-modal-compact .space-y-2\.5 {
+  row-gap: 0.375rem;
+}
+
+.payment-modal-compact .numpad-btn + .numpad-btn {
+  margin-top: 0;
+}
+
 /* Product card touch feedback */
 .product-card {
   @apply relative overflow-hidden rounded-xl border-2 border-transparent
@@ -362,6 +384,45 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Specific tablet touch optimizations */
+/* Short landscape/tablet viewports: keep payment controls visible without an inner scrollbar. */
+@media (min-width: 640px) and (max-height: 700px) {
+  .payment-modal-compact .numpad-btn {
+    min-width: 34px !important;
+    min-height: 34px !important;
+    height: 34px;
+    font-size: 0.95rem !important;
+    border-radius: 8px;
+  }
+
+  .payment-modal-compact .numpad-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .payment-modal-compact .grid {
+    gap: 0.25rem;
+  }
+
+  .payment-modal-compact .flex-wrap {
+    gap: 0.25rem;
+  }
+
+  .payment-modal-compact .flex-wrap button {
+    min-height: 28px !important;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.625rem;
+  }
+
+  .payment-modal-compact .space-y-2 > :not([hidden]) ~ :not([hidden]),
+  .payment-modal-compact .space-y-2\.5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.25rem;
+  }
+
+  .payment-modal-compact .p-2\.5 {
+    padding: 0.375rem;
+  }
+}
+
 @media (pointer: coarse) and (min-width: 768px) {
   /* All interactive elements must be at least 48px */
   button, a, input, select, textarea, [role="button"] {

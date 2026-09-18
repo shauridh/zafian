@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import ModalShell from "@/components/ui/ModalShell";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -88,15 +89,8 @@ export default function PWAInstallPrompt() {
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end justify-center sm:items-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={handleDismiss}
-      />
-
-      {/* Bottom Sheet */}
-      <div className="relative w-full max-w-md mx-4 mb-4 sm:mb-0 animate-slide-up">
+    <ModalShell open={showPrompt} onClose={handleDismiss} className="max-w-md">
+      <div className="animate-slide-up">
         <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-2xl overflow-hidden border border-gray-200 dark:border-[#333]">
           {/* Header with gradient */}
           <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-5 text-white">
@@ -196,7 +190,7 @@ export default function PWAInstallPrompt() {
         .animate-slide-up {
           animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-      `}</style>
-    </div>
+      `}      </style>
+    </ModalShell>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@//lib/supabase/client";
 import { formatRupiah } from "@//lib/format";
 import { useShiftStore } from "@/stores/shiftStore";
+import ModalShell from "@/components/ui/ModalShell";
 
 type TimeFilter = "today" | "week" | "month" | "year";
 
@@ -219,9 +220,8 @@ export default function DashboardPage() {
 
       {/* POS / Open Shift Modal */}
       {showPOSModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowPOSModal(false)} />
-          <div className="relative bg-white dark:bg-[#1a1a1a] rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+        <ModalShell open={showPOSModal} onClose={() => setShowPOSModal(false)} className="max-w-sm">
+          <div className="rounded-3xl p-6">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-sabana rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg">
                 🍗
@@ -285,8 +285,8 @@ export default function DashboardPage() {
                 🟢 Buka Kasir
               </button>
             </div>
-          </div>
-        </div>
+            </div>
+        </ModalShell>
       )}
 
       {/* Time Filter Tabs */}

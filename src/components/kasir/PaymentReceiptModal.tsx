@@ -8,6 +8,7 @@ import { useShiftStore } from "@/stores/shiftStore";
 import { formatRupiah, formatDateTime, generateOrderNumber, SERVICE_MODE_LABELS } from "@/lib/format";
 import { QRCodeSVG } from "qrcode.react";
 import { buildReceiptLines } from "@/lib/receipt";
+import ModalShell from "@/components/ui/ModalShell";
 import { getReceiptSettings } from "@/lib/settings";
 import { getActivePromos, calculateBestDiscount, type PromoResult } from "@/lib/promos";
 import { getPrinter, isBluetoothAvailable } from "@/lib/printer";
@@ -111,9 +112,8 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 flex flex-col md:flex-row w-full max-w-[820px] md:h-auto max-h-[94vh] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl overflow-hidden">
+    <ModalShell open={isOpen} onClose={onClose} className="max-w-[760px]">
+      <div className="payment-modal-compact relative flex max-h-[calc(100vh-24px)] flex-col overflow-hidden dark:bg-[#1a1a1a] md:flex-row">
 
         {/* === LEFT: Payment === */}
         <div className="flex-1 flex flex-col min-h-0 min-w-0 md:max-h-[76vh]">
@@ -128,7 +128,7 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#333] text-gray-400 text-xs">✕</button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2.5 min-h-0">
+          <div className="flex-1 overflow-hidden p-2.5 min-h-0">
             {isPaid ? (
               /* === PAID — langsung tombol Transaksi Baru, tanpa panel tambahan === */
               <div className="flex flex-col items-center justify-center min-h-full gap-2.5 py-2">
@@ -220,11 +220,11 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
               {isPaid ? "FINAL" : "PREVIEW"}
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto p-2 min-h-0">
+          <div className="flex-1 overflow-hidden p-2 min-h-0">
             <pre className="text-[8px] leading-[1.4] text-gray-800 dark:text-gray-200 whitespace-pre font-mono">{rLines.join("\n")}</pre>
           </div>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

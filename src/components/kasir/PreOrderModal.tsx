@@ -2,6 +2,7 @@
 
 import { formatRupiah } from "@/lib/format";
 import { useCartStore } from "@/stores/cartStore";
+import ModalShell from "@/components/ui/ModalShell";
 
 export interface PreOrderData {
   isPreOrder: boolean;
@@ -27,9 +28,8 @@ export default function PreOrderModal({ isOpen, onClose, preOrder, onChange }: P
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-xs p-4 shadow-2xl max-h-[85vh] overflow-y-auto">
+    <ModalShell open={isOpen} onClose={onClose} className="max-w-xs">
+      <div className="p-4">
         <h3 className="font-heading font-bold text-base mb-0.5 dark:text-gray-100">📅 Pre-Order Event</h3>
         <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-3">Pesan untuk acara dengan DP</p>
         <div className="space-y-2 mb-3">
@@ -69,6 +69,6 @@ export default function PreOrderModal({ isOpen, onClose, preOrder, onChange }: P
           <button onClick={() => { onChange({ ...preOrder, isPreOrder: true }); onClose(); }} disabled={!preOrder.eventName} className="flex-1 py-2 rounded-xl bg-sabana text-white font-bold text-xs disabled:opacity-50">Simpan</button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
