@@ -10,10 +10,12 @@ interface Props {
   onOpenCashInOut: () => void;
   onOpenRecentOrders: () => void;
   showCashInOut: boolean;
+  showSearch: boolean;
+  onToggleSearch: () => void;
 }
 
 /** Compact POS top bar: logo, status, cashier actions. */
-export default function POSHeader({ isOnline, dataReady, onOpenCashInOut, onOpenRecentOrders, showCashInOut }: Props) {
+export default function POSHeader({ isOnline, dataReady, onOpenCashInOut, onOpenRecentOrders, showCashInOut, showSearch, onToggleSearch }: Props) {
   const router = useRouter();
   const { isShiftOpen, cashierName } = useShiftStore();
 
@@ -36,6 +38,7 @@ export default function POSHeader({ isOnline, dataReady, onOpenCashInOut, onOpen
           <button onClick={onOpenCashInOut} className="p-1.5 sm:p-2 rounded-lg bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 transition-colors" title="Cash In/Out">💰</button>
         )}
         <button onClick={onOpenRecentOrders} className="p-1.5 sm:p-2 rounded-lg bg-gray-100 dark:bg-[#333] hover:bg-gray-200 dark:hover:bg-[#444] text-gray-600 dark:text-gray-400 transition-colors" title="Order Hari Ini">📋</button>
+        <button onClick={onToggleSearch} className={`p-1.5 sm:p-2 rounded-lg transition-colors ${showSearch ? "bg-sabana-50 dark:bg-sabana/10 text-sabana" : "bg-gray-100 dark:bg-[#333] text-gray-500"}`} title={showSearch ? "Sembunyikan pencarian" : "Tampilkan pencarian"} aria-label={showSearch ? "Sembunyikan pencarian" : "Tampilkan pencarian"}>⌕</button>
         <ThemeToggle />
         <div className="flex items-center gap-1 bg-sabana-50 dark:bg-sabana/10 px-1.5 py-0.5 rounded-lg">
           <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-sabana text-white flex items-center justify-center text-[10px] sm:text-xs font-bold">{cashierName?.charAt(0) || "K"}</div>

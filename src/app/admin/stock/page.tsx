@@ -244,7 +244,17 @@ export default function StockPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl md:text-2xl font-heading font-bold text-gray-900">📊 Manajemen Stok</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Kelola stok produk jadi (finished goods)</p>
+          <p className="text-gray-500 text-sm mt-0.5">Pantau stok produk jadi yang siap dijual di etalase</p>
+        </div>
+      </div>
+
+      {/* Operational guide */}
+      <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-900/20">
+        <h2 className="text-sm font-semibold text-blue-900 dark:text-blue-200">Cara membaca halaman Stok</h2>
+        <div className="mt-2 grid gap-2 text-xs text-blue-800 dark:text-blue-300 md:grid-cols-3">
+          <p><strong>1. Bahan Baku</strong><br />Kelola jumlah kg, liter, pack, atau satuan beli di menu Bahan Baku.</p>
+          <p><strong>2. Produksi</strong><br />Jalankan resep untuk mengurangi bahan baku dan menambah produk jadi di sini.</p>
+          <p><strong>3. Penjualan</strong><br />Transaksi kasir mengurangi stok produk jadi. Gunakan Sesuaikan hanya untuk stok awal, rusak, atau koreksi opname.</p>
         </div>
       </div>
 

@@ -91,7 +91,6 @@ export function buildReceiptLines(d: ReceiptData, w: number = RECEIPT_WIDTH_58):
 
   lines.push(sep("-"));
   lines.push(trimEnd(MARGIN + trunc(d.date, w - MARGIN.length)));
-  lines.push(trimEnd(MARGIN + trunc(d.orderNumber, w - MARGIN.length)));
   lines.push(trimEnd(MARGIN + `Kasir: ${trunc(d.cashierName || "Kasir", w - MARGIN.length - 8)}`));
   lines.push(trimEnd(MARGIN + trunc(d.serviceMode, w - MARGIN.length)));
 

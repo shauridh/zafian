@@ -187,6 +187,7 @@ export default function OpenShiftPage() {
           <Numpad
             value={floatInput}
             onChange={setFloatInput}
+            replaceOnFirstDigit
             showQuickAmounts
             quickAmounts={[
               { label: "350K", value: 350000 },

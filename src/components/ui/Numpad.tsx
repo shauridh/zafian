@@ -7,6 +7,8 @@ interface NumpadProps {
   value: string;
   onChange: (value: string) => void;
   maxLength?: number;
+  /** Replaces an initial prefilled value when the first digit is pressed. */
+  replaceOnFirstDigit?: boolean;
   showQuickAmounts?: boolean;
   quickAmounts?: { label: string; value: number }[];
 }
@@ -15,10 +17,11 @@ export default function Numpad({
   value,
   onChange,
   maxLength = 15,
+  replaceOnFirstDigit = false,
   showQuickAmounts = false,
   quickAmounts = [],
 }: NumpadProps) {
-  const lastInputType = useRef<"quick" | "numpad" | null>(null);
+  const lastInputType = useRef<"initial" | "quick" | "numpad" | null>(replaceOnFirstDigit ? "initial" : null);
 
   const handleQuickAmount = useCallback(
     (amount: number) => {
@@ -43,7 +46,7 @@ export default function Numpad({
       if (value.length >= maxLength) return;
       if (!/^\d+$/.test(digit)) return;
 
-      if (lastInputType.current === "quick") {
+      if (lastInputType.current === "initial" || lastInputType.current === "quick") {
         lastInputType.current = "numpad";
         onChange(digit);
         return;

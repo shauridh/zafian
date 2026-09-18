@@ -28,6 +28,7 @@ export default function KasirPage() {
   const features = useFeatureToggles();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [orderNumber, setOrderNumber] = useState(1);
@@ -160,7 +161,7 @@ export default function KasirPage() {
   return (
     <div className="h-screen flex flex-col bg-cream dark:bg-[#0f0f0f] overflow-hidden tablet-safe">
       {/* Header — compact */}
-      <POSHeader isOnline={isOnline} dataReady={dataReady} showCashInOut={features.cashInOut} onOpenCashInOut={() => setShowCashInOut(true)} onOpenRecentOrders={() => setShowRecentOrders(true)} />
+      <POSHeader isOnline={isOnline} dataReady={dataReady} showCashInOut={features.cashInOut} showSearch={showSearch} onToggleSearch={() => { setShowSearch((visible) => !visible); setSearchQuery(""); }} onOpenCashInOut={() => setShowCashInOut(true)} onOpenRecentOrders={() => setShowRecentOrders(true)} />
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -172,10 +173,12 @@ export default function KasirPage() {
             {features.tableSelector && serviceMode === "dine_in" && (
               <TableSelector selectedTable={selectedTable} onSelect={setSelectedTable} visible={true} />
             )}
-            <div className="relative">
-              <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <input type="text" placeholder="Cari produk..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-8 pr-3 py-1.5 sm:py-2 rounded-lg border border-gray-200 dark:border-[#444] bg-white dark:bg-[#262626] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sabana text-xs sm:text-sm" />
-            </div>
+            {showSearch && (
+              <div className="relative">
+                <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0a7 7 0 0114 0z" /></svg>
+                <input type="text" placeholder="Cari produk..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-8 pr-3 py-1.5 sm:py-2 rounded-lg border border-gray-200 dark:border-[#444] bg-white dark:bg-[#262626] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sabana text-xs sm:text-sm" />
+              </div>
+            )}
             <CategoryBar categories={categories} selectedId={selectedCategory} onSelect={(id) => { setSelectedCategory(id); setSearchQuery(""); }} />
           </div>
 

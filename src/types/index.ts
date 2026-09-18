@@ -39,6 +39,9 @@ export interface Ingredient {
   name: string;
   sku?: string;
   unit: string;
+  purchase_unit?: string;
+  usage_unit?: string;
+  conversion_factor?: number;
   purchase_price: number;
   stock_quantity: number;
   min_stock: number;
@@ -56,6 +59,7 @@ export interface ProductIngredient {
   ingredient_id: string;
   quantity: number;
   cost_per_unit: number;
+  usage_unit?: string;
 }
 
 // ============================================

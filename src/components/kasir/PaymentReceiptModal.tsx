@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import clsx from "clsx";
 import Numpad from "@/components/ui/Numpad";
 import { useCartStore } from "@/stores/cartStore";
@@ -38,6 +38,8 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
   const [promo, setPromo] = useState<PromoResult | null>(null);
   const [printSt, setPrintSt] = useState<"idle" | "ok" | "err">("idle");
   const [printing, setPrinting] = useState(false);
+  const [shareStatus, setShareStatus] = useState<"idle" | "ok" | "err">("idle");
+  const autoPrintAttempted = useRef(false);
   const hasBT = isBluetoothAvailable();
 
   const [rSettings] = useState(() => getReceiptSettings());
@@ -66,11 +68,11 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
     else if (enough) onComplete("cash", paid);
   }, [isOnlineFood, pm, enough, fTotal, total, paid, onComplete]);
 
-  const doPrintBT = async () => {
+  const doPrintBT = async (automatic = false) => {
     setPrinting(true); setPrintSt("idle");
     try {
       const p = getPrinter();
-      if (!(await p.connect())) { setPrintSt("err"); setTimeout(() => setPrintSt("idle"), 2000); return; }
+      if (!(await p.connect({ requestPermission: !automatic }))) { setPrintSt("err"); setTimeout(() => setPrintSt("idle"), 2000); return; }
       if (!paymentResult) return;
       const ok = await p.printReceipt({
         items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
@@ -86,6 +88,21 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
     } catch { setPrintSt("err"); }
     setTimeout(() => setPrintSt("idle"), 2000);
     setPrinting(false);
+  };
+
+  const shareReceipt = async () => {
+    const text = rLines.join("\n");
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Struk Sabana Fried Chicken", text });
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+      setShareStatus("ok");
+    } catch {
+      setShareStatus("err");
+    }
+    setTimeout(() => setShareStatus("idle"), 2000);
   };
 
   // Receipt lines — live before payment, final after payment
@@ -109,10 +126,61 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
     footer: rSettings.footer,
   }), [isPaid, paymentResult, items, total, fTotal, paid, pm, isOnlineFood, promo, orderNumber, serviceMode, savedOrderId, cashierName, rSettings]);
 
+  React.useEffect(() => {
+    if (!isOpen || !isPaid) {
+      autoPrintAttempted.current = false;
+      return;
+    }
+    if (rSettings.autoPrint && !autoPrintAttempted.current) {
+      autoPrintAttempted.current = true;
+      void doPrintBT(true);
+    }
+  }, [isOpen, isPaid, rSettings.autoPrint]);
+
   if (!isOpen) return null;
 
   return (
-    <ModalShell open={isOpen} onClose={onClose} className="max-w-[760px]">
+    <ModalShell open={isOpen} onClose={onClose} className={isPaid ? "max-w-[440px]" : "max-w-[760px]"}>
+      {isPaid ? (
+        <div className="flex max-h-[calc(100vh-24px)] flex-col overflow-hidden bg-white dark:bg-[#1a1a1a]">
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-[#333]">
+            <div>
+              <h2 className="font-heading text-sm font-bold text-gray-900 dark:text-gray-100">✅ Pembayaran Selesai</h2>
+              <p className="text-[10px] text-gray-500">Transaksi berhasil disimpan</p>
+            </div>
+            <button onClick={onClose} aria-label="Tutup modal" className="rounded-lg p-1.5 text-xs text-gray-400 hover:bg-gray-100 dark:hover:bg-[#333]">✕</button>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
+            <div className="flex items-center justify-center gap-2 rounded-xl bg-green-50 px-3 py-2 text-center dark:bg-green-900/20">
+              <span className="text-xl">✅</span>
+              <div>
+                <p className="text-xs font-bold text-green-700 dark:text-green-300">Pembayaran Berhasil</p>
+                <p className="text-[10px] text-gray-500">{formatRupiah(paymentResult!.amountPaid)} · {paymentResult!.method === "cash" ? "TUNAI" : paymentResult!.method.toUpperCase()} · Kembalian {formatRupiah(paymentResult!.change)}</p>
+              </div>
+            </div>
+
+            <div className="min-h-0 rounded-xl border border-gray-200 bg-gray-50 p-2 dark:border-[#333] dark:bg-[#111]">
+              <div className="mb-1.5 flex items-center justify-between border-b border-gray-200 pb-1.5 dark:border-[#333]">
+                <h3 className="font-heading text-xs font-bold text-gray-900 dark:text-gray-100">🧾 Struk</h3>
+                <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-bold text-green-700 dark:bg-green-900/30 dark:text-green-400">FINAL</span>
+              </div>
+              <pre className="overflow-hidden whitespace-pre font-mono text-[8px] leading-[1.35] text-gray-800 dark:text-gray-200">{rLines.join("\n")}</pre>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={hasBT ? () => void doPrintBT() : () => window.print()} disabled={printing} className={clsx("rounded-xl py-2.5 text-[10px] font-bold transition-all", printSt === "ok" ? "bg-green-500 text-white" : printSt === "err" ? "bg-red-500 text-white" : "bg-sabana text-white shadow-lg shadow-sabana/30")}>
+                {printSt === "ok" ? "✅ Tercetak" : printing ? "Mencetak..." : hasBT ? "🖨️ Print BT" : "🖨️ Print"}
+              </button>
+              <button onClick={shareReceipt} className={clsx("rounded-xl py-2.5 text-[10px] font-bold", shareStatus === "ok" ? "bg-green-100 text-green-700" : shareStatus === "err" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600 dark:bg-[#333] dark:text-gray-300")}>
+                {shareStatus === "ok" ? "✅ Tersalin" : shareStatus === "err" ? "Gagal" : "📤 Bagikan"}
+              </button>
+            </div>
+
+            <button onClick={onClose} className="w-full rounded-xl bg-green-600 py-3 text-xs font-bold text-white shadow-lg shadow-green-600/30 hover:bg-green-700">🛒 Transaksi Baru</button>
+          </div>
+        </div>
+      ) : (
       <div className="payment-modal-compact relative flex max-h-[calc(100vh-24px)] flex-col overflow-hidden dark:bg-[#1a1a1a] md:flex-row">
 
         {/* === LEFT: Payment === */}
@@ -129,28 +197,7 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
           </div>
 
           <div className="flex-1 overflow-hidden p-2.5 min-h-0">
-            {isPaid ? (
-              /* === PAID — langsung tombol Transaksi Baru, tanpa panel tambahan === */
-              <div className="flex flex-col items-center justify-center min-h-full gap-2.5 py-2">
-                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-2xl">✅</div>
-                <div className="text-center">
-                  <p className="font-bold text-green-700 dark:text-green-300 text-sm">Pembayaran Berhasil</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{formatRupiah(paymentResult!.amountPaid)} · {paymentResult!.method === "cash" ? "TUNAI" : paymentResult!.method.toUpperCase()}</p>
-                  <p className="text-xs text-green-600 font-semibold mt-0.5">Kembalian: {formatRupiah(paymentResult!.change)}</p>
-                </div>
-                <div className="flex gap-2 w-full max-w-[240px] pt-1">
-                  {hasBT && (
-                    <button onClick={doPrintBT} disabled={printing} className={clsx("flex-1 py-2.5 rounded-xl text-[11px] font-bold transition-all",
-                      printSt === "ok" ? "bg-green-500 text-white" : printSt === "err" ? "bg-red-500 text-white" : "bg-sabana text-white shadow-lg shadow-sabana/30"
-                    )}>{printSt === "ok" ? "✅ Tercetak" : printing ? "..." : "🖨️ Print BT"}</button>
-                  )}
-                  <button onClick={() => window.print()} className="flex-1 py-2.5 rounded-xl text-[11px] font-bold bg-gray-100 dark:bg-[#333] text-gray-600 dark:text-gray-400">📄 Browser</button>
-                </div>
-                <button onClick={onClose} className="w-full max-w-[240px] py-3 rounded-xl bg-green-600 text-white font-bold text-sm hover:bg-green-700 shadow-lg shadow-green-600/30">
-                  🛒 Transaksi Baru
-                </button>
-              </div>
-            ) : isOnlineFood ? (
+            {isOnlineFood ? (
               /* === ONLINE FOOD === */
               <div className="space-y-2.5">
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-2.5 border border-blue-100 dark:border-blue-800">
@@ -225,6 +272,7 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
           </div>
         </div>
       </div>
+      )}
     </ModalShell>
   );
 }

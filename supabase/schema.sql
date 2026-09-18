@@ -73,6 +73,9 @@ CREATE TABLE ingredients (
   name TEXT NOT NULL,
   sku TEXT,
   unit TEXT NOT NULL,
+  purchase_unit TEXT,
+  usage_unit TEXT,
+  conversion_factor NUMERIC(12,4) DEFAULT 1,
   purchase_price INT NOT NULL,
   stock_quantity INT DEFAULT 0,
   min_stock INT DEFAULT 0,
@@ -89,7 +92,9 @@ CREATE TABLE product_ingredients (
   product_id UUID REFERENCES products(id) ON DELETE CASCADE,
   ingredient_id UUID REFERENCES ingredients(id),
   quantity DECIMAL(10,3) NOT NULL,
-  cost_per_unit INT NOT NULL
+  usage_unit TEXT,
+  cost_per_unit INT NOT NULL,
+  notes TEXT
 );
 
 -- ============================================

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import Link from "next/link";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseCRUD";
 import { supabase } from "@/lib/supabase/client";
 import { formatRupiah } from "@/lib/format";
@@ -148,9 +149,10 @@ export default function ProductsPage() {
           <h1 className="text-2xl font-heading font-bold text-gray-900">🍗 Produk</h1>
           <p className="text-gray-500 mt-1">Kelola produk, harga, dan gambar dari database</p>
         </div>
-        <button onClick={() => { if (showForm) { resetForm(); } else { setEditingId(null); setShowForm(true); } }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors">
-          + Tambah Produk
-        </button>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/bundles" className="px-4 py-2 border border-sabana text-sabana rounded-xl font-semibold hover:bg-sabana-50 transition-colors">🎁 Paket/Bundling</Link>
+          <button onClick={() => { if (showForm) { resetForm(); } else { setEditingId(null); setShowForm(true); } }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors">+ Tambah Produk</button>
+        </div>
       </div>
 
       {/* Form */}

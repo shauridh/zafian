@@ -3,6 +3,7 @@
 import { formatRupiah } from "@/lib/format";
 import { useCartStore } from "@/stores/cartStore";
 import ModalShell from "@/components/ui/ModalShell";
+import Numpad from "@/components/ui/Numpad";
 
 export interface PreOrderData {
   isPreOrder: boolean;
@@ -43,12 +44,15 @@ export default function PreOrderModal({ isOpen, onClose, preOrder, onChange }: P
           </div>
           <div>
             <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400 mb-0.5">DP *</label>
-            <input type="number" value={preOrder.dpAmount || ""} onChange={(e) => onChange({ ...preOrder, dpAmount: parseInt(e.target.value) || 0 })} placeholder="0" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sabana text-base font-bold font-mono" />
-            <div className="flex gap-1.5 mt-1.5">
-              {[100000, 200000, 500000].map((v) => (
-                <button key={v} onClick={() => onChange({ ...preOrder, dpAmount: v })} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${preOrder.dpAmount === v ? "bg-sabana text-white" : "bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400"}`}>{formatRupiah(v)}</button>
-              ))}
+            <div className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-center font-mono text-lg font-bold text-gray-900 dark:border-[#444] dark:bg-[#222] dark:text-gray-100">
+              Rp {preOrder.dpAmount ? preOrder.dpAmount.toLocaleString("id-ID") : "0"}
             </div>
+            <Numpad
+              value={preOrder.dpAmount ? String(preOrder.dpAmount) : ""}
+              onChange={(value) => onChange({ ...preOrder, dpAmount: parseInt(value) || 0 })}
+              showQuickAmounts
+              quickAmounts={[100000, 200000, 500000].map((value) => ({ label: formatRupiah(value), value }))}
+            />
           </div>
           <div>
             <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400 mb-0.5">Pelunasan</label>

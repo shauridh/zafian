@@ -44,6 +44,7 @@ interface BluetoothRemoteGATTCharacteristic {
 interface Navigator {
   bluetooth?: {
     requestDevice(options: RequestDeviceOptions): Promise<BluetoothDevice>;
+    getDevices?(): Promise<BluetoothDevice[]>;
   };
 }
 

@@ -34,13 +34,54 @@ class ThermalPrinter {
   private server: BluetoothRemoteGATTServer | null = null;
   private characteristic: BluetoothRemoteGATTCharacteristic | null = null;
   private isConnected = false;
+  private readonly deviceKey = "sabana-thermal-printer-device-id";
 
-  async connect(): Promise<boolean> {
+  private async connectDevice(device: BluetoothDevice): Promise<boolean> {
+    if (!device.gatt) return false;
+    this.device = device;
+    this.server = await device.gatt.connect();
+    const services = await this.server.getPrimaryServices();
+    for (const service of services) {
+      try {
+        const chars = await service.getCharacteristics();
+        const writable = chars.find((char) => char.properties.write || char.properties.writeWithoutResponse);
+        if (writable) {
+          this.characteristic = writable;
+          this.isConnected = true;
+          localStorage.setItem(this.deviceKey, device.id);
+          console.log(`[Printer] Connected: ${device.name || "Unknown"}`);
+          return true;
+        }
+      } catch { /* skip unsupported service */ }
+    }
+    return false;
+  }
+
+  /** Reconnects to a previously approved device without opening the pairing chooser. */
+  async reconnect(): Promise<boolean> {
+    try {
+      const bluetooth = typeof navigator !== "undefined" ? navigator.bluetooth : undefined;
+      if (!bluetooth?.getDevices) return false;
+      const savedId = localStorage.getItem(this.deviceKey);
+      const devices = await bluetooth.getDevices();
+      const device = devices.find((candidate) => !savedId || candidate.id === savedId);
+      return device ? await this.connectDevice(device) : false;
+    } catch {
+      return false;
+    }
+  }
+
+  isReady(): boolean { return this.isConnected && !!this.characteristic; }
+
+  async connect(options: { requestPermission?: boolean } = {}): Promise<boolean> {
     try {
       if (!navigator.bluetooth) {
         throw new Error("Web Bluetooth tidak didukung di browser ini. Gunakan Chrome/Edge.");
       }
-      
+      if (this.isReady()) return true;
+      if (await this.reconnect()) return true;
+      if (options.requestPermission === false) return false;
+
       this.device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: [
@@ -53,32 +94,19 @@ class ThermalPrinter {
         ],
       });
 
-      if (!this.device?.gatt) return false;
-
-      this.server = await this.device.gatt.connect();
-      const services = await this.server.getPrimaryServices();
-      
-      for (const service of services) {
-        try {
-          const chars = await service.getCharacteristics();
-          for (const char of chars) {
-            if (char.properties.write || char.properties.writeWithoutResponse) {
-              this.characteristic = char;
-              this.isConnected = true;
-              console.log(`[Printer] Connected: ${this.device.name || "Unknown"}`);
-              return true;
-            }
-          }
-        } catch (e) { /* skip */ }
-      }
+      if (!this.device) return false;
+      if (await this.connectDevice(this.device)) return true;
 
       // Fallback services
+      const server = this.server;
+      if (!server) return false;
       for (const uuid of ["000018f0-0000-1000-8000-00805f9b34fb", "0000ffe0-0000-1000-8000-00805f9b34fb"]) {
         try {
-          const service = await this.server.getPrimaryService(uuid);
+          const service = await server.getPrimaryService(uuid);
           const chars = await service.getCharacteristics();
           this.characteristic = chars.find(c => c.properties.write || c.properties.writeWithoutResponse) || chars[0];
           this.isConnected = true;
+          if (this.device) localStorage.setItem(this.deviceKey, this.device.id);
           return true;
         } catch (e) { /* skip */ }
       }
@@ -146,9 +174,9 @@ class ThermalPrinter {
     await this.sendText(char.repeat(maxWidth) + "\n");
   }
 
-  async printReceipt(data: ReceiptData & { width?: number }): Promise<boolean> {
+  async printReceipt(data: ReceiptData & { width?: number }, options: { allowPairing?: boolean } = {}): Promise<boolean> {
     if (!this.isConnected) {
-      const connected = await this.connect();
+      const connected = await this.connect({ requestPermission: options.allowPairing !== false });
       if (!connected) return false;
     }
 

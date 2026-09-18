@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { formatRupiah } from "@/lib/format";
 import ModalShell from "@/components/ui/ModalShell";
+import Numpad from "@/components/ui/Numpad";
 
 type CashInOut = {
   id: string;
@@ -45,12 +46,15 @@ export default function CashInOutModal({ isOpen, onClose }: Props) {
           <button onClick={() => setType("out")} className={`flex-1 py-2 rounded-xl font-bold text-xs transition-all ${type === "out" ? "bg-red-500 text-white shadow-lg" : "bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400"}`}>💸 Cash Out</button>
         </div>
         <div className="space-y-2 mb-3">
-          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Jumlah (Rp)" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sabana text-base font-bold font-mono" />
-          <div className="flex gap-1.5">
-            {[10000, 20000, 50000, 100000].map((v) => (
-              <button key={v} onClick={() => setAmount((parseInt(amount || "0") + v).toString())} className="flex-1 py-1.5 rounded-lg bg-gray-100 dark:bg-[#222] text-[10px] font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#333]">{formatRupiah(v)}</button>
-            ))}
+          <div className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-center font-mono text-lg font-bold text-gray-900 dark:border-[#444] dark:bg-[#222] dark:text-gray-100">
+            Rp {amount ? parseInt(amount).toLocaleString("id-ID") : "0"}
           </div>
+          <Numpad
+            value={amount}
+            onChange={setAmount}
+            showQuickAmounts
+            quickAmounts={[10000, 20000, 50000, 100000].map((value) => ({ label: formatRupiah(value), value }))}
+          />
           <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Catatan..." className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sabana text-xs" />
         </div>
         <div className="flex gap-2">

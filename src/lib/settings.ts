@@ -12,6 +12,7 @@ export interface ReceiptSettings {
   showLogo?: boolean;
   showTime?: boolean;
   showQR?: boolean;
+  autoPrint?: boolean;
   paperWidth?: "58" | "80";
 }
 
@@ -23,6 +24,7 @@ export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
   showLogo: true,
   showTime: true,
   showQR: false,
+  autoPrint: false,
   paperWidth: "58",
 };
 

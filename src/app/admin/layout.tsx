@@ -13,12 +13,18 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: "Menu & Produk",
+    label: "Produk",
+    items: [
+      { href: "/admin/products", label: "Produk", icon: "🍗" },
+      { href: "/admin/bundles", label: "Paket/Bundling", icon: "🎁" },
+    ],
+  },
+  {
+    label: "Menu & Resep",
     items: [
       { href: "/admin/menu", label: "Kategori", icon: "📋" },
-      { href: "/admin/products", label: "Produk", icon: "🍗" },
       { href: "/admin/ingredients", label: "Bahan Baku", icon: "📦" },
-      { href: "/admin/bundles", label: "Paket/Bundling", icon: "🎁" },
+      { href: "/admin/recipes", label: "Resep / BOM", icon: "🧾" },
     ],
   },
   {

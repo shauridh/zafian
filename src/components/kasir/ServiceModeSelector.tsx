@@ -11,12 +11,19 @@ interface ServiceModeSelectorProps {
 }
 
 const SERVICE_MODES = [
-  { id: "dine_in", icon: "🍽️" },
-  { id: "take_away", icon: "📦" },
-  { id: "gofood", icon: "🛵" },
-  { id: "grabfood", icon: "🚚" },
-  { id: "shopeefood", icon: "🛒" },
-];
+  { id: "dine_in", label: "Dine In", kind: "plain" },
+  { id: "take_away", label: "Take Away", kind: "plain" },
+  { id: "gofood", label: "GoFood", kind: "gofood" },
+  { id: "grabfood", label: "GrabFood", kind: "grabfood" },
+  { id: "shopeefood", label: "ShopeeFood", kind: "shopeefood" },
+] as const;
+
+function BrandMark({ kind }: { kind: (typeof SERVICE_MODES)[number]["kind"] }) {
+  if (kind === "gofood") return <span className="font-black tracking-tight text-[#00AA13]">gofood</span>;
+  if (kind === "grabfood") return <span className="font-black tracking-tight text-[#00B14F]">GrabFood</span>;
+  if (kind === "shopeefood") return <span className="font-black tracking-tight text-[#EE4D2D]">ShopeeFood</span>;
+  return null;
+}
 
 export default function ServiceModeSelector({
   selected,
@@ -45,8 +52,7 @@ export default function ServiceModeSelector({
                 : undefined
             }
           >
-            <span>{mode.icon}</span>
-            <span>{SERVICE_MODE_LABELS[mode.id]}</span>
+            {mode.kind === "plain" ? <span>{mode.label}</span> : <BrandMark kind={mode.kind} />}
           </button>
         );
       })}

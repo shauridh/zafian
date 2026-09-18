@@ -35,6 +35,14 @@ export default function ProductionPage() {
   const [batchQty, setBatchQty] = useState(1);
   const [producing, setProducing] = useState(false);
   const [produced, setProduced] = useState(false);
+  const [showRecipeForm, setShowRecipeForm] = useState(false);
+  const [recipeName, setRecipeName] = useState("");
+  const [recipeDescription, setRecipeDescription] = useState("");
+  const [recipeIngredients, setRecipeIngredients] = useState<{ ingredient_id: string; quantity: number }[]>([{ ingredient_id: "", quantity: 0 }]);
+  const [recipeOutputs, setRecipeOutputs] = useState<{ product_id: string; quantity: number }[]>([{ product_id: "", quantity: 0 }]);
+  const [ingredientOptions, setIngredientOptions] = useState<{ id: string; name: string; unit: string }[]>([]);
+  const [productOptions, setProductOptions] = useState<{ id: string; name: string; unit: string }[]>([]);
+  const [savingRecipe, setSavingRecipe] = useState(false);
 
   // Fetch data
   useEffect(() => {
@@ -115,6 +123,41 @@ export default function ProductionPage() {
     }
     fetchData();
   }, []);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("ingredients").select("id,name,unit,usage_unit").eq("is_active", true).order("name"),
+      supabase.from("products").select("id,name,unit").eq("is_active", true).order("name"),
+    ]).then(([ingredientsResult, productsResult]) => {
+      setIngredientOptions((ingredientsResult.data || []) as { id: string; name: string; unit: string }[]);
+      setProductOptions((productsResult.data || []) as { id: string; name: string; unit: string }[]);
+    });
+  }, []);
+
+  const saveRecipe = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const inputs = recipeIngredients.filter((item) => item.ingredient_id && item.quantity > 0);
+    const outputs = recipeOutputs.filter((item) => item.product_id && item.quantity > 0);
+    if (!recipeName.trim() || !inputs.length || !outputs.length) {
+      alert("Isi nama resep, minimal satu bahan input, dan minimal satu produk output.");
+      return;
+    }
+    setSavingRecipe(true);
+    try {
+      const { data: recipe, error: recipeError } = await supabase.from("production_recipes").insert({ name: recipeName.trim(), description: recipeDescription.trim(), is_active: true }).select("id").single();
+      if (recipeError || !recipe) throw recipeError || new Error("Resep gagal dibuat");
+      const { error: inputError } = await supabase.from("recipe_inputs").insert(inputs.map((item) => ({ recipe_id: recipe.id, ingredient_id: item.ingredient_id, quantity: item.quantity })));
+      if (inputError) throw inputError;
+      const { error: outputError } = await supabase.from("recipe_outputs").insert(outputs.map((item) => ({ recipe_id: recipe.id, product_id: item.product_id, quantity: item.quantity })));
+      if (outputError) throw outputError;
+      setShowRecipeForm(false);
+      setRecipeName(""); setRecipeDescription("");
+      setRecipeIngredients([{ ingredient_id: "", quantity: 0 }]); setRecipeOutputs([{ product_id: "", quantity: 0 }]);
+      window.location.reload();
+    } catch (error) {
+      alert(`Gagal menyimpan resep: ${error instanceof Error ? error.message : "error tidak diketahui"}`);
+    } finally { setSavingRecipe(false); }
+  };
 
   // Start production
   const handleStartProduction = async () => {
@@ -219,6 +262,22 @@ export default function ProductionPage() {
         <h1 className="text-xl md:text-2xl font-heading font-bold text-gray-900">🏭 Menu Produksi</h1>
         <p className="text-gray-500 text-sm mt-0.5">Konversi bahan mentah menjadi bahan jadi (etalase)</p>
       </div>
+
+      <div className="flex justify-end">
+        <button onClick={() => setShowRecipeForm(!showRecipeForm)} className="px-4 py-2 rounded-xl bg-sabana text-white text-sm font-semibold hover:bg-sabana-dark">+ Tambah Resep Produksi</button>
+      </div>
+
+      {showRecipeForm && (
+        <form onSubmit={saveRecipe} className="rounded-2xl border border-sabana/20 bg-sabana-50 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4"><div><h2 className="font-heading font-semibold text-gray-900">Tambah Resep Produksi</h2><p className="text-xs text-gray-500 mt-1">Input mengurangi bahan baku; output menambah stok produk jadi.</p></div><button type="button" onClick={() => setShowRecipeForm(false)} className="text-gray-400">✕</button></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4"><input required value={recipeName} onChange={(event) => setRecipeName(event.target.value)} placeholder="Nama resep, contoh: Adonan Crispy" className="px-3 py-2 rounded-xl border border-gray-200" /><input value={recipeDescription} onChange={(event) => setRecipeDescription(event.target.value)} placeholder="Deskripsi (opsional)" className="px-3 py-2 rounded-xl border border-gray-200" /></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div><h3 className="text-sm font-semibold mb-2">Bahan Input</h3>{recipeIngredients.map((line, index) => <div key={index} className="flex gap-2 mb-2"><select required value={line.ingredient_id} onChange={(event) => setRecipeIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ingredient_id: event.target.value } : item))} className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm"><option value="">Pilih bahan</option>{ingredientOptions.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>)}</select><input required type="number" min="0.001" step="0.001" value={line.quantity || ""} onChange={(event) => setRecipeIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: Number(event.target.value) } : item))} placeholder="Qty" className="w-24 px-3 py-2 rounded-xl border border-gray-200 text-sm" /></div>)}<button type="button" onClick={() => setRecipeIngredients((current) => [...current, { ingredient_id: "", quantity: 0 }])} className="text-xs font-semibold text-sabana">+ Tambah bahan</button></div>
+            <div><h3 className="text-sm font-semibold mb-2">Produk Output</h3>{recipeOutputs.map((line, index) => <div key={index} className="flex gap-2 mb-2"><select required value={line.product_id} onChange={(event) => setRecipeOutputs((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, product_id: event.target.value } : item))} className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm"><option value="">Pilih produk</option>{productOptions.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>)}</select><input required type="number" min="1" step="1" value={line.quantity || ""} onChange={(event) => setRecipeOutputs((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: Number(event.target.value) } : item))} placeholder="Qty" className="w-24 px-3 py-2 rounded-xl border border-gray-200 text-sm" /></div>)}<button type="button" onClick={() => setRecipeOutputs((current) => [...current, { product_id: "", quantity: 0 }])} className="text-xs font-semibold text-sabana">+ Tambah output</button></div>
+          </div>
+          <button type="submit" disabled={savingRecipe} className="mt-5 px-5 py-2.5 rounded-xl bg-success text-white font-semibold disabled:opacity-50">{savingRecipe ? "Menyimpan..." : "Simpan Resep"}</button>
+        </form>
+      )}
 
       {/* Success Banner */}
       {produced && (

@@ -5,6 +5,7 @@ import { PWASetup } from "@/components/PWASetup";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import OfflineProvider from "@/components/OfflineProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import PageHelpButton from "@/components/PageHelpButton";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -63,6 +64,7 @@ export default function RootLayout({
           <PWASetup />
           <PWAInstallPrompt />
           <OfflineProvider>{children}</OfflineProvider>
+          <PageHelpButton />
         </ThemeProvider>
       </body>
     </html>

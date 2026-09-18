@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useShiftStore } from "@/stores/shiftStore";
 import { supabase } from "@/lib/supabase/client";
 import { formatRupiah, CASH_DENOMINATIONS } from "@/lib/format";
+import Numpad from "@/components/ui/Numpad";
 
 interface ShiftInfo {
   id: string;
@@ -340,29 +341,17 @@ export default function CloseShiftPage() {
                     <div className="mt-2 p-3 bg-sabana-50 rounded-xl border border-sabana-100">
                       <div className="flex items-center gap-2 mb-2">
                         <label className="text-xs font-medium text-gray-600">Jumlah:</label>
-                        <input
-                          type="number"
-                          value={counts[denom.value]}
-                          onChange={(e) => handleCountChange(denom.value, parseInt(e.target.value) || 0)}
-                          className="w-20 text-center text-lg font-bold py-1.5 rounded-lg border-2 border-gray-200 focus:outline-none focus:border-sabana bg-white"
-                          autoFocus
-                          min={0}
-                        />
+                        <div className="w-20 rounded-lg border-2 border-gray-200 bg-white px-2 py-1.5 text-center font-mono text-lg font-bold">
+                          {counts[denom.value]}
+                        </div>
                         <span className="text-xs text-gray-500">
                           = {formatRupiah(subtotal)}
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[1, 2, 5, 10, 20, 50, 100].map((n) => (
-                          <button
-                            key={n}
-                            onClick={() => handleCountChange(denom.value, counts[denom.value] + n)}
-                            className="px-3 py-1.5 text-xs font-medium bg-white rounded-lg border border-gray-200 hover:border-sabana hover:text-sabana active:scale-95 transition-all"
-                          >
-                            +{n}
-                          </button>
-                        ))}
-                      </div>
+                      <Numpad
+                        value={String(counts[denom.value])}
+                        onChange={(value) => handleCountChange(denom.value, parseInt(value) || 0)}
+                      />
                     </div>
                   )}
                 </div>

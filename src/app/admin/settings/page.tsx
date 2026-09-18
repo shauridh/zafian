@@ -45,7 +45,7 @@ export default function SettingsPage() {
   const [printerConnected, setPrinterConnected] = useState(false);
   const [printerConnecting, setPrinterConnecting] = useState(false);
   const [features, setFeatures] = useState<FeatureToggles>(DEFAULT_FEATURES);
-  const [receiptData, setReceiptData] = useState<{ outletName: string; outletAddress: string; outletPhone: string; footer: string; showLogo: boolean; showTime: boolean; showQRIS: boolean; paperWidth?: "58" | "80" }>({ outletName: "SABANA FRIED CHICKEN", outletAddress: "Jl. Contoh No. 123", outletPhone: "0812-xxxx-xxxx", footer: "Terima kasih! Sampai jumpa! 🍗", showLogo: true, showTime: true, showQRIS: false, paperWidth: "58" });
+  const [receiptData, setReceiptData] = useState<{ outletName: string; outletAddress: string; outletPhone: string; footer: string; showLogo: boolean; showTime: boolean; showQRIS: boolean; autoPrint: boolean; paperWidth?: "58" | "80" }>({ outletName: "SABANA FRIED CHICKEN", outletAddress: "Jl. Contoh No. 123", outletPhone: "0812-xxxx-xxxx", footer: "Terima kasih! Sampai jumpa! 🍗", showLogo: true, showTime: true, showQRIS: false, autoPrint: false, paperWidth: "58" });
   const [brandColor, setBrandColor] = useState("#F97316");
   const [brandColorDark, setBrandColorDark] = useState("#F97316");
   const [portalTagline, setPortalTagline] = useState("Sabana");
@@ -181,8 +181,8 @@ export default function SettingsPage() {
               )}
               <div><label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Lebar Kertas</label>
                 <div className="flex gap-2">{(["58", "80"] as const).map((w) => (<button key={w} onClick={() => { setReceiptData((r) => ({ ...r, paperWidth: w })); saveReceiptSettings({ ...receiptData, paperWidth: w, showQR: receiptData.showQRIS }); }} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${(receiptData.paperWidth ?? "58") === w ? "border-sabana bg-sabana-50 text-sabana" : "border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400"}`}>{w}mm</button>))}</div>
-              </div>
-              <button onClick={handleTestPrint} disabled={!printerConnected} className="w-full mt-4 py-3 bg-blue-500 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">🖨️ Test Print</button>
+              </div>                  <label className="mt-4 flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-900/20"><input type="checkbox" checked={receiptData.autoPrint} onChange={(event) => setReceiptData((current) => ({ ...current, autoPrint: event.target.checked }))} className="mt-0.5 h-4 w-4 rounded text-sabana" /><span className="text-xs text-blue-800 dark:text-blue-200"><strong>Print otomatis setelah pembayaran</strong><br />Berjalan tanpa chooser hanya setelah printer pernah dipasangkan dan izin Bluetooth disimpan browser.</span></label>
+                  <button onClick={handleTestPrint} disabled={!printerConnected} className="w-full mt-4 py-3 bg-blue-500 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">🖨️ Test Print</button>
             </div>
           </div>
         )}

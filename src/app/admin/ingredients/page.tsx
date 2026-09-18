@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseCRUD";
+import { csvToObjects, downloadCsv } from "@/lib/csv";
 import { formatRupiah } from "@/lib/format";
 
 interface Ingredient {
@@ -9,6 +10,9 @@ interface Ingredient {
   name: string;
   sku?: string;
   unit: string;
+  purchase_unit?: string;
+  usage_unit?: string;
+  conversion_factor?: number;
   purchase_price: number;
   stock_quantity: number;
   min_stock: number;
@@ -24,13 +28,19 @@ export default function IngredientsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkRows, setBulkRows] = useState<Record<string, string>[]>([]);
+  const [bulkError, setBulkError] = useState("");
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const bulkInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
-    name: "", sku: "", unit: "pack", purchase_price: 0, stock_quantity: 0, min_stock: 0, supplier: "",
+    name: "", sku: "", unit: "pack", purchase_unit: "pack", usage_unit: "gram", conversion_factor: 1, purchase_price: 0, stock_quantity: 0, min_stock: 0, supplier: "",
   });
 
   const resetForm = () => {
-    setFormData({ name: "", sku: "", unit: "pack", purchase_price: 0, stock_quantity: 0, min_stock: 0, supplier: "" });
+    setFormData({ name: "", sku: "", unit: "pack", purchase_unit: "pack", usage_unit: "gram", conversion_factor: 1, purchase_price: 0, stock_quantity: 0, min_stock: 0, supplier: "" });
     setEditingId(null);
     setShowForm(false);
   };
@@ -39,7 +49,7 @@ export default function IngredientsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...formData, is_active: true, purchase_price: Number(formData.purchase_price), stock_quantity: Number(formData.stock_quantity), min_stock: Number(formData.min_stock) };
+      const payload = { ...formData, unit: formData.purchase_unit, is_active: true, purchase_unit: formData.purchase_unit, usage_unit: formData.usage_unit, conversion_factor: Number(formData.conversion_factor) || 1, purchase_price: Number(formData.purchase_price), stock_quantity: Number(formData.stock_quantity), min_stock: Number(formData.min_stock) };
       if (editingId) {
         await update(editingId, payload as any);
       } else {
@@ -51,7 +61,7 @@ export default function IngredientsPage() {
 
   const handleEdit = (item: Ingredient) => {
     setEditingId(item.id);
-    setFormData({ name: item.name, sku: item.sku || "", unit: item.unit, purchase_price: item.purchase_price, stock_quantity: item.stock_quantity, min_stock: item.min_stock, supplier: item.supplier || "" });
+    setFormData({ name: item.name, sku: item.sku || "", unit: item.unit, purchase_unit: item.purchase_unit || item.unit, usage_unit: item.usage_unit || item.unit, conversion_factor: item.conversion_factor || 1, purchase_price: item.purchase_price, stock_quantity: item.stock_quantity, min_stock: item.min_stock, supplier: item.supplier || "" });
     setShowForm(true);
   };
 
@@ -66,6 +76,47 @@ export default function IngredientsPage() {
     return { label: "Cukup", color: "bg-green-100 text-green-700" };
   };
 
+  const handleBulkFile = async (file: File | undefined) => {
+    if (!file) return;
+    setBulkFile(file);
+    setBulkError("");
+    try {
+      const rows = csvToObjects(await file.text());
+      const required = ["name", "purchase_unit", "usage_unit", "conversion_factor", "purchase_price"];
+      const missing = required.filter((key) => !Object.prototype.hasOwnProperty.call(rows[0] || {}, key));
+      if (missing.length) throw new Error(`Kolom wajib belum ada: ${missing.join(", ")}`);
+      if (!rows.length) throw new Error("File tidak memiliki baris data.");
+      setBulkRows(rows);
+    } catch (error) {
+      setBulkRows([]);
+      setBulkError(error instanceof Error ? error.message : "CSV tidak dapat dibaca.");
+    }
+  };
+
+  const saveBulkIngredients = async () => {
+    if (!bulkRows.length) return;
+    setBulkSaving(true);
+    setBulkError("");
+    try {
+      const payload = bulkRows.map((row, index) => {
+        const conversion = Number(row.conversion_factor);
+        const price = Number(row.purchase_price);
+        if (!row.name || !row.purchase_unit || !row.usage_unit || !conversion || conversion <= 0 || Number.isNaN(price)) {
+          throw new Error(`Baris ${index + 2} tidak valid. Periksa nama, satuan, konversi, dan harga beli.`);
+        }
+        return { name: row.name, sku: row.sku || null, unit: row.purchase_unit, purchase_unit: row.purchase_unit, usage_unit: row.usage_unit, conversion_factor: conversion, purchase_price: price, stock_quantity: Number(row.stock_quantity) || 0, min_stock: Number(row.min_stock) || 0, supplier: row.supplier || null, is_active: true };
+      });
+      const { error } = await (await import("@/lib/supabase/client")).supabase.from("ingredients").insert(payload);
+      if (error) throw error;
+      setBulkOpen(false);
+      setBulkRows([]);
+      setBulkFile(null);
+      window.location.reload();
+    } catch (error) {
+      setBulkError(error instanceof Error ? error.message : "Import bahan baku gagal.");
+    } finally { setBulkSaving(false); }
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -73,10 +124,23 @@ export default function IngredientsPage() {
           <h1 className="text-2xl font-heading font-bold text-gray-900">📦 Bahan Baku</h1>
           <p className="text-gray-500 mt-1">Kelola bahan baku dan stok dari database</p>
         </div>
-        <button onClick={() => { if (showForm) { resetForm(); } else { setEditingId(null); setShowForm(true); } }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors">
-          + Tambah Bahan Baku
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setBulkOpen(!bulkOpen)} className="px-4 py-2 border border-sabana text-sabana rounded-xl font-semibold hover:bg-sabana-50 transition-colors">Import CSV</button>
+          <button onClick={() => { if (showForm) { resetForm(); } else { setEditingId(null); setShowForm(true); } }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors">+ Tambah Bahan Baku</button>
+        </div>
       </div>
+
+      {bulkOpen && (
+        <section className="bg-sabana-50 rounded-2xl p-5 border border-sabana/20 shadow-sm mb-6">
+          <div className="flex items-start justify-between gap-4">
+            <div><h3 className="font-heading font-semibold">Import bahan baku massal</h3><p className="text-xs text-gray-600 mt-1">Gunakan CSV UTF-8. Satu baris = satu bahan. Harga dan stok memakai satuan beli.</p></div>
+            <button type="button" onClick={() => downloadCsv("template-bahan-baku.csv", ["name","sku","purchase_unit","usage_unit","conversion_factor","purchase_price","stock_quantity","min_stock","supplier"], [["Tepung","ING-001","kg","gram",1000,14000,0,0,"Supplier A"]])} className="text-xs font-semibold text-sabana hover:underline">Download template</button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 mt-4"><input ref={bulkInputRef} type="file" accept=".csv,text/csv" onChange={(event) => void handleBulkFile(event.target.files?.[0])} className="block text-sm" />{bulkFile && <span className="text-xs text-gray-500">{bulkFile.name} · {bulkRows.length} baris</span>}<button type="button" onClick={() => void saveBulkIngredients()} disabled={!bulkRows.length || bulkSaving} className="px-4 py-2 rounded-xl bg-success text-white text-sm font-semibold disabled:opacity-50">{bulkSaving ? "Mengimpor..." : "Import bahan"}</button></div>
+          {bulkError && <p className="text-sm text-red-700 mt-3">{bulkError}</p>}
+          {bulkRows.length > 0 && <p className="text-xs text-gray-600 mt-3">Preview valid: {bulkRows.slice(0, 3).map((row) => row.name).join(", ")}{bulkRows.length > 3 ? "…" : ""}</p>}
+        </section>
+      )}
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-6">
@@ -100,6 +164,17 @@ export default function IngredientsPage() {
                 <option value="pcs">Pcs</option>
                 <option value="ekor">Ekor</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Satuan Resep *</label>
+              <select value={formData.usage_unit} onChange={(e) => setFormData({ ...formData, usage_unit: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sabana">
+                <option value="gram">Gram</option><option value="kg">Kg</option><option value="ml">Ml</option><option value="liter">Liter</option><option value="pcs">Pcs</option><option value="ekor">Ekor</option><option value="porsi">Porsi</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Isi Konversi *</label>
+              <input type="number" min="0.001" step="0.001" value={formData.conversion_factor} onChange={(e) => setFormData({ ...formData, conversion_factor: Number(e.target.value) })} required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sabana font-mono" />
+              <p className="text-[10px] text-gray-400 mt-1">1 {formData.purchase_unit} = {formData.conversion_factor || 0} {formData.usage_unit}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Harga Beli *</label>
@@ -139,7 +214,8 @@ export default function IngredientsPage() {
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Nama</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">SKU</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Satuan</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Konversi</th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">HPP / Satuan Resep</th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Harga Beli</th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Stok</th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Min Stok</th>
@@ -155,7 +231,8 @@ export default function IngredientsPage() {
                     <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 font-medium text-sm">{item.name}</td>
                       <td className="px-4 py-3 text-sm font-mono text-gray-500">{item.sku || "-"}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{item.unit}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">1 {item.purchase_unit || item.unit} = {item.conversion_factor || 1} {item.usage_unit || item.unit}</td>
+                      <td className="px-4 py-3 text-right text-sm font-mono">{formatRupiah(Math.round(item.purchase_price / (item.conversion_factor || 1)))}</td>
                       <td className="px-4 py-3 text-right text-sm font-mono">{formatRupiah(item.purchase_price)}</td>
                       <td className="px-4 py-3 text-right text-sm font-mono font-bold">{item.stock_quantity}</td>
                       <td className="px-4 py-3 text-right text-sm text-gray-500">{item.min_stock}</td>
