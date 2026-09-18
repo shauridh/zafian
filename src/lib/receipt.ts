@@ -30,6 +30,7 @@ export interface ReceiptData {
   outletAddress?: string;
   outletPhone?: string;
   footer?: string;
+  promoText?: string;
 }
 
 export const RECEIPT_WIDTH_58 = 32; // 58mm ≈ 32 chars; 80mm ≈ 48
@@ -51,6 +52,20 @@ const rp = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
 /** Truncate with ellipsis, never exceeding width. */
 function trunc(s: string, w: number): string {
   return s.length > w ? s.slice(0, w - 1) + "\u2026" : s;
+}
+
+function wrapWords(value: string, width: number): string[] {
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (!current) current = word;
+    else if ((current.length + 1 + word.length) <= width) current += ` ${word}`;
+    else { lines.push(current); current = word; }
+  }
+  if (current) lines.push(current);
+  return lines;
 }
 
 /** Left/right split on ONE line: left truncated, right flush to column w. */
@@ -80,14 +95,15 @@ export function buildReceiptLines(d: ReceiptData, w: number = RECEIPT_WIDTH_58):
   const method = (d.paymentMethod || "").toUpperCase();
   const methodLabel = method === "CASH" ? "TUNAI" : method === "ESTIMATE" ? "ESTIMASI" : method;
   const footerText = stripWide(d.footer || "Terima kasih!");
+  const promoText = stripWide(d.promoText || "");
   const lines: string[] = [];
 
   const trimEnd = (s: string) => s.trimEnd();
 
   lines.push(sep("="));
-  lines.push(center(d.outletName || "SABANA FRIED CHICKEN"));
-  if (d.outletAddress) lines.push(center(d.outletAddress));
-  if (d.outletPhone) lines.push(center(`Telp: ${d.outletPhone}`));
+  for (const line of wrapWords(stripWide(d.outletName || "SABANA FRIED CHICKEN"), w - MARGIN.length)) lines.push(center(line));
+  if (d.outletAddress) for (const line of wrapWords(stripWide(d.outletAddress), w - MARGIN.length)) lines.push(center(line));
+  if (d.outletPhone) for (const line of wrapWords(`Telp: ${stripWide(d.outletPhone)}`, w - MARGIN.length)) lines.push(center(line));
 
   lines.push(sep("-"));
   lines.push(trimEnd(MARGIN + trunc(d.date, w - MARGIN.length)));
@@ -112,6 +128,11 @@ export function buildReceiptLines(d: ReceiptData, w: number = RECEIPT_WIDTH_58):
   lines.push(trimEnd(MARGIN + `Metode: ${methodLabel}`));
   lines.push(sep("="));
 
+  if (promoText) {
+    lines.push(center("PROMO"));
+    for (const line of wrapWords(promoText, w - MARGIN.length)) lines.push(center(line));
+    lines.push(sep("-"));
+  }
   lines.push(center(footerText));
   lines.push(center("Sabana Fried Chicken"));
 

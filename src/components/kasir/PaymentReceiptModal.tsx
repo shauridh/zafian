@@ -107,7 +107,7 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
           serviceMode: SERVICE_MODE_LABELS[serviceMode] || serviceMode,
           orderNumber: savedOrderId || `#${orderNumber}`, date: formatDateTime(new Date()),
           outletName: rSettings.outletName, outletAddress: rSettings.outletAddress, outletPhone: rSettings.outletPhone,
-          footer: rSettings.footer,
+          promoText: rSettings.promoText, footer: rSettings.footer,
         }), automatic ? 10000 : 20000);
         setPrintSt(ok ? "ok" : "err");
       }

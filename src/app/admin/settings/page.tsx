@@ -45,7 +45,7 @@ export default function SettingsPage() {
   const [printerConnected, setPrinterConnected] = useState(false);
   const [printerConnecting, setPrinterConnecting] = useState(false);
   const [features, setFeatures] = useState<FeatureToggles>(DEFAULT_FEATURES);
-  const [receiptData, setReceiptData] = useState<{ outletName: string; outletAddress: string; outletPhone: string; footer: string; showLogo: boolean; showTime: boolean; showQRIS: boolean; autoPrint: boolean; paperWidth?: "58" | "80" }>({ outletName: "SABANA FRIED CHICKEN", outletAddress: "Jl. Contoh No. 123", outletPhone: "0812-xxxx-xxxx", footer: "Terima kasih! Sampai jumpa! 🍗", showLogo: true, showTime: true, showQRIS: false, autoPrint: false, paperWidth: "58" });
+  const [receiptData, setReceiptData] = useState<{ outletName: string; outletAddress: string; outletPhone: string; promoText: string; footer: string; showLogo: boolean; showTime: boolean; showQRIS: boolean; autoPrint: boolean; paperWidth?: "58" | "80" }>({ outletName: "SABANA FRIED CHICKEN", outletAddress: "Jl. Contoh No. 123", outletPhone: "0812-xxxx-xxxx", promoText: "", footer: "Terima kasih! Sampai jumpa! 🍗", showLogo: true, showTime: true, showQRIS: false, autoPrint: false, paperWidth: "58" });
   const [brandColor, setBrandColor] = useState("#F97316");
   const [brandColorDark, setBrandColorDark] = useState("#F97316");
   const [portalTagline, setPortalTagline] = useState("Sabana");
@@ -99,7 +99,7 @@ export default function SettingsPage() {
         subtotal: 107000, total: 107000, amountPaid: 110000, change: 3000,
         paymentMethod: "Tunai", cashierName: "Sabana", serviceMode: "Dine In", orderNumber: "TEST-001",
         date: new Date().toLocaleString("id-ID"), outletName: receiptData.outletName,
-        outletAddress: receiptData.outletAddress, outletPhone: receiptData.outletPhone,
+        outletAddress: receiptData.outletAddress, outletPhone: receiptData.outletPhone, promoText: receiptData.promoText,
       });
       setPrinterConnected(ok);
       alert(ok ? "✅ Test print berhasil dikirim ke printer." : "❌ Data tidak berhasil dikirim. Periksa printer, koneksi, dan characteristic BLE.");
@@ -198,8 +198,9 @@ export default function SettingsPage() {
               <h3 className="font-heading font-semibold mb-4 dark:text-gray-100">🧾 Pengaturan Struk</h3>
               <div className="space-y-3">
                 <div><label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nama Outlet di Struk</label><input type="text" value={receiptData.outletName} onChange={(e) => setReceiptData({ ...receiptData, outletName: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-sm" /></div>
-                <div><label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Alamat di Struk</label><input type="text" value={receiptData.outletAddress} onChange={(e) => setReceiptData({ ...receiptData, outletAddress: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-sm" /></div>
+                <div><label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Alamat di Struk</label><textarea value={receiptData.outletAddress} onChange={(e) => setReceiptData({ ...receiptData, outletAddress: e.target.value })} rows={2} placeholder="Alamat outlet, boleh lebih dari satu baris" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-sm resize-none" /></div>
                 <div><label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">No. HP di Struk</label><input type="text" value={receiptData.outletPhone} onChange={(e) => setReceiptData({ ...receiptData, outletPhone: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-sm" /></div>
+                <div><label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Promo sebelum footer</label><textarea value={receiptData.promoText} onChange={(e) => setReceiptData({ ...receiptData, promoText: e.target.value })} rows={2} placeholder="Contoh: Promo makan hemat! Follow @sabana" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-sm resize-none" /></div>
                 <div><label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Footer Struk</label><textarea value={receiptData.footer} onChange={(e) => setReceiptData({ ...receiptData, footer: e.target.value })} rows={2} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-sm resize-none" /></div>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={receiptData.showLogo} onChange={(e) => setReceiptData({ ...receiptData, showLogo: e.target.checked })} className="w-4 h-4 text-sabana rounded" /><span className="text-sm dark:text-gray-300">Tampilkan Logo</span></label>
@@ -231,6 +232,7 @@ export default function SettingsPage() {
                   <div className="flex justify-between"><span>KEMBALI</span><span>Rp 3.000</span></div>
                 </div>
                 <div className="border-t border-dashed border-gray-300 dark:border-[#444] pt-3 text-center">
+                  {receiptData.promoText && <><p className="font-bold">PROMO</p><p className="text-gray-500 dark:text-gray-400 text-[10px] whitespace-pre-wrap">{receiptData.promoText}</p></>}
                   <p className="font-bold">Terima kasih!</p>
                   <p className="text-gray-500 dark:text-gray-400 text-[10px]">{receiptData.footer}</p>
                 </div>

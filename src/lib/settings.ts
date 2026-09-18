@@ -9,6 +9,7 @@ export interface ReceiptSettings {
   outletAddress?: string;
   outletPhone?: string;
   footer?: string;
+  promoText?: string;
   showLogo?: boolean;
   showTime?: boolean;
   showQR?: boolean;
@@ -21,6 +22,7 @@ const KEY = "sabana-receipt-settings";
 export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
   outletName: "SABANA FRIED CHICKEN",
   footer: "Terima kasih!",
+  promoText: "",
   showLogo: true,
   showTime: true,
   showQR: false,
