@@ -7,6 +7,7 @@ import { getReceiptSettings, saveReceiptSettings } from "@/lib/settings";
 import NotificationSettings from "@/components/admin/NotificationSettings";
 import ThemeToggle from "@/components/ThemeToggle";
 import BackupSettings from "@/components/admin/BackupSettings";
+import ReceiptSettingsPreview from "@/components/admin/ReceiptSettingsPreview";
 
 type SettingsTab = "outlet" | "printer" | "receipt" | "features" | "portal" | "theme" | "notifications" | "backup" | "danger";
 
@@ -211,31 +212,10 @@ export default function SettingsPage() {
             </div>
             {/* Receipt Preview */}
             <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 border border-gray-200 dark:border-[#333] shadow-sm">
-              <h3 className="font-heading font-semibold mb-3 dark:text-gray-100">👁️ Preview Struk</h3>
-              <div className="bg-gray-100 dark:bg-[#222] rounded-xl p-4 font-mono text-xs leading-relaxed max-w-[280px] mx-auto">
-                <div className="text-center border-b border-dashed border-gray-300 dark:border-[#444] pb-3 mb-3">
-                  {receiptData.showLogo && <p className="text-lg font-bold">🍗</p>}
-                  <p className="font-bold text-sm">{receiptData.outletName}</p>
-                  <p className="text-gray-500 dark:text-gray-400">{receiptData.outletAddress}</p>
-                  <p className="text-gray-500 dark:text-gray-400">{receiptData.outletPhone}</p>
-                </div>
-                {receiptData.showTime && <p className="text-gray-500 dark:text-gray-400 mb-2">{new Date().toLocaleString("id-ID")}</p>}
-                <div className="border-b border-dashed border-gray-300 dark:border-[#444] pb-2 mb-2">
-                  <div className="flex justify-between"><span>1x Ayam Reguler</span><span>Rp 89.000</span></div>
-                  <div className="flex justify-between"><span>2x Nasi Putih</span><span>Rp 10.000</span></div>
-                  <div className="flex justify-between"><span>1x Kentang Goreng</span><span>Rp 8.000</span></div>
-                </div>
-                <div className="space-y-1 mb-2">
-                  <div className="flex justify-between"><span>Subtotal</span><span>Rp 107.000</span></div>
-                  <div className="flex justify-between font-bold"><span>TOTAL</span><span>Rp 107.000</span></div>
-                  <div className="flex justify-between"><span>BAYAR</span><span>Rp 110.000</span></div>
-                  <div className="flex justify-between"><span>KEMBALI</span><span>Rp 3.000</span></div>
-                </div>
-                <div className="border-t border-dashed border-gray-300 dark:border-[#444] pt-3 text-center">
-                  {receiptData.promoText && <><p className="font-bold">PROMO</p><p className="text-gray-500 dark:text-gray-400 text-[10px] whitespace-pre-wrap">{receiptData.promoText}</p></>}
-                  <p className="font-bold">Terima kasih!</p>
-                  <p className="text-gray-500 dark:text-gray-400 text-[10px]">{receiptData.footer}</p>
-                </div>
+              <h3 className="font-heading font-semibold mb-3 dark:text-gray-100">👁️ Preview Live 58mm / 80mm</h3>
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                <ReceiptSettingsPreview width={32} settings={receiptData} />
+                <ReceiptSettingsPreview width={48} settings={receiptData} />
               </div>
             </div>
           </div>
@@ -296,8 +276,8 @@ export default function SettingsPage() {
                 <div className="flex-1 rounded-xl p-4 text-white text-center" style={{ backgroundColor: brandColorDark }}><p className="font-bold text-sm">Dark Mode</p><p className="text-xs opacity-80">{brandColorDark}</p></div>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div><label className="block text-xs font-medium text-gray-500 mb-1">Light Mode</label><div className="flex items-center gap-2"><input type="color" value={brandColor} onChange={(e) => { setBrandColor(e.target.value); document.documentElement.style.setProperty("--brand-color", e.target.value); }} className="w-10 h-10 rounded-lg border-0 cursor-pointer" /><input type="text" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-xs font-mono" /></div></div>
-                <div><label className="block text-xs font-medium text-gray-500 mb-1">Dark Mode</label><div className="flex items-center gap-2"><input type="color" value={brandColorDark} onChange={(e) => { setBrandColorDark(e.target.value); document.documentElement.style.setProperty("--brand-color-dark", e.target.value); }} className="w-10 h-10 rounded-lg border-0 cursor-pointer" /><input type="text" value={brandColorDark} onChange={(e) => setBrandColorDark(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-xs font-mono" /></div></div>
+                <div><label className="block text-xs font-medium text-gray-500 mb-1">Light Mode</label><div className="flex items-center gap-2"><input type="color" value={brandColor} onChange={(e) => { setBrandColor(e.target.value); document.documentElement.style.setProperty("--brand-color", e.target.value); }} className="w-10 h-10 rounded-lg border-0 cursor-pointer" /><input type="text" value={brandColor} onChange={(e) => { const value = e.target.value; setBrandColor(value); document.documentElement.style.setProperty("--brand-color", value); }} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-xs font-mono" /></div></div>
+                <div><label className="block text-xs font-medium text-gray-500 mb-1">Dark Mode</label><div className="flex items-center gap-2"><input type="color" value={brandColorDark} onChange={(e) => { setBrandColorDark(e.target.value); document.documentElement.style.setProperty("--brand-color-dark", e.target.value); }} className="w-10 h-10 rounded-lg border-0 cursor-pointer" /><input type="text" value={brandColorDark} onChange={(e) => { const value = e.target.value; setBrandColorDark(value); document.documentElement.style.setProperty("--brand-color-dark", value); }} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-[#444] dark:bg-[#222] dark:text-gray-100 text-xs font-mono" /></div></div>
               </div>
               <div className="flex gap-2 flex-wrap">{PRESET_COLORS.map((p) => (<button key={p.name} onClick={() => { setBrandColor(p.light); setBrandColorDark(p.dark); document.documentElement.style.setProperty("--brand-color", p.light); document.documentElement.style.setProperty("--brand-color-dark", p.dark); }} className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-xs font-medium ${brandColor === p.light ? "border-sabana bg-sabana-50" : "border-gray-200 dark:border-[#444]"}`}><span className="w-4 h-4 rounded-full" style={{ backgroundColor: p.light }} /><span className="dark:text-gray-300">{p.name}</span></button>))}</div>
             </div>

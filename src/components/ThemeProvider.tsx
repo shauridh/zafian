@@ -24,11 +24,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>("system");
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
 
-  // Load saved theme
+  // Load saved theme and brand colors before applying the visual state.
   useEffect(() => {
     const saved = localStorage.getItem("sabana-theme") as Theme;
-    if (saved) {
+    if (saved === "light" || saved === "dark" || saved === "system") {
       setTheme(saved);
+    }
+    try {
+      const settings = JSON.parse(localStorage.getItem("sabana-app-settings") || "{}");
+      const root = document.documentElement;
+      root.style.setProperty("--brand-color", settings.brand_color || "#F97316");
+      root.style.setProperty("--brand-color-dark", settings.brand_color_dark || settings.brand_color || "#F97316");
+    } catch {
+      // Keep CSS defaults when settings are unavailable or malformed.
     }
   }, []);
 

@@ -494,9 +494,20 @@ h1, h2, h3, h4, h5, h6 {
   --brand-color-dark: #F97316;
 }
 
-.dark .bg-sabana { background-color: var(--brand-color-dark) !important; }
-.dark .text-sabana { color: var(--brand-color-dark) !important; }
-.dark .border-sabana { border-color: var(--brand-color-dark) !important; }
+/* Tailwind utilities are generated with static colors; these overrides make
+   the settings color apply immediately in both light and dark themes. */
+.bg-sabana, .bg-sabana-dark { background-color: var(--brand-color) !important; }
+.text-sabana, .text-sabana-dark { color: var(--brand-color) !important; }
+.border-sabana, .border-sabana-dark { border-color: var(--brand-color) !important; }
+.ring-sabana { --tw-ring-color: var(--brand-color) !important; }
+.from-sabana { --tw-gradient-from: var(--brand-color) !important; }
+.to-sabana-dark { --tw-gradient-to: var(--brand-color) !important; }
+.hover\:bg-sabana-dark:hover { background-color: var(--brand-color) !important; }
+.shadow-sabana\/30 { --tw-shadow-color: var(--brand-color) !important; }
+
+.dark .bg-sabana, .dark .bg-sabana-dark { background-color: var(--brand-color-dark) !important; }
+.dark .text-sabana, .dark .text-sabana-dark { color: var(--brand-color-dark) !important; }
+.dark .border-sabana, .dark .border-sabana-dark { border-color: var(--brand-color-dark) !important; }
 .dark .ring-sabana { --tw-ring-color: var(--brand-color-dark) !important; }
 .dark .from-sabana { --tw-gradient-from: var(--brand-color-dark) !important; }
 .dark .to-sabana-dark { --tw-gradient-to: var(--brand-color-dark) !important; }
