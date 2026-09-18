@@ -39,6 +39,9 @@ export default function IngredientsPage() {
     name: "", sku: "", unit: "pack", purchase_unit: "pack", usage_unit: "gram", conversion_factor: 1, purchase_price: 0, stock_quantity: 0, min_stock: 0, supplier: "",
   });
   const [filters, setFilters] = useState({ name: "", sku: "", unit: "", status: "", supplier: "" });
+  const [sort, setSort] = useState<{ key: "name" | "sku" | "unit" | "purchase_price" | "stock_quantity" | "min_stock" | "status" | "supplier"; direction: "asc" | "desc" }>({ key: "name", direction: "asc" });
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const resetForm = () => {
     setFormData({ name: "", sku: "", unit: "pack", purchase_unit: "pack", usage_unit: "gram", conversion_factor: 1, purchase_price: 0, stock_quantity: 0, min_stock: 0, supplier: "" });
@@ -85,6 +88,30 @@ export default function IngredientsPage() {
       && status.includes(filters.status.toLowerCase())
       && (item.supplier || "").toLowerCase().includes(filters.supplier.toLowerCase());
   });
+  const sortedIngredients = [...filteredIngredients].sort((a, b) => {
+    const value = (item: Ingredient): string | number => {
+      if (sort.key === "unit") return `${item.purchase_unit || item.unit} ${item.usage_unit || item.unit}`;
+      if (sort.key === "status") return getStockStatus(item).label;
+      if (sort.key === "supplier") return item.supplier || "";
+      if (sort.key === "sku") return item.sku || "";
+      return item[sort.key];
+    };
+    const left = value(a);
+    const right = value(b);
+    const comparison = typeof left === "string" && typeof right === "string"
+      ? left.localeCompare(right, "id")
+      : Number(left) - Number(right);
+    return sort.direction === "asc" ? comparison : -comparison;
+  });
+  const ingredientPageCount = Math.max(1, Math.ceil(sortedIngredients.length / pageSize));
+  const safeIngredientPage = Math.min(page, ingredientPageCount);
+  const paginatedIngredients = sortedIngredients.slice((safeIngredientPage - 1) * pageSize, safeIngredientPage * pageSize);
+  const resetFilters = () => { setFilters({ name: "", sku: "", unit: "", status: "", supplier: "" }); setPage(1); };
+  const toggleSort = (key: typeof sort.key) => {
+    setSort((current) => current.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: "asc" });
+    setPage(1);
+  };
+  const sortLabel = (key: typeof sort.key) => sort.key === key ? (sort.direction === "asc" ? " ↑" : " ↓") : "";
 
   const handleBulkFile = async (file: File | undefined) => {
     if (!file) return;
@@ -135,6 +162,7 @@ export default function IngredientsPage() {
           <p className="text-gray-500 mt-1">Kelola bahan baku dan stok dari database</p>
         </div>
         <div className="flex items-center gap-2">
+          <button type="button" onClick={resetFilters} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors">Reset Filter</button>
           <button onClick={() => setBulkOpen(!bulkOpen)} className="px-4 py-2 border border-sabana text-sabana rounded-xl font-semibold hover:bg-sabana-50 transition-colors">Import CSV</button>
           <button onClick={() => { if (showForm) { resetForm(); } else { setEditingId(null); setShowForm(true); } }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors">+ Tambah Bahan Baku</button>
         </div>
@@ -222,20 +250,20 @@ export default function IngredientsPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Nama<input aria-label="Filter nama bahan baku" value={filters.name} onChange={(e) => setFilters({ ...filters, name: e.target.value })} placeholder="Cari nama" className="mt-1 w-full min-w-28 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">SKU<input aria-label="Filter SKU bahan baku" value={filters.sku} onChange={(e) => setFilters({ ...filters, sku: e.target.value })} placeholder="Cari SKU" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Konversi<input aria-label="Filter satuan bahan baku" value={filters.unit} onChange={(e) => setFilters({ ...filters, unit: e.target.value })} placeholder="Satuan" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">HPP / Satuan Resep</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Harga Beli</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Stok</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Min Stok</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Status<input aria-label="Filter status stok bahan baku" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} placeholder="Cukup / habis" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Supplier<input aria-label="Filter supplier bahan baku" value={filters.supplier} onChange={(e) => setFilters({ ...filters, supplier: e.target.value })} placeholder="Cari supplier" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("name")}>Nama{sortLabel("name")}</button><input aria-label="Filter nama bahan baku" value={filters.name} onChange={(e) => { setFilters({ ...filters, name: e.target.value }); setPage(1); }} placeholder="Cari nama" className="mt-1 w-full min-w-28 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("sku")}>SKU{sortLabel("sku")}</button><input aria-label="Filter SKU bahan baku" value={filters.sku} onChange={(e) => { setFilters({ ...filters, sku: e.target.value }); setPage(1); }} placeholder="Cari SKU" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("unit")}>Konversi{sortLabel("unit")}</button><input aria-label="Filter satuan bahan baku" value={filters.unit} onChange={(e) => { setFilters({ ...filters, unit: e.target.value }); setPage(1); }} placeholder="Satuan" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-gray-600">HPP / Satuan Resep</th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("purchase_price")}>Harga Beli{sortLabel("purchase_price")}</button></th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("stock_quantity")}>Stok{sortLabel("stock_quantity")}</button></th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("min_stock")}>Min Stok{sortLabel("min_stock")}</button></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("status")}>Status{sortLabel("status")}</button><input aria-label="Filter status stok bahan baku" value={filters.status} onChange={(e) => { setFilters({ ...filters, status: e.target.value }); setPage(1); }} placeholder="Cukup / habis" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("supplier")}>Supplier{sortLabel("supplier")}</button><input aria-label="Filter supplier bahan baku" value={filters.supplier} onChange={(e) => { setFilters({ ...filters, supplier: e.target.value }); setPage(1); }} placeholder="Cari supplier" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredIngredients.map((item) => {
+                {paginatedIngredients.map((item) => {
                   const status = getStockStatus(item);
                   return (
                     <tr key={item.id} className="hover:bg-gray-50 transition-colors">
@@ -267,6 +295,10 @@ export default function IngredientsPage() {
                 )}
               </tbody>
             </table>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 text-sm text-gray-500">
+              <span>{sortedIngredients.length === 0 ? "0" : `${(safeIngredientPage - 1) * pageSize + 1}-${Math.min(safeIngredientPage * pageSize, sortedIngredients.length)}`} dari {sortedIngredients.length} bahan</span>
+              <div className="flex items-center gap-2"><button type="button" disabled={safeIngredientPage <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="rounded-lg border border-gray-200 px-3 py-1.5 disabled:opacity-40">Sebelumnya</button><span>Halaman {safeIngredientPage} / {ingredientPageCount}</span><button type="button" disabled={safeIngredientPage >= ingredientPageCount} onClick={() => setPage((current) => Math.min(ingredientPageCount, current + 1))} className="rounded-lg border border-gray-200 px-3 py-1.5 disabled:opacity-40">Berikutnya</button></div>
+            </div>
           </div>
         )}
       </div>

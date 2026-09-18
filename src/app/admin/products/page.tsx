@@ -54,6 +54,9 @@ export default function ProductsPage() {
     is_available: true,
   });
   const [filters, setFilters] = useState({ name: "", category: "", sku: "", status: "" });
+  const [sort, setSort] = useState<{ key: "name" | "category" | "price" | "hpp" | "sku" | "status"; direction: "asc" | "desc" }>({ key: "name", direction: "asc" });
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const resetForm = () => {
     setFormData({
@@ -150,6 +153,29 @@ export default function ProductsPage() {
       && (product.sku || "").toLowerCase().includes(filters.sku.toLowerCase())
       && (!filters.status || status === filters.status);
   });
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    const value = (product: Product) => {
+      if (sort.key === "category") return getCategoryName(product.category_id).toLowerCase();
+      if (sort.key === "status") return product.is_active ? "aktif" : "nonaktif";
+      if (sort.key === "sku") return product.sku || "";
+      return product[sort.key] || 0;
+    };
+    const left = value(a);
+    const right = value(b);
+    const comparison = typeof left === "string" && typeof right === "string"
+      ? left.localeCompare(right, "id")
+      : Number(left) - Number(right);
+    return sort.direction === "asc" ? comparison : -comparison;
+  });
+  const productPageCount = Math.max(1, Math.ceil(sortedProducts.length / pageSize));
+  const safeProductPage = Math.min(page, productPageCount);
+  const paginatedProducts = sortedProducts.slice((safeProductPage - 1) * pageSize, safeProductPage * pageSize);
+  const resetFilters = () => { setFilters({ name: "", category: "", sku: "", status: "" }); setPage(1); };
+  const toggleSort = (key: typeof sort.key) => {
+    setSort((current) => current.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: "asc" });
+    setPage(1);
+  };
+  const sortLabel = (key: typeof sort.key) => sort.key === key ? (sort.direction === "asc" ? " ↑" : " ↓") : "";
 
   return (
     <div className="p-6">
@@ -159,6 +185,7 @@ export default function ProductsPage() {
           <p className="text-gray-500 mt-1">Kelola produk, harga, dan gambar dari database</p>
         </div>
         <div className="flex items-center gap-2">
+          <button type="button" onClick={resetFilters} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors">Reset Filter</button>
           <Link href="/admin/bundles" className="px-4 py-2 border border-sabana text-sabana rounded-xl font-semibold hover:bg-sabana-50 transition-colors">🎁 Paket/Bundling</Link>
           <button onClick={() => { if (showForm) { resetForm(); } else { setEditingId(null); setShowForm(true); } }} className="px-4 py-2 bg-sabana text-white rounded-xl font-semibold hover:bg-sabana-dark transition-colors">+ Tambah Produk</button>
         </div>
@@ -255,17 +282,17 @@ export default function ProductsPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Gambar</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Nama<input aria-label="Filter nama produk" value={filters.name} onChange={(e) => setFilters({ ...filters, name: e.target.value })} placeholder="Cari nama" className="mt-1 w-full min-w-28 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Kategori<input aria-label="Filter kategori produk" value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })} placeholder="Cari kategori" className="mt-1 w-full min-w-28 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Harga</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">HPP</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">SKU<input aria-label="Filter SKU produk" value={filters.sku} onChange={(e) => setFilters({ ...filters, sku: e.target.value })} placeholder="Cari SKU" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Status<select aria-label="Filter status produk" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana"><option value="">Semua</option><option value="aktif">Aktif</option><option value="nonaktif">Nonaktif</option></select></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("name")}>Nama{sortLabel("name")}</button><input aria-label="Filter nama produk" value={filters.name} onChange={(e) => { setFilters({ ...filters, name: e.target.value }); setPage(1); }} placeholder="Cari nama" className="mt-1 w-full min-w-28 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("category")}>Kategori{sortLabel("category")}</button><input aria-label="Filter kategori produk" value={filters.category} onChange={(e) => { setFilters({ ...filters, category: e.target.value }); setPage(1); }} placeholder="Cari kategori" className="mt-1 w-full min-w-28 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("price")}>Harga{sortLabel("price")}</button></th>
+                  <th className="px-4 py-2 text-right text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("hpp")}>HPP{sortLabel("hpp")}</button></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("sku")}>SKU{sortLabel("sku")}</button><input aria-label="Filter SKU produk" value={filters.sku} onChange={(e) => { setFilters({ ...filters, sku: e.target.value }); setPage(1); }} placeholder="Cari SKU" className="mt-1 w-full min-w-24 rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana" /></th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600"><button type="button" onClick={() => toggleSort("status")}>Status{sortLabel("status")}</button><select aria-label="Filter status produk" value={filters.status} onChange={(e) => { setFilters({ ...filters, status: e.target.value }); setPage(1); }} className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-xs font-normal focus:outline-none focus:ring-1 focus:ring-sabana"><option value="">Semua</option><option value="aktif">Aktif</option><option value="nonaktif">Nonaktif</option></select></th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredProducts.map((product) => (
+                {paginatedProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3">
                       {product.image_url ? (
@@ -298,6 +325,10 @@ export default function ProductsPage() {
                 {filteredProducts.length === 0 && <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-400">Tidak ada produk yang sesuai filter.</td></tr>}
               </tbody>
             </table>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 text-sm text-gray-500">
+              <span>{sortedProducts.length === 0 ? "0" : `${(safeProductPage - 1) * pageSize + 1}-${Math.min(safeProductPage * pageSize, sortedProducts.length)}`} dari {sortedProducts.length} produk</span>
+              <div className="flex items-center gap-2"><button type="button" disabled={safeProductPage <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="rounded-lg border border-gray-200 px-3 py-1.5 disabled:opacity-40">Sebelumnya</button><span>Halaman {safeProductPage} / {productPageCount}</span><button type="button" disabled={safeProductPage >= productPageCount} onClick={() => setPage((current) => Math.min(productPageCount, current + 1))} className="rounded-lg border border-gray-200 px-3 py-1.5 disabled:opacity-40">Berikutnya</button></div>
+            </div>
           </div>
         )}
       </div>
