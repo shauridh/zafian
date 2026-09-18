@@ -13,10 +13,16 @@ import { getReceiptSettings } from "@/lib/settings";
 import { getActivePromos, calculateBestDiscount, type PromoResult } from "@/lib/promos";
 import { getPrinter, isBluetoothAvailable } from "@/lib/printer";
 
+export interface SplitPayment {
+  method: "cash" | "qris";
+  amount: number;
+  reference?: string;
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (paymentMethod: string, amountPaid: number) => void;
+  onComplete: (paymentMethod: string, amountPaid: number, splitPayments?: SplitPayment[]) => void;
   saving?: boolean;
   orderNumber?: number;
   paymentResult?: { method: string; amountPaid: number; change: number };
@@ -33,6 +39,8 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
   const isPaid = !!paymentResult;
 
   const [pm, setPm] = useState<"cash" | "qris">("cash");
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitCash, setSplitCash] = useState("");
   const [cashIn, setCashIn] = useState("");
   const [platId, setPlatId] = useState("");
   const [promo, setPromo] = useState<PromoResult | null>(null);
@@ -49,12 +57,15 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
     (async () => { try { const p = await getActivePromos(); setPromo(calculateBestDiscount(p, total)); } catch {} })();
   }, [isOpen, total, isOnlineFood, isPaid]);
 
-  React.useEffect(() => { if (isOpen && !isPaid) { setCashIn(""); setPm("cash"); } }, [isOpen, isPaid]);
+  React.useEffect(() => { if (isOpen && !isPaid) { setCashIn(""); setSplitCash(""); setSplitMode(false); setPm("cash"); } }, [isOpen, isPaid]);
 
   const fTotal = total - (promo?.discount_amount || 0);
   const paid = parseInt(cashIn) || 0;
   const change = pm === "cash" ? Math.max(0, paid - fTotal) : 0;
-  const enough = isOnlineFood || pm === "qris" || paid >= fTotal;
+  const splitCashAmount = parseInt(splitCash) || 0;
+  const splitQrisAmount = Math.max(0, fTotal - splitCashAmount);
+  const splitEnough = splitCashAmount > 0 && splitQrisAmount > 0;
+  const enough = isOnlineFood || splitMode ? splitEnough : pm === "qris" || paid >= fTotal;
 
   const qAmts = useMemo(() => [
     { label: "UANG PAS", value: fTotal },
@@ -64,9 +75,13 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
 
   const doComplete = useCallback(() => {
     if (isOnlineFood) onComplete("estimate", total);
+    else if (splitMode && splitEnough) onComplete("split", fTotal, [
+      { method: "cash", amount: splitCashAmount },
+      { method: "qris", amount: splitQrisAmount },
+    ]);
     else if (pm === "qris") onComplete("qris", fTotal);
     else if (enough) onComplete("cash", paid);
-  }, [isOnlineFood, pm, enough, fTotal, total, paid, onComplete]);
+  }, [isOnlineFood, splitMode, splitEnough, splitCashAmount, splitQrisAmount, pm, enough, fTotal, total, paid, onComplete]);
 
   const withPrintTimeout = <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => Promise.race([
     promise,
@@ -231,11 +246,22 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
               <div className="space-y-2">
                 {/* Payment method */}
                 <div className="flex gap-1.5">
-                  <button onClick={() => setPm("cash")} className={clsx("flex-1 py-2 rounded-xl font-bold text-xs border-2 transition-all", pm === "cash" ? "bg-sabana text-white border-sabana shadow" : "bg-white dark:bg-[#222] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#444]")}>💵 TUNAI</button>
-                  <button onClick={() => setPm("qris")} className={clsx("flex-1 py-2 rounded-xl font-bold text-xs border-2 transition-all", pm === "qris" ? "bg-blue-600 text-white border-blue-600 shadow" : "bg-white dark:bg-[#222] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#444]")}>📱 QRIS</button>
+                  <button onClick={() => { setPm("cash"); setSplitMode(false); }} className={clsx("flex-1 py-2 rounded-xl font-bold text-xs border-2 transition-all", !splitMode && pm === "cash" ? "bg-sabana text-white border-sabana shadow" : "bg-white dark:bg-[#222] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#444]")}>💵 TUNAI</button>
+                  <button onClick={() => { setPm("qris"); setSplitMode(false); }} className={clsx("flex-1 py-2 rounded-xl font-bold text-xs border-2 transition-all", !splitMode && pm === "qris" ? "bg-blue-600 text-white border-blue-600 shadow" : "bg-white dark:bg-[#222] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#444]")}>📱 QRIS</button>
+                  <button onClick={() => setSplitMode(true)} className={clsx("flex-1 py-2 rounded-xl font-bold text-xs border-2 transition-all", splitMode ? "bg-purple-600 text-white border-purple-600 shadow" : "bg-white dark:bg-[#222] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#444]")}>↔ Split</button>
                 </div>
 
-                {pm === "cash" ? (
+                {splitMode && (
+                  <div className="rounded-xl border border-purple-200 bg-purple-50 p-2 dark:border-purple-800 dark:bg-purple-900/20">
+                    <div className="mb-2 flex items-center justify-between"><span className="text-[10px] font-semibold text-purple-800 dark:text-purple-200">Pembayaran gabungan</span><span className="text-[10px] text-gray-500">Total {formatRupiah(fTotal)}</span></div>
+                    <label className="mb-1 block text-[9px] text-gray-500">Bagian Tunai</label>
+                    <Numpad value={splitCash} onChange={setSplitCash} quickAmounts={[{ label: "50%", value: Math.floor(fTotal / 2) }, { label: "UANG PAS", value: fTotal }]} showQuickAmounts />
+                    <div className="mt-2 flex justify-between rounded-lg bg-white px-2 py-1.5 text-[10px] dark:bg-[#222]"><span>Cash {formatRupiah(splitCashAmount)}</span><span>QRIS {formatRupiah(splitQrisAmount)}</span></div>
+                    {splitCashAmount >= fTotal && <p className="mt-1 text-[9px] text-red-600">Nominal cash harus lebih kecil dari total agar ada bagian QRIS.</p>}
+                  </div>
+                )}
+
+                {!splitMode && (pm === "cash" ? (
                   <>
                     {promo && <div className="flex justify-between text-[10px]"><span className="text-gray-500 line-through">{formatRupiah(total)}</span><span className="text-green-600 font-semibold">-{formatRupiah(promo.discount_amount)}</span></div>}
                     <div className="flex justify-between items-center"><span className="text-[10px] text-gray-500">Total</span><span className="text-sm font-bold text-sabana">{formatRupiah(fTotal)}</span></div>
@@ -254,7 +280,7 @@ export default function PaymentReceiptModal({ isOpen, onClose, onComplete, savin
                     <p className="text-xs text-gray-500 mt-1">Total: <span className="font-bold text-blue-600">{formatRupiah(fTotal)}</span></p>
                     <p className="text-[9px] text-gray-400">QR berlaku 15 menit</p>
                   </div>
-                )}
+                ))}
               </div>
             )}
           </div>

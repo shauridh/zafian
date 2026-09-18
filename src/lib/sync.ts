@@ -41,23 +41,11 @@ export async function syncToSupabase(): Promise<{ synced: number; errors: number
           .and((item) => !item.synced)
           .toArray();
         const remoteOrderId = crypto.randomUUID();
-        const { error: orderError } = await supabaseClient.rpc("complete_order_transaction", {
-          p_order_id: remoteOrderId,
-          p_outlet_id: order.outlet_id,
-          p_cashier_id: order.cashier_id,
-          p_shift_id: order.shift_id || null,
-          p_service_mode: order.service_mode,
-          p_platform_name: order.platform_name || null,
-          p_platform_order_id: order.platform_order_id || null,
-          p_total: order.total,
-          p_discount: order.discount || 0,
-          p_final_total: order.final_total,
-          p_payment_method: order.payment_method,
-          p_amount_paid: order.amount_paid || 0,
-          p_change_amount: order.change_amount || 0,
-          p_items: orderItems,
-          p_notes: null,
-        });
+        const rpcName = order.split_payments?.length ? "complete_order_transaction_split" : "complete_order_transaction";
+        const rpcPayload = order.split_payments?.length
+          ? { p_order_id: remoteOrderId, p_outlet_id: order.outlet_id, p_cashier_id: order.cashier_id, p_shift_id: order.shift_id || null, p_service_mode: order.service_mode, p_total: order.total, p_discount: order.discount || 0, p_final_total: order.final_total, p_amount_paid: order.amount_paid || 0, p_change_amount: order.change_amount || 0, p_items: orderItems, p_split_payments: order.split_payments, p_notes: null }
+          : { p_order_id: remoteOrderId, p_outlet_id: order.outlet_id, p_cashier_id: order.cashier_id, p_shift_id: order.shift_id || null, p_service_mode: order.service_mode, p_platform_name: order.platform_name || null, p_platform_order_id: order.platform_order_id || null, p_total: order.total, p_discount: order.discount || 0, p_final_total: order.final_total, p_payment_method: order.payment_method, p_amount_paid: order.amount_paid || 0, p_change_amount: order.change_amount || 0, p_items: orderItems, p_notes: null };
+        const { error: orderError } = await supabaseClient.rpc(rpcName, rpcPayload);
         if (orderError) throw orderError;
         await db.transaction("rw", [db.orders, db.orderItems], async () => {
           await db.orderItems.where("order_id").equals(order.id).delete();

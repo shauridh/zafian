@@ -9,7 +9,7 @@ import CategoryBar from "@/components/kasir/CategoryBar";
 import ProductGrid from "@/components/kasir/ProductGrid";
 import Cart from "@/components/kasir/Cart";
 import ServiceModeSelector from "@/components/kasir/ServiceModeSelector";
-import PaymentReceiptModal from "@/components/kasir/PaymentReceiptModal";
+import PaymentReceiptModal, { type SplitPayment } from "@/components/kasir/PaymentReceiptModal";
 import RecentOrders from "@/components/kasir/RecentOrders";
 import TableSelector from "@/components/kasir/TableSelector";
 import OrderNotification from "@/components/kasir/OrderNotification";
@@ -134,7 +134,7 @@ export default function KasirPage() {
     });
   };
 
-  const handlePaymentComplete = async (method: string, amountPaid: number) => {
+  const handlePaymentComplete = async (method: string, amountPaid: number, splitPayments?: SplitPayment[]) => {
     const total = getTotal();
     const isOnlineFood = ONLINE_FOOD_MODES.includes(serviceMode);
     const finalMethod = isOnlineFood ? "estimate" : method;
@@ -153,7 +153,7 @@ export default function KasirPage() {
           cashier_id: useShiftStore.getState().cashierId || "30000000-0000-0000-0000-000000000001",
           shift_id: useShiftStore.getState().shiftId,
           service_mode: serviceMode,
-          total, final_total: total, payment_method: finalMethod, amount_paid: finalAmountPaid, change_amount: finalChange, status: "completed",
+          total, final_total: total, payment_method: finalMethod, amount_paid: finalAmountPaid, change_amount: finalChange, status: "completed", split_payments: splitPayments,
         }, orderItems
       );
 

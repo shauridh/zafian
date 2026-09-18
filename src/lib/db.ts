@@ -73,6 +73,7 @@ export interface DBOrder {
   payment_method: string;
   amount_paid: number;
   change_amount: number;
+  split_payments?: { method: "cash" | "qris"; amount: number; reference?: string }[];
   status: string;
   synced: boolean;
   sync_status?: SyncStatus;

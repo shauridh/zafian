@@ -216,24 +216,26 @@ export async function saveOrderOfflineFirst(
     try {
       const remoteOrderId = typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
-        : `${Date.now()}-0000-0000-0000-000000000000`;
-      const { data: savedOrderId, error } = await supabase.rpc("complete_order_transaction", {
-        p_order_id: remoteOrderId,
-        p_outlet_id: order.outlet_id,
-        p_cashier_id: order.cashier_id,
-        p_shift_id: order.shift_id || null,
-        p_service_mode: order.service_mode,
-        p_platform_name: order.platform_name || null,
-        p_platform_order_id: order.platform_order_id || null,
-        p_total: order.total,
-        p_discount: order.discount || 0,
-        p_final_total: order.final_total,
-        p_payment_method: order.payment_method,
-        p_amount_paid: order.amount_paid || 0,
-        p_change_amount: order.change_amount || 0,
-        p_items: items,
-        p_notes: order.notes || null,
-      });
+        : `${Date.now()}-0000-0000-0000-000000000000`;      const rpcName = Array.isArray(order.split_payments) && order.split_payments.length > 0
+        ? "complete_order_transaction_split"
+        : "complete_order_transaction";
+      const rpcPayload = rpcName === "complete_order_transaction_split"
+        ? {
+            p_order_id: remoteOrderId, p_outlet_id: order.outlet_id, p_cashier_id: order.cashier_id,
+            p_shift_id: order.shift_id || null, p_service_mode: order.service_mode,
+            p_total: order.total, p_discount: order.discount || 0, p_final_total: order.final_total,
+            p_amount_paid: order.amount_paid || 0, p_change_amount: order.change_amount || 0,
+            p_items: items, p_split_payments: order.split_payments, p_notes: order.notes || null,
+          }
+        : {
+            p_order_id: remoteOrderId, p_outlet_id: order.outlet_id, p_cashier_id: order.cashier_id,
+            p_shift_id: order.shift_id || null, p_service_mode: order.service_mode,
+            p_platform_name: order.platform_name || null, p_platform_order_id: order.platform_order_id || null,
+            p_total: order.total, p_discount: order.discount || 0, p_final_total: order.final_total,
+            p_payment_method: order.payment_method, p_amount_paid: order.amount_paid || 0,
+            p_change_amount: order.change_amount || 0, p_items: items, p_notes: order.notes || null,
+          };
+      const { data: savedOrderId, error } = await supabase.rpc(rpcName, rpcPayload);
       if (error) throw error;
       await removeLocalOrder(orderId);
       return { orderId: String(savedOrderId || remoteOrderId), synced: true };
