@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import OrderStatusTimeline from "@/components/customer/OrderStatusTimeline";
 
 type Customer = {
   id: string;
@@ -341,6 +342,7 @@ export default function CustomerPortal() {
                     </div>
                     <span className="font-extrabold text-sabana">{formatCurrency(order.total)}</span>
                   </div>
+                  <OrderStatusTimeline status={order.status} />
                 </div>
               ))
             )}

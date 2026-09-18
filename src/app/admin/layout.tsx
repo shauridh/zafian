@@ -49,6 +49,7 @@ const NAV_SECTIONS = [
       { href: "/admin/promos", label: "Promo & Diskon", icon: "🏷️" },
       { href: "/admin/loyalty", label: "Loyalty Program", icon: "⭐" },
       { href: "/admin/forecasts", label: "Forecasting", icon: "📈" },
+      { href: "/admin/reorder", label: "Reorder Bahan", icon: "🛒" },
     ],
   },
   {
