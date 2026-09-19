@@ -16,6 +16,7 @@ import OrderNotification from "@/components/kasir/OrderNotification";
 import CashInOutModal from "@/components/kasir/CashInOutModal";
 import PreOrderModal, { EMPTY_PREORDER, type PreOrderData } from "@/components/kasir/PreOrderModal";
 import MobileCartDrawer from "@/components/kasir/MobileCartDrawer";
+import CloseShiftModal from "@/components/kasir/CloseShiftModal";
 import POSHeader from "@/components/kasir/POSHeader";
 import { useCartStore } from "@/stores/cartStore";
 import { useShiftStore } from "@/stores/shiftStore";
@@ -29,8 +30,7 @@ export default function KasirPage() {
   const router = useRouter();
   const features = useFeatureToggles();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(true);
+  const [gridColumns, setGridColumns] = useState<3 | 4 | 5>(4);
   const [showPayment, setShowPayment] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [orderNumber, setOrderNumber] = useState(1);
@@ -42,6 +42,7 @@ export default function KasirPage() {
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
   const [stock, setStock] = useState<Record<string, number>>({});
   const [showCashInOut, setShowCashInOut] = useState(false);
+  const [showCloseShift, setShowCloseShift] = useState(false);
   const [showPreOrder, setShowPreOrder] = useState(false);
   const [preOrder, setPreOrder] = useState<PreOrderData>(EMPTY_PREORDER);
   const [showBestSellers, setShowBestSellers] = useState(false);
@@ -107,10 +108,7 @@ export default function KasirPage() {
   }, [dbProducts, stock]);
 
   const filteredProducts = useMemo(() => {
-    let list = allProducts.filter((p) => p.is_active);
-    if (searchQuery) {
-      list = list.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku?.toLowerCase().includes(searchQuery.toLowerCase()));
-    }
+    const list = allProducts.filter((p) => p.is_active);
     if (selectedCategory) {
       return list.filter((p) => p.category_id === selectedCategory);
     }
@@ -119,7 +117,7 @@ export default function KasirPage() {
       return ranked.length ? ranked.slice(0, 8) : list;
     }
     return list;
-  }, [allProducts, selectedCategory, searchQuery, showBestSellers, bestSellerCounts]);
+  }, [allProducts, selectedCategory, showBestSellers, bestSellerCounts]);
 
   const handleProductSelect = (product: Product) => {
     if ((stockMap[product.id] ?? 0) <= 0) return;
@@ -206,9 +204,9 @@ export default function KasirPage() {
   const onlineFoodExclude = features.onlineFood ? [] : ONLINE_FOOD_MODES;
 
   return (
-    <div className="h-screen flex flex-col bg-cream dark:bg-[#0f0f0f] overflow-hidden tablet-safe">
+    <div className="h-[100dvh] min-h-[100svh] flex flex-col bg-cream dark:bg-[#0f0f0f] overflow-hidden tablet-safe">
       {/* Header — compact */}
-      <POSHeader isOnline={isOnline} dataReady={dataReady} showCashInOut={features.cashInOut} showSearch={showSearch} onToggleSearch={() => { setShowSearch((visible) => !visible); setSearchQuery(""); }} onOpenCashInOut={() => setShowCashInOut(true)} onOpenRecentOrders={() => setShowRecentOrders(true)} />
+      <POSHeader isOnline={isOnline} dataReady={dataReady} showCashInOut={features.cashInOut} onOpenCashInOut={() => setShowCashInOut(true)} onOpenRecentOrders={() => setShowRecentOrders(true)} onOpenCloseShift={() => setShowCloseShift(true)} />
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -220,13 +218,12 @@ export default function KasirPage() {
             {features.tableSelector && serviceMode === "dine_in" && (
               <TableSelector selectedTable={selectedTable} onSelect={setSelectedTable} visible={true} />
             )}
-            {showSearch && (
-              <div className="relative">
-                <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0a7 7 0 0114 0z" /></svg>
-                <input type="text" placeholder="Cari produk..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-8 pr-3 py-1.5 sm:py-2 rounded-lg border border-gray-200 dark:border-[#444] bg-white dark:bg-[#262626] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sabana text-xs sm:text-sm" />
+            <div className="flex items-center gap-2">
+              <CategoryBar categories={categories} selectedId={selectedCategory} onSelect={(id) => { setSelectedCategory(id); if (id !== null) setShowBestSellers(false); }} showBestSellers={showBestSellers} onToggleBestSellers={() => setShowBestSellers((active) => !active)} bestSellerCount={Object.keys(bestSellerCounts).length} />
+              <div className="ml-auto flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 bg-white p-0.5 dark:border-[#444] dark:bg-[#222]" aria-label="Jumlah kolom produk">
+                {[3, 4, 5].map((count) => <button key={count} type="button" onClick={() => setGridColumns(count as 3 | 4 | 5)} className={`min-h-8 min-w-8 rounded-md px-1.5 text-[10px] font-bold ${gridColumns === count ? "bg-sabana text-white" : "text-gray-500 dark:text-gray-300"}`} aria-pressed={gridColumns === count}>{count}</button>)}
               </div>
-            )}
-            <CategoryBar categories={categories} selectedId={selectedCategory} onSelect={(id) => { setSelectedCategory(id); setSearchQuery(""); if (id !== null) setShowBestSellers(false); }} showBestSellers={showBestSellers} onToggleBestSellers={() => setShowBestSellers((active) => !active)} bestSellerCount={Object.keys(bestSellerCounts).length} />
+            </div>
           </div>
 
           {/* Product grid */}
@@ -240,7 +237,7 @@ export default function KasirPage() {
               </div>
             ) : (
               <div className="product-grid-tablet">
-                <ProductGrid products={filteredProducts} stock={stockMap} onSelect={handleProductSelect} searchQuery={searchQuery} />
+                <ProductGrid products={filteredProducts} stock={stockMap} onSelect={handleProductSelect} columns={gridColumns} />
               </div>
             )}
           </div>
@@ -298,6 +295,7 @@ export default function KasirPage() {
 
       {/* Cash In/Out */}
       <CashInOutModal isOpen={showCashInOut} onClose={() => setShowCashInOut(false)} />
+      <CloseShiftModal isOpen={showCloseShift} onClose={() => setShowCloseShift(false)} />
 
       {/* Pre-Order */}
       <PreOrderModal isOpen={showPreOrder} onClose={() => setShowPreOrder(false)} preOrder={preOrder} onChange={setPreOrder} />

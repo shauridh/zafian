@@ -31,9 +31,9 @@ export default function ModalShell({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-4" role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
       <button type="button" aria-label="Tutup modal" className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={dismissible ? onClose : undefined} />
-      <div className={`relative z-10 w-full ${className} max-h-[calc(100vh-24px)] overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-[#1a1a1a] sm:max-h-[calc(100vh-32px)]`}>
+      <div className={`relative z-10 my-auto w-full max-w-[calc(100vw-24px)] ${className} max-h-[calc(100dvh-24px)] overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-[#1a1a1a] sm:max-w-[calc(100vw-32px)] sm:max-h-[calc(100dvh-32px)]`}>
         {children}
       </div>
     </div>

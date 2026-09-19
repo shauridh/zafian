@@ -30,7 +30,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  min-width: 320px;
+  overflow-x: hidden;
+  background-color: var(--color-bg);
+}
+
 body {
+  min-width: 0;
+  overflow-x: hidden;
   font-family: 'Inter', sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
@@ -464,7 +472,11 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Safe area for tablets with rounded corners */
+/* Safe area for tablets and mobile browser chrome */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 @supports (padding: env(safe-area-inset-top)) {
   .tablet-safe {
     padding-top: env(safe-area-inset-top);

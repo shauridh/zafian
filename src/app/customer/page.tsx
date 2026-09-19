@@ -202,10 +202,10 @@ export default function CustomerPortal() {
 
   // ==================== MAIN APP ====================
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-[100dvh] bg-gray-50 pb-20">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-lg md:max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-sabana to-sabana-dark rounded-xl flex items-center justify-center shadow-md">
               <span className="text-white font-extrabold text-lg">S</span>
@@ -224,7 +224,7 @@ export default function CustomerPortal() {
       </header>
 
       {/* Content */}
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-lg md:max-w-2xl mx-auto">
         {/* HOME TAB */}
         {activeTab === "home" && (
           <div className="px-4 pt-4 space-y-4">
@@ -454,7 +454,7 @@ export default function CustomerPortal() {
 
       {/* Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 safe-bottom">
-        <div className="max-w-lg mx-auto flex">
+        <div className="max-w-lg md:max-w-2xl mx-auto flex">
           {([
             { key: "home" as const, icon: "🏠", label: "Beranda" },
             { key: "orders" as const, icon: "🧾", label: "Order" },

@@ -65,14 +65,16 @@ const NAV_SECTIONS = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-cream dark:bg-[#0f0f0f]">
+    <div className="flex min-h-[100dvh] bg-cream dark:bg-[#0f0f0f]">
       {/* Sidebar */}
       <aside
         className={clsx(
-          "bg-white dark:bg-[#1a1a1a] border-r border-gray-200 dark:border-[#333] flex flex-col transition-all duration-300",
-          sidebarOpen ? "w-64" : "w-16"
+          "fixed inset-y-0 left-0 z-50 bg-white dark:bg-[#1a1a1a] border-r border-gray-200 dark:border-[#333] flex flex-col transition-all duration-300 md:static md:z-auto",
+          sidebarOpen ? "w-64" : "w-16",
+          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
         {/* Logo */}
@@ -106,6 +108,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={() => setMobileSidebarOpen(false)}
                     className={clsx(
                       "flex items-center gap-3 px-4 py-2 mx-2 rounded-lg transition-all duration-200",
                       "hover:bg-sabana-50 dark:hover:bg-sabana/10",
@@ -129,6 +132,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-2 border-t border-gray-200">
           <Link
             href="/kasir"
+            onClick={() => setMobileSidebarOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-sabana-50 dark:hover:bg-sabana/10 text-gray-600 dark:text-gray-400 transition-colors"
           >
             <span className="text-lg">🛒</span>
@@ -137,8 +141,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
+      {mobileSidebarOpen && <button type="button" aria-label="Tutup menu admin" onClick={() => setMobileSidebarOpen(false)} className="fixed inset-0 z-40 bg-black/40 md:hidden" />}
+
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="min-w-0 flex-1 overflow-y-auto">
+        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200 bg-cream/95 px-4 py-2 backdrop-blur dark:border-[#333] dark:bg-[#0f0f0f]/95 md:hidden">
+          <button type="button" aria-label="Buka menu admin" onClick={() => setMobileSidebarOpen(true)} className="min-h-11 min-w-11 rounded-xl bg-white text-lg shadow-sm dark:bg-[#1a1a1a]">☰</button>
+          <span className="font-heading text-sm font-bold text-sabana">SABANA ADMIN</span>
+        </div>
         {children}
       </main>
     </div>

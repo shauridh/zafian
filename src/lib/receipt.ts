@@ -82,11 +82,11 @@ function splitLine(left: string, right: string, w: number): string {
  */
 export function buildReceiptLines(d: ReceiptData, w: number = RECEIPT_WIDTH_58): string[] {
   const sep = (c: string) => c.repeat(w);
-  /** Centered but indented by the universal 2-space margin. */
+  /** Center header/footer text across the complete paper width. */
   const center = (s: string) => {
-    const t = trunc(s, w - MARGIN.length);
-    const lead = Math.floor((w - MARGIN.length - t.length) / 2);
-    return (MARGIN + " ".repeat(lead) + t).trimEnd();
+    const t = trunc(s, w);
+    const lead = Math.floor((w - t.length) / 2);
+    return (" ".repeat(lead) + t).trimEnd();
   };
   /** Label in a fixed 11-char left column, value flush right. */
   const row = (label: string, value: string) =>
@@ -101,9 +101,9 @@ export function buildReceiptLines(d: ReceiptData, w: number = RECEIPT_WIDTH_58):
   const trimEnd = (s: string) => s.trimEnd();
 
   lines.push(sep("="));
-  for (const line of wrapWords(stripWide(d.outletName || "SABANA FRIED CHICKEN"), w - MARGIN.length)) lines.push(center(line));
-  if (d.outletAddress) for (const line of wrapWords(stripWide(d.outletAddress), w - MARGIN.length)) lines.push(center(line));
-  if (d.outletPhone) for (const line of wrapWords(`Telp: ${stripWide(d.outletPhone)}`, w - MARGIN.length)) lines.push(center(line));
+  for (const line of wrapWords(stripWide(d.outletName || "SABANA FRIED CHICKEN"), w)) lines.push(center(line));
+  if (d.outletAddress) for (const line of wrapWords(stripWide(d.outletAddress), w)) lines.push(center(line));
+  if (d.outletPhone) for (const line of wrapWords(`Telp: ${stripWide(d.outletPhone)}`, w)) lines.push(center(line));
 
   lines.push(sep("-"));
   lines.push(trimEnd(MARGIN + trunc(d.date, w - MARGIN.length)));

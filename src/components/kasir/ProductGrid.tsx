@@ -10,6 +10,7 @@ interface ProductGridProps {
   stock: Record<string, number>;
   onSelect: (product: Product) => void;
   searchQuery?: string;
+  columns?: 3 | 4 | 5;
 }
 
 export default function ProductGrid({
@@ -17,6 +18,7 @@ export default function ProductGrid({
   stock,
   onSelect,
   searchQuery,
+  columns = 4,
 }: ProductGridProps) {
   const getStockStatus = (productId: string): "available" | "low" | "out" => {
     const qty = stock[productId] ?? 0;
@@ -55,7 +57,7 @@ export default function ProductGrid({
   }
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+    <div className={clsx("grid gap-2 sm:gap-2.5", { "grid-cols-3": columns === 3, "grid-cols-4": columns === 4, "grid-cols-5": columns === 5 })}>
       {filtered.map((product) => {
         const stockStatus = getStockStatus(product.id);
         const qty = stock[product.id] ?? 0;
