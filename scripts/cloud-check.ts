@@ -392,6 +392,63 @@ check(
   })(),
 )
 
+/* -------------------------------------------------------------------------- */
+/* 9. Sambung otomatis tanpa membuka pengaturan                               */
+/* -------------------------------------------------------------------------- */
+
+await cloud.saveCloudConfig(config)
+
+reset()
+await cloud.clearCloudSession()
+const withoutSession = await cloud.ensureCloudConnection({ fetchImpl: fakeFetch })
+check('tanpa sesi tersimpan → belum tersambung, tanpa jaringan', withoutSession === null && calls.length === 0)
+check('tanpa sesi status meminta masuk sekali', cloud.getCloudStatus().state === 'pending-setup' && (cloud.getCloudStatus().lastError ?? '').includes('sekali'))
+
+await cloud.saveCloudSession(session)
+reset()
+const autoConnected = await cloud.ensureCloudConnection({ fetchImpl: fakeFetch })
+check('sesi tersimpan dipakai ulang otomatis tanpa jaringan', autoConnected?.session.accessToken === accessToken && autoConnected.refreshed === false && calls.length === 0)
+check('waktu koneksi otomatis tercatat untuk panel', Boolean(cloud.getCloudStatus().lastConnectedAt) && cloud.getCloudStatus().state !== 'pending-setup')
+
+const expiring: cloud.CloudSession = { ...session, accessToken: 'token-lama', refreshToken: 'refresh-lama', expiresAt: 0 }
+await cloud.saveCloudSession(expiring)
+reset((call) => call.url.includes('grant_type=refresh_token')
+  ? new Response(JSON.stringify({ access_token: 'token-baru', refresh_token: 'refresh-baru', expires_in: 3600, user: { id: session.userId, email: session.email } }), { status: 200 })
+  : new Response('{}', { status: 200 }))
+const refreshedConnection = await cloud.ensureCloudConnection({ fetchImpl: fakeFetch })
+check('token kedaluwarsa diperbarui otomatis di latar belakang', refreshedConnection?.refreshed === true && refreshedConnection.session.accessToken === 'token-baru')
+check(
+  'refresh memakai refresh token, bukan kata sandi',
+  calls.length === 1 && calls[0]!.url.includes('grant_type=refresh_token') && calls[0]!.body.includes('refresh-lama') && !calls[0]!.body.includes('password'),
+)
+check('token baru disimpan sehingga putaran berikutnya tanpa jaringan', (await cloud.loadCloudSession())?.refreshToken === 'refresh-baru')
+
+reset()
+const reusedConnection = await cloud.ensureCloudConnection({ fetchImpl: fakeFetch })
+check('setelah refresh, koneksi berikutnya tidak memanggil jaringan', reusedConnection?.refreshed === false && calls.length === 0)
+
+await cloud.saveCloudSession(expiring)
+reset(() => new Response(JSON.stringify({ error: 'invalid_grant', error_description: 'Invalid Refresh Token' }), { status: 400 }))
+const rejected = await cloud.ensureCloudConnection({ fetchImpl: fakeFetch })
+check('refresh ditolak → status pending-setup, bukan crash', rejected === null && cloud.getCloudStatus().state === 'pending-setup')
+check('sesi mati dibersihkan agar tidak mencoba tanpa akhir', (await cloud.loadCloudSession()) === null)
+
+await cloud.saveCloudSession(expiring)
+reset(() => { throw new Error('jaringan mati') })
+const offlineConnection = await cloud.ensureCloudConnection({ fetchImpl: fakeFetch })
+check('gangguan jaringan saat refresh → status error, bukan exception', offlineConnection === null && cloud.getCloudStatus().state === 'error')
+check('sesi disimpan untuk dicoba lagi saat online', (await cloud.loadCloudSession())?.refreshToken === 'refresh-lama')
+
+const noKeyConfig: cloud.CloudBackupConfig = { ...config, key: null }
+reset()
+const incomplete = await cloud.ensureCloudConnection({ config: noKeyConfig, fetchImpl: fakeFetch })
+check('konfigurasi tanpa kunci tidak dianggap tersambung', incomplete === null && calls.length === 0)
+
+await cloud.disableCloudBackup(await cloud.loadCloudConfig(true))
+reset()
+const disabledConnection = await cloud.ensureCloudConnection({ fetchImpl: fakeFetch })
+check('cloud dimatikan → tidak ada koneksi otomatis maupun jaringan', disabledConnection === null && calls.length === 0 && cloud.getCloudStatus().state === 'disabled')
+
 if (failures > 0) {
   console.error(`\n${failures} dari ${checks} pemeriksaan cloud backup gagal`)
   process.exit(1)

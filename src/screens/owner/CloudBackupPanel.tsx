@@ -267,12 +267,12 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
         <>
           <div className="owner-setting-note">
             <strong>Yang dibutuhkan</strong>
-            <span>URL project Supabase, anon key (bukan service role key), UUID outlet, akun pemilik, dan frasa sandi enkripsi. Frasa sandi tidak disimpan; yang disimpan hanya kunci turunannya agar backup harian bisa berjalan otomatis.</span>
+            <span>URL project Supabase, anon key (bukan service role key), UUID outlet, akun pemilik, dan frasa sandi enkripsi. Aktivasi cukup sekali per perangkat: setelah itu sesi dan kunci turunan disimpan, dan aplikasi menyambung otomatis tanpa membuka pengaturan lagi.</span>
           </div>
           {ENV_DEFAULTS && (
             <div className="owner-setting-note">
               <strong>Terisi dari environment build</strong>
-              <span>URL project, anon key, dan UUID outlet dimuat dari environment Vercel. Email, kata sandi, dan frasa sandi tetap wajib diisi di sini; nilai yang tersimpan menimpa nilai environment.</span>
+              <span>URL project, anon key, dan UUID outlet dimuat dari environment Vercel. Email, kata sandi, dan frasa sandi hanya diminta sekali saat aktivasi; sesudahnya perangkat menyambung sendiri. Nilai yang tersimpan menimpa nilai environment.</span>
             </div>
           )}
           <div className="printer-grid">
@@ -314,6 +314,11 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
             <div><span>Project</span><b>{config?.projectUrl}</b></div>
             <div><span>Outlet</span><b>{config?.outletId}</b></div>
             <div><span>Akun</span><b>{session?.email || 'sesi tidak aktif'}</b></div>
+            <div><span>Koneksi otomatis</span><b>{status.lastConnectedAt ? `aktif • ${formatDate(status.lastConnectedAt)}` : session ? 'menunggu pemeriksaan' : 'belum tersambung'}</b></div>
+          </div>
+          <div className="owner-setting-note">
+            <strong>Tersambung otomatis</strong>
+            <span>Perangkat ini memakai sesi pemilik yang tersimpan dan memperbarui token di latar belakang, jadi tidak perlu mengisi apa pun lagi setiap aplikasi dibuka. Buka panel ini hanya untuk mengganti akun, frasa sandi, atau memulihkan snapshot.</span>
           </div>
           <div className="owner-backup-actions">
             <button className="owner-primary" onClick={() => void uploadNow()} disabled={busy}><CloudUpload size={15} /> Backup sekarang ke cloud</button>

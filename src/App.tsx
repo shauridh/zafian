@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Banknote, ChefHat, ChevronRight, Cloud, CreditCard, History, MoreHorizontal, Moon, Package, Plus, Printer, Receipt, ShoppingBag, Sun, X } from 'lucide-react'
 import { cashMovementsForShift, cashSalesForShift, expectedCashForShift, type CartItem, type CashMovement, type HeldOrder, type PaymentMethod, type PosStore, type PreOrder, type Shift, type Transaction } from './domain/pos'
 import { createAndStoreBackup, ensureDailyBackup } from './lib/backup'
-import { getCloudStatus, hydrateCloudStatus, loadCloudConfig, loadCloudSession, subscribeCloudStatus, uploadBackupQuietly, type CloudStatus } from './lib/cloud-backup'
+import { ensureCloudConnection, getCloudStatus, hydrateCloudStatus, subscribeCloudStatus, uploadBackupQuietly, type CloudStatus } from './lib/cloud-backup'
 import { enqueueSale, getSyncStatus, hydrateSyncStatus, pushOutboxQuietly, startRealtimeBridge, subscribeSyncStatus, syncNow, type SyncStatus } from './lib/sync-client'
 import { createId } from './lib/id'
 import { loadPosStore, savePosStore } from './lib/persistence'
@@ -99,8 +99,13 @@ export function App({ storageWarning }: AppProps = {}) {
   }, [])
   useEffect(() => {
     let active = true
-    void hydrateCloudStatus().then((value) => { if (active) setCloudStatus(value) })
     const unsubscribe = subscribeCloudStatus((value) => { if (active) setCloudStatus(value) })
+    // Sesi pemilik yang tersimpan dipakai ulang otomatis; panel pengaturan tidak perlu dibuka lagi.
+    void (async () => {
+      const initial = await hydrateCloudStatus()
+      if (active) setCloudStatus(initial)
+      await ensureCloudConnection()
+    })()
     return () => { active = false; unsubscribe() }
   }, [])
   useEffect(() => {
@@ -108,7 +113,7 @@ export function App({ storageWarning }: AppProps = {}) {
     void hydrateSyncStatus().then((value) => { if (active) setSyncStatus(value) })
     const unsubscribe = subscribeSyncStatus((value) => { if (active) setSyncStatus(value) })
     // Sinkronisasi latar: realtime hanya pemicu, polling tetap jalan sebagai fallback.
-    let bridge: ReturnType<typeof startRealtimeBridge> | null = null
+    let bridge: { token: string; handle: ReturnType<typeof startRealtimeBridge> } | null = null
     let syncing = false
     const runSync = async () => {
       if (syncing || !active) return
@@ -127,17 +132,29 @@ export function App({ storageWarning }: AppProps = {}) {
         syncing = false
       }
     }
+    // Sambung otomatis memakai sesi tersimpan; token diperbarui di latar belakang bila perlu.
     const tryStartBridge = async () => {
-      if (bridge || !active) return
-      const config = await loadCloudConfig()
-      const session = await loadCloudSession()
-      if (!active || !config?.enabled || !session) return
-      bridge = startRealtimeBridge({ config, session, onChange: () => { void runSync() } })
+      if (!active) return
+      try {
+        const connection = await ensureCloudConnection()
+        if (!active || !connection) return
+        // Bridge memegang access token saat koneksi dibuka; ganti bila token diperbarui.
+        if (bridge?.token === connection.session.accessToken) return
+        bridge?.handle.stop()
+        bridge = {
+          token: connection.session.accessToken,
+          handle: startRealtimeBridge({ config: connection.config, session: connection.session, onChange: () => { void runSync() } }),
+        }
+      } catch (error) {
+        console.warn('Koneksi Supabase otomatis gagal', error)
+      }
     }
+    const goOnline = () => { void tryStartBridge(); void runSync() }
     void tryStartBridge()
     // Cek berkala agar bridge ikut aktif begitu cloud diaktifkan, tanpa reload.
     const timer = window.setInterval(() => { void tryStartBridge() }, 60_000)
-    return () => { active = false; unsubscribe(); window.clearInterval(timer); bridge?.stop() }
+    window.addEventListener('online', goOnline)
+    return () => { active = false; unsubscribe(); window.clearInterval(timer); window.removeEventListener('online', goOnline); bridge?.handle.stop() }
   }, [])
   useEffect(() => { const goOnline = () => setOnline(true); const goOffline = () => setOnline(false); window.addEventListener('online', goOnline); window.addEventListener('offline', goOffline); return () => { window.removeEventListener('online', goOnline); window.removeEventListener('offline', goOffline) } }, [])
   useEffect(() => { if (!message) return; const timer = setTimeout(() => setMessage(''), 3000); return () => clearTimeout(timer) }, [message])
@@ -150,8 +167,10 @@ export function App({ storageWarning }: AppProps = {}) {
       : value.state === 'error'
         ? `backup cloud gagal: ${value.lastError ?? 'tanpa pesan'}`
         : value.state === 'pending-setup'
-          ? 'backup cloud belum siap'
-          : 'backup cloud nonaktif'
+          ? 'backup cloud perlu masuk sekali'
+          : value.state === 'idle'
+            ? 'backup cloud siap'
+            : 'backup cloud nonaktif'
   const categories = ['Semua', ...store.categories.map((item) => item.name)]
   const activeCategory = categories.includes(category) ? category : 'Semua'
   const shiftSales = new Map<string, number>()

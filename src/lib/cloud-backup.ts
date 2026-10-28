@@ -61,6 +61,8 @@ export type CloudStatus = {
   lastError?: string
   lastPath?: string
   lastChecksum?: string
+  /** Waktu terakhir sesi tersimpan berhasil diverifikasi/diperbarui otomatis. */
+  lastConnectedAt?: string
 }
 
 export type CloudSnapshotEnvelope = {
@@ -401,6 +403,94 @@ export async function hydrateCloudStatus(options: { config?: CloudBackupConfig |
     lastError: session ? stored?.lastError : 'Masuk dengan akun pemilik Supabase untuk mengaktifkan backup cloud.',
   }
   return status
+}
+
+export type CloudConnection = {
+  config: CloudBackupConfig
+  session: CloudSession
+  /** True bila access token kedaluwarsa dan baru diperbarui lewat refresh token. */
+  refreshed: boolean
+}
+
+let connectionInFlight: Promise<CloudConnection | null> | null = null
+
+/**
+ * Sambungkan ulang otomatis memakai konfigurasi + sesi yang tersimpan.
+ *
+ * Dipanggil saat aplikasi dibuka dan berkala. Bila access token masih berlaku
+ * tidak ada permintaan jaringan sama sekali; bila hampir kedaluwarsa, refresh
+ * token dipakai di latar belakang sehingga pemilik tidak perlu membuka panel
+ * pengaturan lagi. Tidak pernah melempar error: kegagalan hanya memperbarui
+ * status yang ditampilkan di panel.
+ */
+export function ensureCloudConnection(
+  options: CloudDeps & { config?: CloudBackupConfig | null; session?: CloudSession | null } = {},
+): Promise<CloudConnection | null> {
+  if (connectionInFlight) return connectionInFlight
+  connectionInFlight = connectCloud(options).finally(() => { connectionInFlight = null })
+  return connectionInFlight
+}
+
+async function connectCloud(
+  options: CloudDeps & { config?: CloudBackupConfig | null; session?: CloudSession | null },
+): Promise<CloudConnection | null> {
+  const config = options.config === undefined ? await loadCloudConfig() : options.config
+  if (!config?.enabled) {
+    if (status.state !== 'disabled') publishStatus({ ...status, state: 'disabled', lastError: undefined })
+    return null
+  }
+  if (!config.key || !isUuid(config.outletId)) {
+    publishStatus({ ...status, state: 'pending-setup', lastError: 'Backup cloud belum lengkap: atur ID outlet dan frasa sandi di panel Backup cloud.' })
+    return null
+  }
+  const stored = options.session === undefined ? await loadCloudSession() : options.session
+  if (!stored) {
+    publishStatus({ ...status, state: 'pending-setup', lastError: 'Masuk sekali dengan akun pemilik Supabase untuk menyambungkan perangkat ini.' })
+    return null
+  }
+
+  const nowMs = (options.now?.() ?? new Date()).getTime()
+  const nowStamp = nowIso(options)
+  const lastConnected = status.lastConnectedAt ? Date.parse(status.lastConnectedAt) : Number.NaN
+  const stampStale = !Number.isFinite(lastConnected) || nowMs - lastConnected > 10 * 60_000
+  const upgraded = status.state === 'disabled' || status.state === 'pending-setup'
+
+  // Perbarui 2 menit sebelum kedaluwarsa agar realtime dan unggahan tidak putus.
+  if (stored.expiresAt - 120_000 > nowMs) {
+    if (upgraded || stampStale) {
+      publishStatus({
+        ...status,
+        state: upgraded ? 'idle' : status.state,
+        lastConnectedAt: nowStamp,
+        lastError: upgraded ? undefined : status.lastError,
+      })
+    }
+    return { config, session: stored, refreshed: false }
+  }
+
+  try {
+    const session = await refreshCloudSession(config, stored, options)
+    await saveCloudSession(session)
+    publishStatus({
+      ...status,
+      state: upgraded ? 'idle' : status.state,
+      lastConnectedAt: nowStamp,
+      lastError: upgraded ? undefined : status.lastError,
+    })
+    return { config, session, refreshed: true }
+  } catch (error) {
+    const message = describeCloudError(error)
+    const rejected = error instanceof CloudBackupError && error.code === 'auth' && (error.status === 400 || error.status === 401)
+    if (rejected) await clearCloudSession()
+    publishStatus({
+      ...status,
+      state: rejected ? 'pending-setup' : 'error',
+      lastError: rejected
+        ? 'Sesi pemilik sudah tidak berlaku. Masuk sekali lagi di Backup → Backup cloud; setelah itu perangkat tersambung otomatis.'
+        : message,
+    })
+    return null
+  }
 }
 
 export function describeCloudError(error: unknown): string {
