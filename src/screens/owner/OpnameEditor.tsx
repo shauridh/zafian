@@ -5,7 +5,7 @@ import type { StockMovement } from '../../domain/inventory'
 import { inventoryRows } from '../../domain/inventory'
 import type { PosStore } from '../../domain/pos'
 import { createId } from '../../lib/id'
-import { Field, Modal, money } from './ui'
+import { ConfirmDialog, Field, Modal, money } from './ui'
 
 type Props = {
   store: PosStore
@@ -22,6 +22,7 @@ export function OpnameEditor({ store, setStore, notify, opname, onClose }: Props
   const [ingredientId, setIngredientId] = useState(initialIngredientId)
   const [counted, setCounted] = useState(opname && typeof opname.countedQty === 'number' ? String(opname.countedQty) : '')
   const [note, setNote] = useState(opname?.note ?? '')
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const rows = inventoryRows(store.ingredients, store.menus, store.transactions, store.stockMovements)
   const ingredient = store.ingredients.find((item) => item.id === ingredientId)
@@ -77,7 +78,6 @@ export function OpnameEditor({ store, setStore, notify, opname, onClose }: Props
 
   const remove = () => {
     if (!opname || !ingredient) return
-    if (!window.confirm(`Hapus catatan opname ${ingredient.name}? Stok akan kembali ke posisi sebelum opname ini.`)) return
     setStore((current) => ({
       ...current,
       stockMovements: current.stockMovements.filter((movement) => movement.id !== opname.id),
@@ -122,11 +122,22 @@ export function OpnameEditor({ store, setStore, notify, opname, onClose }: Props
       </p>
 
       <div className="editor-actions">
-        {opname && <button className="owner-ghost danger" onClick={remove}><Trash2 size={14} /> Hapus opname</button>}
+        {opname && <button className="owner-ghost danger" onClick={() => setConfirmingDelete(true)}><Trash2 size={14} /> Hapus opname</button>}
         <span className="editor-spacer" />
         <button className="owner-ghost" onClick={onClose}>Batal</button>
         <button className="owner-primary" onClick={save}>{opname ? 'Simpan perubahan' : 'Simpan opname'}</button>
       </div>
+
+      {confirmingDelete && opname && ingredient && (
+        <ConfirmDialog
+          eyebrow="HAPUS OPNAME"
+          title={`Hapus opname ${ingredient.name}?`}
+          description="Stok kembali ke posisi sebelum opname ini dan nilai selisih di laporan persediaan ikut hilang. Riwayat pembelian tidak berubah; tindakan ini tidak bisa dibatalkan."
+          confirmLabel="Hapus catatan opname"
+          onConfirm={remove}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
     </Modal>
   )
 }

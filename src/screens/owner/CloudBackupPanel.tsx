@@ -29,7 +29,7 @@ import {
 } from '../../lib/cloud-backup'
 import { createAndStoreBackup } from '../../lib/backup'
 import { mergeSupabaseDefaults, supabaseEnvDefaults } from '../../lib/env'
-import { Field } from './ui'
+import { ConfirmDialog, Field } from './ui'
 
 const stateLabel: Record<CloudStatus['state'], string> = {
   disabled: 'Nonaktif',
@@ -74,6 +74,7 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
   const [rows, setRows] = useState<CloudSnapshotRow[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [confirmingDeactivate, setConfirmingDeactivate] = useState(false)
   const [form, setForm] = useState(() => ({
     ...mergeSupabaseDefaults(ENV_DEFAULTS),
     email: '',
@@ -222,7 +223,6 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
   }
 
   const deactivate = async () => {
-    if (!window.confirm('Matikan backup cloud? Backup lokal di perangkat tetap berjalan dan snapshot di cloud tidak dihapus.')) return
     setBusy(true)
     try {
       await disableCloudBackup(config)
@@ -324,7 +324,7 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
             <button className="owner-primary" onClick={() => void uploadNow()} disabled={busy}><CloudUpload size={15} /> Backup sekarang ke cloud</button>
             <button className="owner-ghost" onClick={() => { if (config && session) void refreshList(config, session) }} disabled={busy || !session}><RefreshCw size={15} /> Muat daftar snapshot</button>
             <button className="owner-ghost" onClick={() => void disconnect()} disabled={busy || !session}><LogOut size={15} /> Putuskan sesi</button>
-            <button className="owner-ghost danger" onClick={() => void deactivate()} disabled={busy}><CloudOff size={15} /> Matikan backup cloud</button>
+            <button className="owner-ghost danger" onClick={() => setConfirmingDeactivate(true)} disabled={busy}><CloudOff size={15} /> Matikan backup cloud</button>
           </div>
 
           <div className="owner-setting-note">
@@ -356,6 +356,17 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
             <span>Aktifkan backup cloud di perangkat baru dengan URL project, anon key, UUID outlet, akun pemilik, dan frasa sandi yang sama. Setelah sesi tersambung, daftar snapshot muncul dan bisa dipulihkan dengan pratinjau seperti restore file lokal.</span>
           </div>
         </>
+      )}
+
+      {confirmingDeactivate && (
+        <ConfirmDialog
+          eyebrow="MATIKAN BACKUP CLOUD"
+          title="Matikan backup cloud?"
+          description="Backup lokal di perangkat tetap berjalan dan snapshot di cloud tidak dihapus, tetapi sesi cloud diputus dan sinkronisasi katalog berhenti sampai diaktifkan lagi."
+          confirmLabel="Matikan & putuskan sesi"
+          onConfirm={() => { setConfirmingDeactivate(false); void deactivate() }}
+          onCancel={() => setConfirmingDeactivate(false)}
+        />
       )}
 
       <div className="owner-setting-note">

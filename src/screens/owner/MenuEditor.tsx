@@ -5,7 +5,7 @@ import type { Menu, RecipeLine } from '../../domain/catalog'
 import type { PosStore } from '../../domain/pos'
 import { createId } from '../../lib/id'
 import { fileToMenuImage } from '../../lib/image'
-import { Field, FieldGroup, Modal, money } from './ui'
+import { ConfirmDialog, Field, FieldGroup, Modal, money } from './ui'
 
 type Props = {
   store: PosStore
@@ -25,6 +25,7 @@ export function MenuEditor({ store, setStore, notify, menu, onClose }: Props) {
   const [recipe, setRecipe] = useState<RecipeLine[]>(menu?.recipe.map((line) => ({ ...line })) ?? [])
   const [uploading, setUploading] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const transactionCount = menu
     ? store.transactions.filter((transaction) => transaction.items.some((item) => item.id === menu.id)).length
@@ -96,10 +97,6 @@ export function MenuEditor({ store, setStore, notify, menu, onClose }: Props) {
 
   const remove = () => {
     if (!menu) return
-    const usage = transactionCount > 0
-      ? ` Menu ini pernah muncul di ${transactionCount} transaksi; riwayat transaksi tetap tersimpan.`
-      : ''
-    if (!window.confirm(`Hapus menu "${menu.name}"?${usage}`)) return
     setStore((current) => ({
       ...current,
       menus: current.menus.filter((item) => item.id !== menu.id),
@@ -184,11 +181,24 @@ export function MenuEditor({ store, setStore, notify, menu, onClose }: Props) {
       )}
 
       <div className="editor-actions">
-        {menu && <button className="owner-ghost danger" onClick={remove}><Trash2 size={14} /> Hapus menu</button>}
+        {menu &&        <button className="owner-ghost danger" onClick={() => setConfirmingDelete(true)}><Trash2 size={14} /> Hapus menu</button>}
         <span className="editor-spacer" />
         <button className="owner-ghost" onClick={onClose}>Batal</button>
         <button className="owner-primary" onClick={save}>{menu ? 'Simpan perubahan' : 'Tambah menu'}</button>
       </div>
+
+      {confirmingDelete && menu && (
+        <ConfirmDialog
+          eyebrow="HAPUS MENU"
+          title={`Hapus menu "${menu.name}"?`}
+          description={transactionCount > 0
+            ? `Menu dihapus dari katalog kasir. Menu ini pernah muncul di ${transactionCount} transaksi dan riwayat transaksi tetap tersimpan.`
+            : 'Menu dihapus dari katalog kasir. Belum ada transaksi yang memakai menu ini.'}
+          confirmLabel="Hapus dari katalog"
+          onConfirm={remove}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
     </Modal>
   )
 }

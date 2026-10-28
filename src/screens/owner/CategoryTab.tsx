@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Pencil, Plus, Tags, Trash2 } from 'lucide-react'
 import type { Category } from '../../domain/catalog'
 import { createId } from '../../lib/id'
 import type { OwnerTabProps } from './types'
-import { EmptyState, Field, Modal } from './ui'
+import { ConfirmDialog, EmptyState, Field, Modal } from './ui'
 
 type CategorySectionProps = {
   title: string
@@ -42,6 +42,7 @@ function CategorySection({
   const [newName, setNewName] = useState('')
   const [editing, setEditing] = useState<Category | null>(null)
   const [draftName, setDraftName] = useState('')
+  const [pendingRemove, setPendingRemove] = useState<Category | null>(null)
 
   const duplicate = (name: string, ignoreId?: string) =>
     categories.some((category) => category.id !== ignoreId && category.name.toLowerCase() === name.toLowerCase())
@@ -67,8 +68,13 @@ function CategorySection({
     const used = countFor(category.name)
     if (used > 0) { notify(`Pindahkan ${used} ${unitLabel} dari kategori ini terlebih dahulu`); return }
     if (categories.length <= 1) { notify('Minimal satu kategori harus tersedia'); return }
-    if (!window.confirm(`Hapus kategori "${category.name}"?`)) return
-    onRemove(category)
+    setPendingRemove(category)
+  }
+
+  const confirmRemove = () => {
+    if (!pendingRemove) return
+    onRemove(pendingRemove)
+    setPendingRemove(null)
   }
 
   return (
@@ -116,6 +122,17 @@ function CategorySection({
         )}
         <p className="owner-muted">{footer}</p>
       </section>
+
+      {pendingRemove && (
+        <ConfirmDialog
+          eyebrow="HAPUS KATEGORI"
+          title={`Hapus kategori "${pendingRemove.name}"?`}
+          description={`Kategori dihapus dari daftar kategori ${unitLabel}. Tidak ada ${unitLabel} yang memakai kategori ini, jadi data ${unitLabel} tidak berubah.`}
+          confirmLabel="Hapus kategori"
+          onConfirm={confirmRemove}
+          onCancel={() => setPendingRemove(null)}
+        />
+      )}
 
       {editing && (
         <Modal eyebrow="UBAH KATEGORI" title={editing.name} onClose={() => setEditing(null)}>

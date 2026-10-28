@@ -250,6 +250,29 @@ async function main(): Promise<number> {
       transaction.onerror = () => rejectStore(transaction.error)
     }
   }), value)
+  const writeKv = (key: string, value: unknown) => page.evaluate(({ key: kvKey, value: kvValue }) => new Promise<void>((resolveWrite, rejectWrite) => {
+    const request = indexedDB.open('sabana-pos')
+    request.onerror = () => rejectWrite(request.error)
+    request.onsuccess = () => {
+      const db = request.result
+      const storeName = db.objectStoreNames[0]
+      const transaction = db.transaction(storeName, 'readwrite')
+      transaction.objectStore(storeName).put(kvValue, kvKey)
+      transaction.oncomplete = () => resolveWrite()
+      transaction.onerror = () => rejectWrite(transaction.error)
+    }
+  }), { key, value })
+  const readKv = (key: string) => page.evaluate((kvKey) => new Promise((resolveRead, rejectRead) => {
+    const request = indexedDB.open('sabana-pos')
+    request.onerror = () => rejectRead(request.error)
+    request.onsuccess = () => {
+      const db = request.result
+      const storeName = db.objectStoreNames[0]
+      const get = db.transaction(storeName, 'readonly').objectStore(storeName).get(kvKey)
+      get.onsuccess = () => resolveRead(get.result)
+      get.onerror = () => rejectRead(get.error)
+    }
+  }), key)
   const field = (label: string) => page.locator('.owner-field', { hasText: label }).locator('input, textarea, select').first()
   const navTo = async (label: string) => {
     await page.locator('.owner-nav button', { hasText: label }).first().click()
@@ -403,6 +426,18 @@ async function main(): Promise<number> {
     await shot('menu-katalog')
     await page.locator('.owner-menu-card', { hasText: 'Menu Uji UI 2' }).first().getByRole('button', { name: 'Edit' }).click()
     await page.getByRole('button', { name: 'Hapus menu' }).click()
+    await page.waitForSelector('.owner-confirm')
+    store = await readStore()
+    check('hapus menu membuka dialog konfirmasi di aplikasi', (await page.locator('.owner-confirm').count()) === 1)
+    check('menu belum terhapus sebelum konfirmasi', Boolean(store.menus.find((menu: any) => menu.name === 'Menu Uji UI 2')))
+    await page.locator('.owner-confirm').getByRole('button', { name: 'Batal' }).click()
+    await settle(300)
+    store = await readStore()
+    check('batal tidak menghapus menu', Boolean(store.menus.find((menu: any) => menu.name === 'Menu Uji UI 2')) && (await page.locator('.owner-confirm').count()) === 0)
+    await shot('hapus-menu-konfirmasi-batal')
+    await page.getByRole('button', { name: 'Hapus menu' }).click()
+    await page.waitForSelector('.owner-confirm')
+    await page.getByRole('button', { name: 'Hapus dari katalog' }).click()
     await settle(500)
     store = await readStore()
     check('menu dihapus dari store', !store.menus.some((menu: any) => menu.name === 'Menu Uji UI 2'))
@@ -448,6 +483,32 @@ async function main(): Promise<number> {
     for (const pick of picks) after.push({ label: pick.label, ...(await stockCell(pick.label.split(' (')[0])) })
     const deltas = before.map((entry, index) => after[index].value - entry.value)
     check('stok 3 bahan bertambah +10', deltas.every((delta) => delta === 10), `${before.map((entry) => entry.text).join(' / ')} → ${after.map((entry) => entry.text).join(' / ')}`)
+
+    // ---------- 4b. Opname: hapus wajib lewat dialog konfirmasi in-app ----------
+    await page.getByRole('button', { name: 'Opname baru' }).first().click()
+    await page.waitForSelector('.modal.owner-modal')
+    await page.locator('[aria-label="Stok fisik"]').fill('7')
+    await page.getByRole('button', { name: 'Simpan opname' }).click()
+    await settle(500)
+    store = await readStore()
+    check('opname tersimpan dari UI', store.stockMovements.some((movement: any) => movement.type === 'opname'))
+    check('opname tampil di riwayat', (await page.locator('.owner-opname-row').count()) >= 1)
+    await page.locator('.owner-opname-row').first().getByRole('button', { name: 'Hapus', exact: true }).click()
+    await page.waitForSelector('.owner-confirm')
+    store = await readStore()
+    check('hapus opname membuka dialog konfirmasi di aplikasi', (await page.locator('.owner-confirm').count()) === 1)
+    check('opname belum terhapus sebelum konfirmasi', store.stockMovements.some((movement: any) => movement.type === 'opname'))
+    await shot('hapus-opname-konfirmasi')
+    await page.locator('.owner-confirm').getByRole('button', { name: 'Batal' }).click()
+    await settle(300)
+    store = await readStore()
+    check('batal tidak menghapus opname', store.stockMovements.some((movement: any) => movement.type === 'opname'))
+    await page.locator('.owner-opname-row').first().getByRole('button', { name: 'Hapus', exact: true }).click()
+    await page.waitForSelector('.owner-confirm')
+    await page.getByRole('button', { name: 'Hapus catatan opname' }).click()
+    await settle(500)
+    store = await readStore()
+    check('opname terhapus setelah konfirmasi', !store.stockMovements.some((movement: any) => movement.type === 'opname'))
 
     await page.locator('.owner-data tbody tr', { hasText: 'Bahan Uji UI' }).first().getByRole('button', { name: 'Edit' }).click()
     await page.waitForSelector('.modal')
@@ -510,6 +571,18 @@ async function main(): Promise<number> {
     const usedCategory = page.locator('.owner-category-row', { hasText: 'Paket' }).first()
     check('kategori terpakai tidak bisa dihapus', await usedCategory.getByRole('button', { name: 'Hapus' }).isDisabled())
     await page.locator('.owner-category-row', { hasText: 'Kategori Uji UI 2' }).first().getByRole('button', { name: 'Hapus' }).click()
+    await page.waitForSelector('.owner-confirm')
+    store = await readStore()
+    check('hapus kategori membuka dialog konfirmasi di aplikasi', (await page.locator('.owner-confirm').count()) === 1)
+    check('kategori belum terhapus sebelum konfirmasi', Boolean(store.categories.find((category: any) => category.name === 'Kategori Uji UI 2')))
+    await shot('hapus-kategori-konfirmasi')
+    await page.locator('.owner-confirm').getByRole('button', { name: 'Batal' }).click()
+    await settle(300)
+    store = await readStore()
+    check('batal tidak menghapus kategori', Boolean(store.categories.find((category: any) => category.name === 'Kategori Uji UI 2')))
+    await page.locator('.owner-category-row', { hasText: 'Kategori Uji UI 2' }).first().getByRole('button', { name: 'Hapus' }).click()
+    await page.waitForSelector('.owner-confirm')
+    await page.getByRole('button', { name: 'Hapus kategori' }).click()
     await settle(400)
     store = await readStore()
     check('kategori tak terpakai bisa dihapus', !store.categories.some((category: any) => category.name === 'Kategori Uji UI 2'))
@@ -542,8 +615,41 @@ async function main(): Promise<number> {
     check('tes cetak mengirim 2 salinan', (printHtml?.match(/<pre>/g) ?? []).length === 2, String((printHtml?.match(/<pre>/g) ?? []).length))
     await shot('pengaturan-reload')
 
-    // ---------- 7. Buka shift → transaksi tunai → struk → tutup shift ----------
+    // ---------- 6b. Matikan cloud wajib lewat dialog konfirmasi in-app ----------
     await backToPos()
+    await writeKv('cloud:config', {
+      enabled: true,
+      projectUrl: 'https://example.invalid',
+      anonKey: 'anon-kunci-uji',
+      outletId: '471d3f1c-1ad0-4f88-a35c-7f9f6e968926',
+      bucket: 'outlet-backups',
+      key: { material: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', salt: 'BBBB', iterations: 1000 },
+      updatedAt: new Date().toISOString(),
+    })
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForSelector('.pos-screen', { timeout: 30_000 })
+    await settle(700)
+    await enterOwner()
+    await navTo('Backup')
+    await page.getByRole('button', { name: 'Matikan backup cloud' }).waitFor({ timeout: 10_000 })
+    await page.getByRole('button', { name: 'Matikan backup cloud' }).click()
+    await page.waitForSelector('.owner-confirm')
+    const cloudDialogText = await page.locator('.owner-confirm').innerText()
+    check('matikan cloud membuka dialog konfirmasi di aplikasi', cloudDialogText.includes('Matikan backup cloud'))
+    check('dialog menjelaskan backup lokal & snapshot tetap ada', cloudDialogText.includes('snapshot di cloud tidak dihapus'), cloudDialogText.replace(/\s+/g, ' ').slice(0, 200))
+    await shot('matikan-cloud-konfirmasi')
+    await page.locator('.owner-confirm').getByRole('button', { name: 'Batal' }).click()
+    await settle(300)
+    check('batal tidak mematikan cloud', (await page.getByRole('button', { name: 'Matikan backup cloud' }).count()) === 1 && (await readKv('cloud:config') as any)?.enabled === true)
+    await page.getByRole('button', { name: 'Matikan backup cloud' }).click()
+    await page.waitForSelector('.owner-confirm')
+    await page.getByRole('button', { name: 'Matikan & putuskan sesi' }).click()
+    await settle(700)
+    check('konfirmasi mematikan cloud', (await readKv('cloud:config') as any)?.enabled === false)
+    await shot('matikan-cloud-selesai')
+    await backToPos()
+
+    // ---------- 7. Buka shift → transaksi tunai → struk → tutup shift ----------
     await page.locator('.empty-cart .open-shift-inline').click()
     await page.waitForSelector('#opening-float')
     const openingFloat = Number(await page.locator('#opening-float').inputValue())
@@ -721,10 +827,15 @@ async function main(): Promise<number> {
       const usageNote = await page.locator('.menu-usage-note').innerText()
       check('editor memperingatkan menu pernah dipakai transaksi', usageNote.includes(`${soldUsage} transaksi`), usageNote)
 
-      dialogMessages.length = 0
       await page.getByRole('button', { name: 'Hapus menu' }).click()
-      await settle(500)
-      check('konfirmasi hapus menu menyebut jumlah transaksi', dialogMessages.some((message) => message.includes(`${soldUsage} transaksi`)), dialogMessages.at(-1) ?? 'tidak ada dialog')
+      await page.waitForSelector('.owner-confirm')
+      const deleteDialogText = await page.locator('.owner-confirm').innerText()
+      check('dialog hapus menu menyebut jumlah transaksi', deleteDialogText.includes(`${soldUsage} transaksi`), deleteDialogText.replace(/\s+/g, ' ').slice(0, 220))
+      store = await readStore()
+      check('menu yang dipakai transaksi belum terhapus sebelum konfirmasi', Boolean(store.menus.some((menu: any) => menu.name === soldName)))
+      await shot('hapus-menu-dipakai-transaksi')
+      await page.getByRole('button', { name: 'Hapus dari katalog' }).click()
+      await settle(600)
       store = await readStore()
       check('menu yang dihapus hilang dari store', !store.menus.some((menu: any) => menu.name === soldName))
       await backToPos()

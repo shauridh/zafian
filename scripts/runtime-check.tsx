@@ -84,6 +84,12 @@ const setSelect = (select: HTMLSelectElement, value: string) => {
 const fieldByLabel = (scope: ParentNode | null | undefined, label: string) => [...(scope?.querySelectorAll('.owner-field') ?? [])].find((field) => field.querySelector('span')?.textContent?.trim() === label)
 const persistedState = () => JSON.parse(window.localStorage.getItem('sabana-pos-store-v1') ?? '{}')
 const settle = async (ms = 25) => { await act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)) }) }
+const clickInDialog = (label: string) => {
+  const dialog = window.document.querySelector('.owner-confirm')
+  const target = [...(dialog?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === label)
+  if (!target) throw new Error(`Tombol "${label}" tidak ada di dialog konfirmasi`)
+  act(() => { target.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+}
 const clickByTextAsync = async (label: string) => {
   const target = [...window.document.querySelectorAll('button')].find((button) => button.textContent?.trim() === label)
   if (!target) throw new Error(`Tombol "${label}" tidak ditemukan`)
@@ -296,9 +302,15 @@ const lemonCard = [...window.document.querySelectorAll('.owner-menu-card')].find
 const lemonEdit = [...(lemonCard?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Edit')
 if (lemonEdit) act(() => { lemonEdit.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
 const lemonEditor = window.document.querySelector('.modal.editor')
-window.confirm = () => true
 const deleteMenu = [...(lemonEditor?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Hapus menu')
 if (deleteMenu) act(() => { deleteMenu.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+check('hapus menu membuka dialog di aplikasi', Boolean(window.document.querySelector('.owner-confirm')), bodyText().slice(-200))
+check('menu belum terhapus sebelum konfirmasi', Boolean(persistedState().menus?.find((menu: { name: string }) => menu.name === 'Es Lemon')))
+clickInDialog('Batal')
+check('batal menutup dialog tanpa menghapus menu', !window.document.querySelector('.owner-confirm') && Boolean(persistedState().menus?.find((menu: { name: string }) => menu.name === 'Es Lemon')))
+const deleteMenuAgain = [...(window.document.querySelector('.modal.editor')?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Hapus menu')
+if (deleteMenuAgain) act(() => { deleteMenuAgain.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+clickInDialog('Hapus dari katalog')
 check('menu baru berhasil dihapus', !persistedState().menus?.some((menu: { name: string }) => menu.name === 'Es Lemon'))
 check('kategori tetap ada setelah menu dihapus', Boolean(persistedState().categories?.find((category: { name: string }) => category.name === 'Minuman Segar')))
 
@@ -392,18 +404,35 @@ if (saveEditedOpname) act(() => { saveEditedOpname.dispatchEvent(new window.Mous
 const editedOpname = persistedState().stockMovements?.find((movement: { type: string }) => movement.type === 'opname')
 check('opname bisa diedit', editedOpname?.countedQty === 980 && editedOpname?.qty === -20, JSON.stringify(editedOpname))
 check('edit opname mempertahankan biaya snapshot', editedOpname?.unitCost === 20, JSON.stringify(editedOpname))
+const reopenedOpnameRow = [...window.document.querySelectorAll('.owner-opname-row')].find((row) => row.textContent?.includes('Gula aren'))
+const reopenOpnameEdit = [...(reopenedOpnameRow?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Edit')
+if (reopenOpnameEdit) act(() => { reopenOpnameEdit.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+const removeOpnameFromEditor = [...(window.document.querySelector('.owner-modal')?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Hapus opname')
+if (removeOpnameFromEditor) act(() => { removeOpnameFromEditor.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+check('hapus opname dari editor membuka dialog di aplikasi', Boolean(window.document.querySelector('.owner-confirm')), bodyText().slice(-200))
+clickInDialog('Batal')
+check('batal mempertahankan opname dan editor', Boolean(window.document.querySelector('.owner-confirm') === null) && Boolean(persistedState().stockMovements?.some((movement: { type: string }) => movement.type === 'opname')) && Boolean(window.document.querySelector('.owner-modal')))
+clickByText('Batal')
 const editedOpnameRow = [...window.document.querySelectorAll('.owner-opname-row')].find((row) => row.textContent?.includes('Gula aren'))
 const deleteOpnameButton = [...(editedOpnameRow?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Hapus')
-window.confirm = () => true
 if (deleteOpnameButton) act(() => { deleteOpnameButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+check('hapus opname dari tabel membuka dialog di aplikasi', Boolean(window.document.querySelector('.owner-confirm')), bodyText().slice(-200))
+check('opname belum terhapus sebelum konfirmasi', Boolean(persistedState().stockMovements?.some((movement: { type: string }) => movement.type === 'opname')))
+clickInDialog('Hapus catatan opname')
 check('opname bisa dihapus', !persistedState().stockMovements?.some((movement: { type: string }) => movement.type === 'opname'))
 check('pembelian tetap utuh setelah opname dihapus', persistedState().stockMovements?.length === 2, String(persistedState().stockMovements?.length))
 
 clickByText('Kategori')
 const minumanRow = [...window.document.querySelectorAll('.owner-category-row')].find((row) => row.textContent?.includes('Minuman Segar'))
 const deleteCategoryButton = [...(minumanRow?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Hapus')
-window.confirm = () => true
 if (deleteCategoryButton) act(() => { deleteCategoryButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+check('hapus kategori membuka dialog di aplikasi', Boolean(window.document.querySelector('.owner-confirm')), bodyText().slice(-200))
+check('kategori belum terhapus sebelum konfirmasi', Boolean(persistedState().categories?.find((category: { name: string }) => category.name === 'Minuman Segar')))
+clickInDialog('Batal')
+check('batal mempertahankan kategori', Boolean(persistedState().categories?.find((category: { name: string }) => category.name === 'Minuman Segar')))
+const deleteCategoryAgain = [...([...window.document.querySelectorAll('.owner-category-row')].find((row) => row.textContent?.includes('Minuman Segar'))?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Hapus')
+if (deleteCategoryAgain) act(() => { deleteCategoryAgain.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+clickInDialog('Hapus kategori')
 check('kategori bisa dihapus saat tidak dipakai', !persistedState().categories?.some((category: { name: string }) => category.name === 'Minuman Segar'))
 
 clickByText('Bahan & stok')

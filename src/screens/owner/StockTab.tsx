@@ -32,6 +32,7 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
   const [adjustNote, setAdjustNote] = useState('')
   const [draft, setDraft] = useState<PurchaseLine[]>([])
   const [pendingDelete, setPendingDelete] = useState<{ ingredient: Ingredient; usedBy: string[] } | null>(null)
+  const [pendingOpnameDelete, setPendingOpnameDelete] = useState<StockMovement | null>(null)
   const [lineIngredient, setLineIngredient] = useState(store.ingredients[0]?.id ?? '')
   const [lineQty, setLineQty] = useState('')
   const [lineCost, setLineCost] = useState('')
@@ -125,9 +126,11 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
     notify(usedBy.length > 0 ? `${ingredient.name} dihapus • dilepas dari ${usedBy.length} resep` : `${ingredient.name} dihapus`)
   }
 
-  const deleteOpname = (movement: StockMovement) => {
+  const deleteOpname = () => {
+    if (!pendingOpnameDelete) return
+    const movement = pendingOpnameDelete
     const ingredient = store.ingredients.find((item) => item.id === movement.ingredientId)
-    if (!window.confirm(`Hapus catatan opname ${ingredient?.name ?? 'bahan'}? Stok akan kembali ke posisi sebelum opname ini.`)) return
+    setPendingOpnameDelete(null)
     setStore((current) => ({
       ...current,
       stockMovements: current.stockMovements.filter((item) => item.id !== movement.id),
@@ -249,7 +252,7 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
                   <span className={diff === 0 ? 'owner-pill ok' : diff < 0 ? 'owner-pill danger' : 'owner-pill warn'}>{diff > 0 ? '+' : ''}{Number.isInteger(diff) ? diff : diff.toFixed(2)} {unit}</span>
                   <div className="owner-opname-actions">
                     <button className="owner-ghost" onClick={() => setOpnameEditing(movement)}><Pencil size={13} /> Edit</button>
-                    <button className="owner-ghost danger" onClick={() => deleteOpname(movement)}><Trash2 size={13} /> Hapus</button>
+                    <button className="owner-ghost danger" onClick={() => setPendingOpnameDelete(movement)}><Trash2 size={13} /> Hapus</button>
                   </div>
                 </div>
               )
@@ -337,6 +340,17 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
           confirmLabel={pendingDelete.usedBy.length > 0 ? 'Hapus & lepas dari resep' : 'Hapus bahan'}
           onConfirm={confirmDelete}
           onCancel={() => setPendingDelete(null)}
+        />
+      )}
+
+      {pendingOpnameDelete && (
+        <ConfirmDialog
+          eyebrow="HAPUS OPNAME"
+          title={`Hapus catatan opname ${store.ingredients.find((item) => item.id === pendingOpnameDelete.ingredientId)?.name ?? 'bahan'}?`}
+          description="Catatan opname dihapus dan stok kembali ke posisi sebelum opname ini. Nilai selisih di laporan persediaan ikut hilang; riwayat pembelian tidak berubah."
+          confirmLabel="Hapus catatan opname"
+          onConfirm={deleteOpname}
+          onCancel={() => setPendingOpnameDelete(null)}
         />
       )}
 
