@@ -2,16 +2,6 @@ node_modules
 dev-server.log
 .dev-server.pid
 dist
-staging
-supabase/.temp
-supabase/.branches
-supabase/seed/*.sql
-supabase/hosted.json
-supabase/hosted-report.json
-supabase/production.json
-supabase/production-report.json
-supabase/production/
-.env.supabase.local
 .env*.local
 .wrangler
 .dev.vars

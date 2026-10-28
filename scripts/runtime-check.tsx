@@ -501,7 +501,6 @@ clickByText('Batal')
 
 const persisted = persistedState()
 check('state tersimpan dengan versi skema terbaru', persisted.schemaVersion === SCHEMA_VERSION, String(persisted.schemaVersion))
-check('metadata sync tersimpan di state', persisted.sync?.outletId === 'outlet-local' && typeof persisted.sync?.deviceId === 'string', JSON.stringify(persisted.sync))
 check('harga baru tersimpan di localStorage', persisted.menus?.find((menu: { id: string }) => menu.id === 'dada')?.price === 21000)
 check('kategori tersimpan di localStorage', Array.isArray(persisted.categories) && persisted.categories.length >= 5, String(persisted.categories?.length))
 check('kategori bahan tersimpan di localStorage', Array.isArray(persisted.ingredientCategories) && persisted.ingredientCategories.some((category: { name: string }) => category.name === 'Bumbu Dapur'), String(persisted.ingredientCategories?.length))
@@ -559,23 +558,6 @@ await enterOwner()
 clickByText('Backup')
 check('tab backup terbuka', bodyText().includes('Backup & restore'))
 await settle(40)
-check('panel backup cloud tampil di tab backup', bodyText().includes('Backup cloud (Supabase)'))
-check('panel cloud default nonaktif dengan transport jelas', bodyText().includes('Nonaktif') && bodyText().includes('Belum aktif'), bodyText().slice(-400))
-check('form aktivasi cloud meminta URL, anon key, outlet, dan frasa sandi', ['URL project', 'Anon key', 'UUID outlet', 'Frasa sandi enkripsi'].every((label) => bodyText().includes(label)))
-const cloudUrlInput = window.document.querySelector('input[placeholder="https://xxxx.supabase.co"]') as HTMLInputElement | null
-check('form cloud tetap kosong tanpa env build', Boolean(cloudUrlInput) && cloudUrlInput.value === '')
-check('panel cloud menegaskan kasir tetap lokal', bodyText().includes('Kasir tetap bekerja dari IndexedDB'))
-check('tidak ada tombol backup cloud manual', !bodyText().includes('Backup sekarang ke cloud'))
-check('panel cloud menjelaskan backup otomatis + percobaan ulang', bodyText().includes('Backup otomatis') && bodyText().includes('dibuat otomatis') && bodyText().includes('dicoba ulang'), bodyText().slice(-320))
-check('panel sinkronisasi tampil di tab backup', bodyText().includes('Sinkronisasi katalog'))
-check('panel sync menampilkan seq, pull terakhir, dan antrean', ['Seq terakhir', 'Pull terakhir', 'Perubahan tertunda'].every((label) => bodyText().includes(label)))
-check('panel sync menjelaskan strategi konflik', bodyText().includes('Strategi konflik') && bodyText().includes('row_version'))
-const syncButton = [...window.document.querySelectorAll('button')].find((button) => button.textContent?.includes('Sinkronkan sekarang'))
-check('tombol Sinkronkan sekarang tersedia', Boolean(syncButton))
-if (syncButton) {
-  await act(async () => { syncButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); await new Promise((resolve) => setTimeout(resolve, 60)) })
-  check('sync tanpa konfigurasi memberi petunjuk, bukan error', bodyText().includes('Aktifkan backup cloud terlebih dahulu'), bodyText().slice(-260))
-}
 const backupFileInput = window.document.querySelector('.owner-backup-actions input[type="file"]') as HTMLInputElement | null
 check('input file restore tersedia', Boolean(backupFileInput))
 if (backupFileInput) {

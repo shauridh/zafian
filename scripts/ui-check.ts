@@ -250,29 +250,6 @@ async function main(): Promise<number> {
       transaction.onerror = () => rejectStore(transaction.error)
     }
   }), value)
-  const writeKv = (key: string, value: unknown) => page.evaluate(({ key: kvKey, value: kvValue }) => new Promise<void>((resolveWrite, rejectWrite) => {
-    const request = indexedDB.open('sabana-pos')
-    request.onerror = () => rejectWrite(request.error)
-    request.onsuccess = () => {
-      const db = request.result
-      const storeName = db.objectStoreNames[0]
-      const transaction = db.transaction(storeName, 'readwrite')
-      transaction.objectStore(storeName).put(kvValue, kvKey)
-      transaction.oncomplete = () => resolveWrite()
-      transaction.onerror = () => rejectWrite(transaction.error)
-    }
-  }), { key, value })
-  const readKv = (key: string) => page.evaluate((kvKey) => new Promise((resolveRead, rejectRead) => {
-    const request = indexedDB.open('sabana-pos')
-    request.onerror = () => rejectRead(request.error)
-    request.onsuccess = () => {
-      const db = request.result
-      const storeName = db.objectStoreNames[0]
-      const get = db.transaction(storeName, 'readonly').objectStore(storeName).get(kvKey)
-      get.onsuccess = () => resolveRead(get.result)
-      get.onerror = () => rejectRead(get.error)
-    }
-  }), key)
   const field = (label: string) => page.locator('.owner-field', { hasText: label }).locator('input, textarea, select').first()
   const navTo = async (label: string) => {
     await page.locator('.owner-nav button', { hasText: label }).first().click()
@@ -615,44 +592,8 @@ async function main(): Promise<number> {
     check('tes cetak mengirim 2 salinan', (printHtml?.match(/<pre>/g) ?? []).length === 2, String((printHtml?.match(/<pre>/g) ?? []).length))
     await shot('pengaturan-reload')
 
-    // ---------- 6b. Matikan cloud wajib lewat dialog konfirmasi in-app ----------
-    await backToPos()
-    await writeKv('cloud:config', {
-      enabled: true,
-      projectUrl: 'https://example.invalid',
-      anonKey: 'anon-kunci-uji',
-      outletId: '471d3f1c-1ad0-4f88-a35c-7f9f6e968926',
-      bucket: 'outlet-backups',
-      key: { material: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', salt: 'BBBB', iterations: 1000 },
-      updatedAt: new Date().toISOString(),
-    })
-    await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.waitForSelector('.pos-screen', { timeout: 30_000 })
-    await settle(700)
-    await enterOwner()
-    await navTo('Backup')
-    await page.getByRole('button', { name: 'Matikan backup cloud' }).waitFor({ timeout: 10_000 })
-    check('panel cloud tidak menawarkan backup manual', (await page.getByRole('button', { name: 'Backup sekarang ke cloud' }).count()) === 0)
-    const autoBackupNote = await page.locator('.owner-setting-note', { hasText: 'Backup otomatis' }).first().innerText()
-    check('panel cloud menjelaskan backup otomatis + percobaan ulang', autoBackupNote.includes('dibuat otomatis') && autoBackupNote.includes('dicoba ulang'), autoBackupNote.replace(/\s+/g, ' ').slice(0, 180))
-    await page.getByRole('button', { name: 'Matikan backup cloud' }).click()
-    await page.waitForSelector('.owner-confirm')
-    const cloudDialogText = await page.locator('.owner-confirm').innerText()
-    check('matikan cloud membuka dialog konfirmasi di aplikasi', cloudDialogText.includes('Matikan backup cloud'))
-    check('dialog menjelaskan backup lokal & snapshot tetap ada', cloudDialogText.includes('snapshot di cloud tidak dihapus'), cloudDialogText.replace(/\s+/g, ' ').slice(0, 200))
-    await shot('matikan-cloud-konfirmasi')
-    await page.locator('.owner-confirm').getByRole('button', { name: 'Batal' }).click()
-    await settle(300)
-    check('batal tidak mematikan cloud', (await page.getByRole('button', { name: 'Matikan backup cloud' }).count()) === 1 && (await readKv('cloud:config') as any)?.enabled === true)
-    await page.getByRole('button', { name: 'Matikan backup cloud' }).click()
-    await page.waitForSelector('.owner-confirm')
-    await page.getByRole('button', { name: 'Matikan & putuskan sesi' }).click()
-    await settle(700)
-    check('konfirmasi mematikan cloud', (await readKv('cloud:config') as any)?.enabled === false)
-    await shot('matikan-cloud-selesai')
-    await backToPos()
-
     // ---------- 7. Buka shift → transaksi tunai → struk → tutup shift ----------
+    await backToPos()
     await page.locator('.empty-cart .open-shift-inline').click()
     await page.waitForSelector('#opening-float')
     const openingFloat = Number(await page.locator('#opening-float').inputValue())

@@ -1,7 +1,6 @@
 import { SCHEMA_VERSION, type PosStore } from '../domain/pos'
 import { createId } from './id'
 import { normalizeStore } from './schema'
-import { latestBusinessTimestamp } from '../domain/sync'
 import { BACKUP_STORAGE_KEY, isStorageReady, readJson, writeJson } from './storage'
 
 export const BACKUP_FORMAT = 'sabana-pos-backup'
@@ -237,17 +236,8 @@ export function applyRestoredStore(restored: PosStore, current: PosStore, fileNa
   const withPin = current.settings.ownerPin
     ? { ...restored, settings: { ...restored.settings, ownerPin: current.settings.ownerPin } }
     : restored
-  // Identitas perangkat tidak boleh berpindah saat restore dari perangkat lain.
-  const sync = {
-    ...withPin.sync,
-    outletId: current.sync.outletId,
-    deviceId: current.sync.deviceId,
-    revision: Math.max(withPin.sync.revision, current.sync.revision),
-    updatedAt: latestBusinessTimestamp([withPin.sync.updatedAt, current.sync.updatedAt]),
-  }
   return {
     ...withPin,
-    sync,
     auditLog: [...withPin.auditLog, {
       id: createId(),
       createdAt: new Date().toISOString(),

@@ -45,18 +45,6 @@ jobs:
       - name: check:storage
         run: bun run check:storage
 
-      - name: check:sync
-        run: bun run check:sync
-
-      - name: check:pull
-        run: bun run check:pull
-
-      - name: check:db
-        run: bun run check:db
-
-      - name: check:cloud
-        run: bun run check:cloud
-
       - name: check:ui (Chromium headless)
         run: bun run check:ui
 

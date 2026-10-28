@@ -16,8 +16,6 @@ import {
 import { downloadCsv } from '../../lib/csv'
 import { savePosStore } from '../../lib/persistence'
 import { describeStorageError, getStorageBackend } from '../../lib/storage'
-import { CloudBackupPanel } from './CloudBackupPanel'
-import { SyncPanel } from './SyncPanel'
 import type { OwnerTabProps } from './types'
 import { money } from './ui'
 
@@ -174,13 +172,6 @@ export function BackupTab({ store, setStore, notify }: OwnerTabProps) {
           </div>
         </section>
       </div>
-
-      <SyncPanel store={store} setStore={setStore} notify={notify} />
-
-      <CloudBackupPanel
-        notify={notify}
-        onRestoreRequest={(nextStore, meta, label) => setPendingRestore({ store: nextStore, meta, fileName: label })}
-      />
 
       <section className="owner-panel">
         <div className="owner-panel-head">

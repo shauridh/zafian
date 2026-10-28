@@ -17,7 +17,6 @@ import {
 } from '../domain/pos'
 import type { StockMovement } from '../domain/inventory'
 import { defaultSettings, type AppSettings, type OwnerPinRecord, type ThemeMode } from '../domain/settings'
-import { latestBusinessTimestamp, normalizeSyncMeta } from '../domain/sync'
 
 const ORDER_TYPES: OrderType[] = ['Takeaway', 'Dine in', 'GoFood', 'GrabFood', 'ShopeeFood']
 const PAYMENT_METHODS: PaymentMethod[] = ['Cash', 'QRIS', 'Unpaid']
@@ -356,20 +355,8 @@ export function normalizeStore(input: unknown): PosStore {
     finalIngredients.map((ingredient) => ingredient.category),
   )
 
-  const latestBusinessAt = latestBusinessTimestamp([
-    ...transactions.map((item) => item.createdAt),
-    ...transactions.map((item) => item.statusChangedAt),
-    ...cashMovements.map((item) => item.createdAt),
-    ...shifts.flatMap((item) => [item.openedAt, item.closedAt]),
-    ...preOrders.flatMap((item) => [item.createdAt, item.pickupAt]),
-    ...stockMovements.map((item) => item.createdAt),
-    ...expenses.map((item) => item.createdAt),
-    ...auditLog.map((item) => item.createdAt),
-  ])
-
   return {
     schemaVersion: SCHEMA_VERSION,
-    sync: normalizeSyncMeta(raw.sync, latestBusinessAt),
     transactions,
     cashMovements,
     shifts,

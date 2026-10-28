@@ -3,7 +3,6 @@ import type { Ingredient, IngredientCategory, Menu, MenuCategory } from './catal
 import { seedCategories, seedIngredientCategories, seedIngredients, seedMenus } from './catalog'
 import { createDefaultSettings, type AppSettings } from './settings'
 import type { StockMovement } from './inventory'
-import { createSyncMeta, type SyncMeta } from './sync'
 
 export type OrderType = 'Takeaway' | 'Dine in' | 'GoFood' | 'GrabFood' | 'ShopeeFood'
 export type PaymentMethod = 'Cash' | 'QRIS' | 'Unpaid'
@@ -93,8 +92,6 @@ export const SCHEMA_VERSION = 8
 
 export type PosStore = {
   schemaVersion: number
-  /** Metadata sync lokal; tidak dipakai UI dan belum dikirim ke jaringan. */
-  sync: SyncMeta
   transactions: Transaction[]
   cashMovements: CashMovement[]
   shifts: Shift[]
@@ -113,7 +110,6 @@ export type PosStore = {
 
 export const initialPosStore: PosStore = {
   schemaVersion: SCHEMA_VERSION,
-  sync: createSyncMeta(),
   transactions: [],
   cashMovements: [],
   shifts: [],

@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Banknote, ChefHat, ChevronRight, Cloud, CreditCard, History, MoreHorizontal, Moon, Package, Plus, Printer, Receipt, ShoppingBag, Sun, X } from 'lucide-react'
+import { Banknote, ChefHat, ChevronRight, Cloud, CreditCard, History, MoreHorizontal, Moon, Package, Plus, Printer, Receipt, Save, ShoppingBag, Sun, X } from 'lucide-react'
 import { cashMovementsForShift, cashSalesForShift, expectedCashForShift, type CartItem, type CashMovement, type HeldOrder, type PaymentMethod, type PosStore, type PreOrder, type Shift, type Transaction } from './domain/pos'
-import { createAndStoreBackup, ensureDailyBackup, readLatestBackup } from './lib/backup'
-import { ensureCloudConnection, getCloudStatus, hydrateCloudStatus, subscribeCloudStatus, uploadBackupQuietly, type CloudStatus } from './lib/cloud-backup'
-import { enqueueSale, getSyncStatus, hydrateSyncStatus, pushOutboxQuietly, startRealtimeBridge, subscribeSyncStatus, syncNow, type SyncStatus } from './lib/sync-client'
+import { createAndStoreBackup, ensureDailyBackup } from './lib/backup'
 import { createId } from './lib/id'
 import { loadPosStore, savePosStore } from './lib/persistence'
 import { describeStorageError } from './lib/storage'
@@ -51,8 +49,6 @@ export function App({ storageWarning }: AppProps = {}) {
   const [activeShiftId, setActiveShiftId] = useState(() => loadPosStore().shifts.find((shift) => shift.status === 'open')?.id ?? '')
   const [ownerTab, setOwnerTab] = useState<OwnerTab>('ringkasan')
   const [storageError, setStorageError] = useState('')
-  const [cloudStatus, setCloudStatus] = useState<CloudStatus>(() => getCloudStatus())
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => getSyncStatus())
   const [storageWarningDismissed, setStorageWarningDismissed] = useState(false)
   const [pinPrompt, setPinPrompt] = useState<{ mode: 'setup' | 'enter'; purpose: string } | null>(null)
   const [closingShift, setClosingShift] = useState(false)
@@ -82,99 +78,18 @@ export function App({ storageWarning }: AppProps = {}) {
   useEffect(() => { storeRef.current = store }, [store])
   useEffect(() => {
     let active = true
-    const runAutomaticBackup = () => {
-      void (async () => {
-        const result = await ensureDailyBackup(storeRef.current)
-        // Backup terbaru tetap diunggah walau harian sudah dibuat: unggahan yang gagal dicoba lagi otomatis.
-        const record = result.record ?? await readLatestBackup()
-        if (record) void uploadBackupQuietly(record)
-      })().catch((error: unknown) => {
-        if (active) setStorageError(`Backup otomatis gagal: ${describeStorageError(error)}`)
+    const runDailyBackup = () => {
+      void ensureDailyBackup(storeRef.current).catch((error: unknown) => {
+        if (active) setStorageError(`Backup harian gagal: ${describeStorageError(error)}`)
       })
     }
-    // Cek saat dibuka, lalu berkala agar pergantian hari dan percobaan unggah ulang tetap tercakup.
-    runAutomaticBackup()
-    const timer = window.setInterval(runAutomaticBackup, 30 * 60 * 1000)
-    window.addEventListener('online', runAutomaticBackup)
-    return () => { active = false; window.clearInterval(timer); window.removeEventListener('online', runAutomaticBackup) }
-  }, [])
-  useEffect(() => {
-    let active = true
-    const unsubscribe = subscribeCloudStatus((value) => { if (active) setCloudStatus(value) })
-    // Sesi pemilik yang tersimpan dipakai ulang otomatis; panel pengaturan tidak perlu dibuka lagi.
-    void (async () => {
-      const initial = await hydrateCloudStatus()
-      if (active) setCloudStatus(initial)
-      await ensureCloudConnection()
-      // Begitu sesi cloud tersambung, backup otomatis terbaru langsung diunggah tanpa aksi pemilik.
-      const latest = await readLatestBackup()
-      if (active && latest) void uploadBackupQuietly(latest)
-    })()
-    return () => { active = false; unsubscribe() }
-  }, [])
-  useEffect(() => {
-    let active = true
-    void hydrateSyncStatus().then((value) => { if (active) setSyncStatus(value) })
-    const unsubscribe = subscribeSyncStatus((value) => { if (active) setSyncStatus(value) })
-    // Sinkronisasi latar: realtime hanya pemicu, polling tetap jalan sebagai fallback.
-    let bridge: { token: string; handle: ReturnType<typeof startRealtimeBridge> } | null = null
-    let syncing = false
-    const runSync = async () => {
-      if (syncing || !active) return
-      syncing = true
-      try {
-        await syncNow({
-          store: storeRef.current,
-          onStore: async (next) => {
-            await savePosStore(next)
-            if (active) setStore(next)
-          },
-        })
-      } catch (error) {
-        console.warn('Sinkronisasi latar gagal', error)
-      } finally {
-        syncing = false
-      }
-    }
-    // Sambung otomatis memakai sesi tersimpan; token diperbarui di latar belakang bila perlu.
-    const tryStartBridge = async () => {
-      if (!active) return
-      try {
-        const connection = await ensureCloudConnection()
-        if (!active || !connection) return
-        // Bridge memegang access token saat koneksi dibuka; ganti bila token diperbarui.
-        if (bridge?.token === connection.session.accessToken) return
-        bridge?.handle.stop()
-        bridge = {
-          token: connection.session.accessToken,
-          handle: startRealtimeBridge({ config: connection.config, session: connection.session, onChange: () => { void runSync() } }),
-        }
-      } catch (error) {
-        console.warn('Koneksi Supabase otomatis gagal', error)
-      }
-    }
-    const goOnline = () => { void tryStartBridge(); void runSync() }
-    void tryStartBridge()
-    // Cek berkala agar bridge ikut aktif begitu cloud diaktifkan, tanpa reload.
-    const timer = window.setInterval(() => { void tryStartBridge() }, 60_000)
-    window.addEventListener('online', goOnline)
-    return () => { active = false; unsubscribe(); window.clearInterval(timer); window.removeEventListener('online', goOnline); bridge?.handle.stop() }
+    runDailyBackup()
+    const timer = window.setInterval(runDailyBackup, 30 * 60 * 1000)
+    return () => { active = false; window.clearInterval(timer) }
   }, [])
   useEffect(() => { const goOnline = () => setOnline(true); const goOffline = () => setOnline(false); window.addEventListener('online', goOnline); window.addEventListener('offline', goOffline); return () => { window.removeEventListener('online', goOnline); window.removeEventListener('offline', goOffline) } }, [])
   useEffect(() => { if (!message) return; const timer = setTimeout(() => setMessage(''), 3000); return () => clearTimeout(timer) }, [message])
 
-  const syncStatusLabel = syncStatus.pending > 0 ? `${syncStatus.pending} perubahan tertunda` : 'antrean sinkron kosong'
-  const cloudStatusLabel = (value: CloudStatus) => value.state === 'ok'
-    ? 'backup cloud terunggah'
-    : value.state === 'uploading'
-      ? 'unggah backup cloud berjalan'
-      : value.state === 'error'
-        ? `backup cloud gagal: ${value.lastError ?? 'tanpa pesan'}`
-        : value.state === 'pending-setup'
-          ? 'backup cloud perlu masuk sekali'
-          : value.state === 'idle'
-            ? 'backup cloud siap'
-            : 'backup cloud nonaktif'
   const categories = ['Semua', ...store.categories.map((item) => item.name)]
   const activeCategory = categories.includes(category) ? category : 'Semua'
   const shiftSales = new Map<string, number>()
@@ -205,10 +120,6 @@ export function App({ storageWarning }: AppProps = {}) {
     const paidAmount = paymentMethod === 'Cash' ? cashValue : paymentMethod === 'QRIS' ? subtotal : 0
     const transaction: Transaction = { id: createId(), number: `POS-${store.nextTransactionNumber}`, createdAt: new Date().toISOString(), orderType, paymentMethod, items: cart as CartItem[], subtotal, paidAmount, change: paymentMethod === 'Cash' ? Math.max(0, paidAmount - subtotal) : 0, status: 'completed' as const, note: deliveryNote || undefined, shiftId: activeShift.id }
     setStore((current) => ({ ...current, transactions: [...current.transactions, transaction], nextTransactionNumber: current.nextTransactionNumber + 1, auditLog: [...current.auditLog, { id: createId(), createdAt: new Date().toISOString(), action: 'sale' as const, detail: `${transaction.number} • ${orderType} • ${paymentMethod}` }] }))
-    // Antrean penjualan Fase 3: dikirim lewat RPC idempoten, tidak menahan kasir.
-    void enqueueSale(store, transaction)
-      .then(() => pushOutboxQuietly())
-      .catch((error: unknown) => console.warn('Penjualan belum masuk antrean sinkronisasi', error))
     if (store.settings.printer.autoPrint && paymentMethod !== 'Unpaid') void printReceiptPreferred(transaction, brandingFromSettings(store.settings)).then((outcome) => { if (outcome.mode === 'failed') setMessage(printOutcomeMessage(outcome)) })
     setCart([])
     setModal(null)
@@ -223,9 +134,6 @@ export function App({ storageWarning }: AppProps = {}) {
     if (!activeShift) { setModal('open-shift'); return }
     const transaction: Transaction = { id: createId(), number: `POS-${store.nextTransactionNumber}`, createdAt: new Date().toISOString(), orderType: order.orderType, paymentMethod: order.paymentMethod, items: order.items, subtotal: order.total, paidAmount: order.dp, change: 0, status: 'completed', note: `Pre-order ${order.customerName}`, shiftId: activeShift.id }
     setStore((current) => ({ ...current, transactions: [...current.transactions, transaction], nextTransactionNumber: current.nextTransactionNumber + 1, preOrders: current.preOrders.map((item) => item.id === order.id ? { ...item, status: 'processing' as const, transactionId: transaction.id } : item) }))
-    void enqueueSale(store, transaction)
-      .then(() => pushOutboxQuietly())
-      .catch((error: unknown) => console.warn('Pre-order belum masuk antrean sinkronisasi', error))
     setMessage(`Pre-order ${order.customerName} mulai diproses • penjualan diakui`)
   }
   const settlePreOrder = (order: PreOrder) => {
@@ -293,9 +201,7 @@ export function App({ storageWarning }: AppProps = {}) {
     setClosingShift(true)
     try {
       // Snapshot diambil tepat sebelum shift ditutup; bila backup gagal, shift tetap terbuka.
-      const shiftBackup = await createAndStoreBackup(store, 'before-shift-close')
-      // Snapshot cloud dikirim setelah backup lokal tersimpan; tutup shift tidak menunggu jaringan.
-      void uploadBackupQuietly(shiftBackup)
+      await createAndStoreBackup(store, 'before-shift-close')
       const closedStore: PosStore = {
         ...store,
         shifts: store.shifts.map((shift) => shift.id === activeShift.id ? { ...shift, actualCash: countedCash, closedAt: new Date().toISOString(), status: 'closed' as const } : shift),
@@ -339,7 +245,7 @@ export function App({ storageWarning }: AppProps = {}) {
   return <div className={darkMode ? 'pos-shell pos-screen dark-theme' : 'pos-shell pos-screen'}>
     <header className="pos-topbar">
       <div className="brand"><div className="brand-mark"><ChefHat size={20} /></div><div><strong>Sabana POS</strong><span>{store.settings.outletName}</span></div></div>
-      <div className="top-actions"><button className="top-status printer-status" onClick={() => requestOwnerAccess('pengaturan')} aria-label="Pengaturan printer" title="Pengaturan printer (PIN)"><Printer size={17} /></button><button className={`top-status sync-status${online ? '' : ' offline'}${cloudStatus.state === 'error' || syncStatus.state === 'error' ? ' cloud-error' : cloudStatus.state === 'ok' ? ' cloud-ok' : ''}`} onClick={() => { void savePosStore(store).then(() => setMessage(online ? 'Tersimpan aman di perangkat' : 'Offline • data tersimpan di perangkat')).catch((error: unknown) => setStorageError(describeStorageError(error))) }} aria-label={`${online ? 'Online, klik untuk simpan ulang' : 'Offline, data tersimpan lokal'} • ${cloudStatusLabel(cloudStatus)} • ${syncStatusLabel}`} title={`${online ? 'Online — simpan ke perangkat' : 'Offline — tersimpan lokal'} • ${cloudStatusLabel(cloudStatus)} • ${syncStatusLabel}`}><Cloud size={17} />{syncStatus.pending > 0 && <span className="held-count">{syncStatus.pending}</span>}</button><button className="top-status history-status" onClick={() => setModal('history')} aria-label="Riwayat transaksi" title="Riwayat transaksi"><History size={17} /></button><button className="top-status theme-status" onClick={toggleTheme} aria-label={darkMode ? 'Gunakan tema terang' : 'Gunakan tema gelap'} title={darkMode ? 'Tema terang' : 'Tema gelap'}>{darkMode ? <Sun size={17} /> : <Moon size={17} />}</button><button className="icon-btn" onClick={() => setModal('more')} aria-label="Menu"><MoreHorizontal /></button><button className="avatar" onClick={() => requestOwnerAccess('ringkasan')} aria-label="Buka mode pemilik" title="Mode pemilik (PIN)">P</button></div>
+      <div className="top-actions"><button className="top-status printer-status" onClick={() => requestOwnerAccess('pengaturan')} aria-label="Pengaturan printer" title="Pengaturan printer (PIN)"><Printer size={17} /></button><button className={`top-status save-status${online ? '' : ' offline'}`} onClick={() => { void savePosStore(store).then(() => setMessage(online ? 'Tersimpan aman di perangkat' : 'Offline • data tersimpan di perangkat')).catch((error: unknown) => setStorageError(describeStorageError(error))) }} aria-label={online ? 'Online, klik untuk simpan ulang data ke perangkat' : 'Offline, data tersimpan lokal'} title={online ? 'Online — simpan ke perangkat' : 'Offline — tersimpan lokal'}><Save size={17} /></button><button className="top-status history-status" onClick={() => setModal('history')} aria-label="Riwayat transaksi" title="Riwayat transaksi"><History size={17} /></button><button className="top-status theme-status" onClick={toggleTheme} aria-label={darkMode ? 'Gunakan tema terang' : 'Gunakan tema gelap'} title={darkMode ? 'Tema terang' : 'Tema gelap'}>{darkMode ? <Sun size={17} /> : <Moon size={17} />}</button><button className="icon-btn" onClick={() => setModal('more')} aria-label="Menu"><MoreHorizontal /></button><button className="avatar" onClick={() => requestOwnerAccess('ringkasan')} aria-label="Buka mode pemilik" title="Mode pemilik (PIN)">P</button></div>
     </header>
     <main className="pos-main">
       <section className="catalog">
