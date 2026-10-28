@@ -48,6 +48,9 @@ jobs:
       - name: check:repo (Supabase, gateway tiruan)
         run: bun run check:repo
 
+      - name: check:sql (migration + RLS di Postgres/PGlite)
+        run: bun run check:sql
+
       - name: check:ui (Chromium headless)
         run: bun run check:ui
 

@@ -13,6 +13,9 @@ berjalan mode lokal untuk pengembangan; build produksi wajib memakai env.
      untuk trigger transaksi. **Wajib**: tanpa ini pembayaran ditolak RLS
      dengan pesan `new row violates row-level security policy for table
      "transaction_items"`.
+   - `migrations/0004_shifts_delete.sql` — izin hapus shift untuk pemilik
+     (restore/hapus data). Tanpa ini, DELETE shift menjadi no-op tanpa error
+     sehingga shift lama muncul lagi setelah reload.
 3. Alternatif CLI (butuh Docker):
    ```bash
    supabase link --project-ref <ref>
@@ -108,6 +111,10 @@ on conflict (user_id) do update
       role = excluded.role;
 ```
 
+Bila pesan menyebut `transaction_items`, jalankan `0003_transaction_items_write.sql`;
+bila menyebut `shifts` atau shift tidak ikut terhapus saat restore, jalankan
+`0004_shifts_delete.sql`. Jangan mengulang `0001`/`0002`.
+
 Muat ulang aplikasi setelah menjalankan SQL. Aplikasi tidak memakai env outlet,
 jadi outlet yang dipakai selalu baris `staff` akun tersebut.
 
@@ -124,8 +131,11 @@ jadi outlet yang dipakai selalu baris `staff` akun tersebut.
 
 ## 7. Hasil uji pada PostgreSQL lokal
 
-Migration diuji pada **PostgreSQL 18.4 lokal** dengan stub Supabase (role `anon`,
-`authenticated`, `service_role`, schema `auth` + `auth.uid()`/`auth.jwt()`):
+Migration diuji pada Postgres asli — **PostgreSQL 18.4 lokal** dan **PGlite/WASM**
+lewat `bun run check:sql` — dengan stub Supabase (role `anon`, `authenticated`,
+`service_role`, schema `auth` + `auth.uid()`/`auth.jwt()`). `bun run check:sql`
+menjalankan semua file migration berurutan lalu menguji write path aplikasi
+(75 pemeriksaan, 75 PASS / 0 FAIL saat rilis ini):
 
 - `0001_init.sql` dan `0002_rls.sql` **apply bersih tanpa error** pada database
   kosong, dijalankan berurutan di **dua database baru** (masing-masing 12 tabel).
@@ -146,7 +156,10 @@ jalankan sekali pada project baru. Untuk mengulang, buat project/database baru.
 ## 8. Belum diuji di repo ini
 
 - Ke project **Supabase hosted** belum dieksekusi (butuh kredensial project).
-  Yang terbukti adalah apply + RLS pada PostgreSQL lokal dengan stub Supabase.
+  Yang terbukti adalah apply + RLS pada Postgres asli (PGlite/PostgreSQL lokal)
+  dengan stub Supabase, termasuk seluruh migration 0001–0004 lewat
+  `bun run check:sql`. Login Supabase Auth dengan JWT asli dan PostgREST hosted
+  tetap perlu diverifikasi sekali setelah project dibuat.
 - Login Supabase Auth dengan JWT asli dan klien PostgREST belum diuji end-to-end;
   validasi data memakai gateway tiruan (`bun run check:repo`) dan SQL lokal.
 - Realtime belum dipakai.

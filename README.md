@@ -23,17 +23,20 @@ bun run check:runtime   # jsdom: mount App, PIN, buka layar pemilik, ubah harga,
 bun run check:ui        # Chromium: CRUD, kategori, gambar, bulk, printer, shift/struk, overflow
 bun run check:storage   # fake-indexeddb: migrasi localStorage, idempotensi, backup, gagal tulis
 bun run check:repo      # repo Supabase dengan gateway tiruan: load/save, diff, hapus, dokumen, error
+bun run check:sql       # Postgres asli (PGlite): semua migration, RLS per tabel, alur checkout
 ```
 
 `bun run check:ui` memerlukan Chromium Playwright sekali: `bunx playwright install --with-deps chromium`. Skrip memakai dev server di `:3000` bila sedang hidup, atau menyalakan server Vite sendiri; set `UI_BASE_URL` untuk menunjuk server lain, `UI_CHECK_OWN_SERVER=1` untuk selalu menyalakan server sendiri (CI), dan `UI_CHECK_SCREENSHOTS=0` untuk mematikan screenshot. Screenshot tersimpan di `.screenshots/ui-check/` (gitignored). Hasil per pemeriksaan ditulis ke `artifacts/ui-check-report.json` bila `UI_CHECK_REPORT` diisi, atau `.screenshots/ui-check/report.json` bila tidak.
 
-Workflow `.github/workflows/ci.yml` menjalankan `bun run typecheck`, seluruh `check:*` (domain, runtime, storage, repo), dan `check:ui` headless pada setiap push, lalu mengunggah laporan JSON + screenshot sebagai artefak.
+Workflow `.github/workflows/ci.yml` menjalankan `bun run typecheck`, seluruh `check:*` (domain, runtime, storage, repo, sql), dan `check:ui` headless pada setiap push, lalu mengunggah laporan JSON + screenshot sebagai artefak.
+
+`bun run check:sql` menjalankan semua file di `supabase/migrations/` secara berurutan pada Postgres asli (PGlite/WASM, tanpa Docker) dengan stub Supabase (`auth.uid()`, role `anon`/`authenticated`). Skrip menulis sebagai owner outlet untuk setiap tabel yang dipakai aplikasi, memastikan akun outlet lain dan `anon` ditolak, menjalankan checkout penuh (shift → transaksi → `transaction_items` → total), lalu mencetak jumlah PASS/FAIL dan exit non-zero bila ada yang gagal. Ini yang menangkap bug seperti policy `transaction_items` yang tidak cocok dengan trigger.
 
 ## Deploy production di Vercel
 
 Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase diakses langsung dari browser memakai anon key + RLS. Vercel hanya perlu build env, bukan server API.
 
-1. **Siapkan Supabase lebih dulu** — ikuti [`supabase/README.md`](supabase/README.md): jalankan `0001_init.sql` + `0002_rls.sql` + `0003_transaction_items_write.sql`, aktifkan provider Email, dan buat akun pemilik.
+1. **Siapkan Supabase lebih dulu** — ikuti [`supabase/README.md`](supabase/README.md): jalankan `0001_init.sql` → `0002_rls.sql` → `0003_transaction_items_write.sql` → `0004_shifts_delete.sql` (sekali, berurutan), aktifkan provider Email, dan buat akun pemilik.
 2. Import repo ke Vercel. Konfigurasi dari `vercel.json` menetapkan **install** `bun install --frozen-lockfile`, **build** `bun run build`, dan **output** `dist/client`.
 3. Isi **Environment Variables** (Production dan Preview):
 
@@ -49,13 +52,23 @@ Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase di
 5. Buka aplikasi → masuk dengan **satu akun pemilik**. Outlet dibuat otomatis pada login pertama (RPC `create_outlet`), katalog contoh terisi sekali, dan tidak ada onboarding, pilihan outlet, atau manajemen staf.
 6. `vercel.json` menambahkan rewrite SPA agar refresh/deep link kembali ke `index.html`, header keamanan, cache `sw.js` yang tidak lengket, serta tipe konten manifest.
 
+### Checklist deploy
+
+- [ ] `bun run typecheck`, `bun run build`, dan `bun run check:sql` exit 0 secara lokal; `dist/client` berisi `index.html`, `assets/`, `sw.js`, dan `manifest.webmanifest`.
+- [ ] Supabase SQL Editor: `0001_init.sql` → `0002_rls.sql` → `0003_transaction_items_write.sql` → `0004_shifts_delete.sql`, sekali dan berurutan (jangan mengulang `0001`/`0002`).
+- [ ] Supabase Authentication: provider Email aktif, satu akun pemilik dibuat.
+- [ ] Vercel Environment Variables (Production + Preview): `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY`; tidak ada service role/password di klien.
+- [ ] Deploy, lalu buka `/` dan refresh di path dalam (mis. `/settings`) — harus memuat aplikasi, bukan 404.
+- [ ] Login pemilik → outlet + katalog contoh dibuat sekali → buka shift → bayar tunai → transaksi tersimpan dan struk bisa dicetak.
+- [ ] Setiap mengubah env, redeploy (Vite menanamkan nilai saat build).
+
 Catatan: endpoint Hono di `src/worker/index.ts` hanya tersedia pada deployment Cloudflare, bukan pada deployment Vercel statis. Aplikasi POS tidak memanggil endpoint tersebut. Data operasional berada di Supabase sehingga beberapa perangkat melihat outlet yang sama (last-write-wins per baris).
 
 ### Jika muncul "new row violates row-level security policy"
 
 Artinya akun yang login belum terdaftar sebagai `owner` untuk outlet yang dipakai (mis. akun dibuat ulang atau baris `staff` menunjuk outlet lain). Buka Supabase → SQL Editor, periksa lalu perbaiki:
 
-Jika pesannya menyebut tabel `transaction_items`, penyebabnya berbeda: jalankan `supabase/migrations/0003_transaction_items_write.sql`. Tanpa migration itu, trigger transaksi tidak diizinkan menulis baris item sehingga pembayaran ikut gagal.
+Jika pesannya menyebut tabel `transaction_items`, penyebabnya berbeda: jalankan `supabase/migrations/0003_transaction_items_write.sql`. Tanpa migration itu, trigger transaksi tidak diizinkan menulis baris item sehingga pembayaran ikut gagal. Jika pesannya menyebut tabel `shifts` atau data shift tidak ikut terhapus saat restore, jalankan `supabase/migrations/0004_shifts_delete.sql`.
 
 ```sql
 -- 1) Periksa akun, peran, dan outlet yang terdaftar
