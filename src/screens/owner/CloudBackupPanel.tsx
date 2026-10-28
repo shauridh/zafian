@@ -28,6 +28,7 @@ import {
   type CloudStatus,
 } from '../../lib/cloud-backup'
 import { createAndStoreBackup } from '../../lib/backup'
+import { mergeSupabaseDefaults, supabaseEnvDefaults } from '../../lib/env'
 import { Field } from './ui'
 
 const stateLabel: Record<CloudStatus['state'], string> = {
@@ -58,6 +59,8 @@ function formatBytes(value: number): string {
   return `${(value / (1024 * 1024)).toFixed(2)} MB`
 }
 
+const ENV_DEFAULTS = supabaseEnvDefaults()
+
 type Props = {
   store: PosStore
   notify: (message: string) => void
@@ -71,15 +74,13 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
   const [rows, setRows] = useState<CloudSnapshotRow[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [form, setForm] = useState({
-    projectUrl: '',
-    anonKey: '',
-    outletId: '',
+  const [form, setForm] = useState(() => ({
+    ...mergeSupabaseDefaults(ENV_DEFAULTS),
     email: '',
     password: '',
     passphrase: '',
     passphraseConfirm: '',
-  })
+  }))
 
   useEffect(() => subscribeCloudStatus(setStatus), [])
 
@@ -106,9 +107,7 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
       if (storedConfig) {
         setForm((current) => ({
           ...current,
-          projectUrl: storedConfig.projectUrl,
-          anonKey: storedConfig.anonKey,
-          outletId: storedConfig.outletId,
+          ...mergeSupabaseDefaults(ENV_DEFAULTS, storedConfig),
           email: storedSession?.email ?? '',
         }))
       }
@@ -270,6 +269,12 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
             <strong>Yang dibutuhkan</strong>
             <span>URL project Supabase, anon key (bukan service role key), UUID outlet, akun pemilik, dan frasa sandi enkripsi. Frasa sandi tidak disimpan; yang disimpan hanya kunci turunannya agar backup harian bisa berjalan otomatis.</span>
           </div>
+          {ENV_DEFAULTS && (
+            <div className="owner-setting-note">
+              <strong>Terisi dari environment build</strong>
+              <span>URL project, anon key, dan UUID outlet dimuat dari environment Vercel. Email, kata sandi, dan frasa sandi tetap wajib diisi di sini; nilai yang tersimpan menimpa nilai environment.</span>
+            </div>
+          )}
           <div className="printer-grid">
             <div>
               <Field label="URL project" hint="Contoh: https://egyaohgoyridudzoltxb.supabase.co">

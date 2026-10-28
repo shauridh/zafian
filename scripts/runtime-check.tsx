@@ -515,6 +515,8 @@ await settle(40)
 check('panel backup cloud tampil di tab backup', bodyText().includes('Backup cloud (Supabase)'))
 check('panel cloud default nonaktif dengan transport jelas', bodyText().includes('Nonaktif') && bodyText().includes('Belum aktif'), bodyText().slice(-400))
 check('form aktivasi cloud meminta URL, anon key, outlet, dan frasa sandi', ['URL project', 'Anon key', 'UUID outlet', 'Frasa sandi enkripsi'].every((label) => bodyText().includes(label)))
+const cloudUrlInput = window.document.querySelector('input[placeholder="https://xxxx.supabase.co"]') as HTMLInputElement | null
+check('form cloud tetap kosong tanpa env build', Boolean(cloudUrlInput) && cloudUrlInput.value === '')
 check('panel cloud menegaskan kasir tetap lokal', bodyText().includes('Kasir tetap bekerja dari IndexedDB'))
 check('panel sinkronisasi tampil di tab backup', bodyText().includes('Sinkronisasi katalog'))
 check('panel sync menampilkan seq, pull terakhir, dan antrean', ['Seq terakhir', 'Pull terakhir', 'Perubahan tertunda'].every((label) => bodyText().includes(label)))

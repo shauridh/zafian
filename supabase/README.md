@@ -162,7 +162,7 @@ Verifikasi lokal tanpa cloud:
 
 ```bash
 bun run check:db     # termasuk bucket privat + policy Storage
-bun run check:cloud  # 66 pemeriksaan mock: enkripsi, auth, upload, metadata, restore
+bun run check:cloud  # 71 pemeriksaan mock: enkripsi, auth, upload, metadata, restore, prefill env
 ```
 
 Wizard `bun run supabase:hosted`/`supabase:verify` kini juga memeriksa bucket ini. Pada project yang tabelnya sudah ada, wizard menjalankan migration 003 bila bucket/policy belum terdeteksi — dan sudah dilakukan pada project staging; mode `--verify-only` tetap tidak mengubah apa pun. Laporan hosted terakhir (**48/48**) sudah memuat pemeriksaan bucket, stream sinkronisasi, dan pemanggilan RPC-nya.

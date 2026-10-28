@@ -27,6 +27,7 @@ await storage.initStorage()
 const { inspectBackupValue, createBackupRecord, serializeBackup } = await import('../src/lib/backup')
 const { normalizeStore } = await import('../src/lib/schema')
 const cloud = await import('../src/lib/cloud-backup')
+const { mergeSupabaseDefaults, supabaseEnvDefaults } = await import('../src/lib/env')
 
 let checks = 0
 let failures = 0
@@ -349,6 +350,47 @@ check('validasi form menolak frasa sandi tidak sama', (cloud.validateCloudConfig
 check('validasi form menerima input lengkap', cloud.validateCloudConfigInput({
   projectUrl, anonKey, outletId, email: 'owner@example.test', password: 'rahasia', passphrase: 'frasa-sandi', passphraseConfirm: 'frasa-sandi',
 }) === null)
+
+/* -------------------------------------------------------------------------- */
+/* 8. Prefill dari environment build                                         */
+/* -------------------------------------------------------------------------- */
+
+check('prefill env kosong tidak dipaksakan', supabaseEnvDefaults({}) === null)
+const envDefaults = supabaseEnvDefaults({
+  VITE_SUPABASE_URL: ' https://env-uji.supabase.co ',
+  VITE_SUPABASE_ANON_KEY: ' anon-env-uji ',
+  VITE_OUTLET_ID: ` ${outletId} `,
+})
+check(
+  'prefill env memangkas URL, anon key, dan outlet',
+  envDefaults?.projectUrl === 'https://env-uji.supabase.co' && envDefaults.anonKey === 'anon-env-uji' && envDefaults.outletId === outletId,
+  JSON.stringify(envDefaults),
+)
+check(
+  'prefill env parsial hanya mengisi field yang tersedia',
+  (() => {
+    const partial = supabaseEnvDefaults({ VITE_SUPABASE_URL: 'https://env-uji.supabase.co' })
+    return partial?.projectUrl === 'https://env-uji.supabase.co' && partial.anonKey === '' && partial.outletId === ''
+  })(),
+)
+check(
+  'nilai tersimpan menang atas prefill env',
+  (() => {
+    const merged = mergeSupabaseDefaults(envDefaults, {
+      projectUrl: 'https://tersimpan.supabase.co',
+      anonKey: 'anon-tersimpan',
+      outletId: 'outlet-tersimpan',
+    })
+    return merged.projectUrl === 'https://tersimpan.supabase.co' && merged.anonKey === 'anon-tersimpan' && merged.outletId === 'outlet-tersimpan'
+  })(),
+)
+check(
+  'env mengisi field yang belum tersimpan',
+  (() => {
+    const merged = mergeSupabaseDefaults(envDefaults, { projectUrl: 'https://tersimpan.supabase.co' })
+    return merged.projectUrl === 'https://tersimpan.supabase.co' && merged.anonKey === 'anon-env-uji' && merged.outletId === outletId
+  })(),
+)
 
 if (failures > 0) {
   console.error(`\n${failures} dari ${checks} pemeriksaan cloud backup gagal`)
