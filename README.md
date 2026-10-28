@@ -33,7 +33,7 @@ Workflow `.github/workflows/ci.yml` menjalankan `bun run typecheck`, seluruh `ch
 
 Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase diakses langsung dari browser memakai anon key + RLS. Vercel hanya perlu build env, bukan server API.
 
-1. **Siapkan Supabase lebih dulu** — ikuti [`supabase/README.md`](supabase/README.md): jalankan `0001_init.sql` + `0002_rls.sql`, aktifkan provider Email, dan buat akun pemilik.
+1. **Siapkan Supabase lebih dulu** — ikuti [`supabase/README.md`](supabase/README.md): jalankan `0001_init.sql` + `0002_rls.sql` + `0003_transaction_items_write.sql`, aktifkan provider Email, dan buat akun pemilik.
 2. Import repo ke Vercel. Konfigurasi dari `vercel.json` menetapkan **install** `bun install --frozen-lockfile`, **build** `bun run build`, dan **output** `dist/client`.
 3. Isi **Environment Variables** (Production dan Preview):
 
@@ -54,6 +54,8 @@ Catatan: endpoint Hono di `src/worker/index.ts` hanya tersedia pada deployment C
 ### Jika muncul "new row violates row-level security policy"
 
 Artinya akun yang login belum terdaftar sebagai `owner` untuk outlet yang dipakai (mis. akun dibuat ulang atau baris `staff` menunjuk outlet lain). Buka Supabase → SQL Editor, periksa lalu perbaiki:
+
+Jika pesannya menyebut tabel `transaction_items`, penyebabnya berbeda: jalankan `supabase/migrations/0003_transaction_items_write.sql`. Tanpa migration itu, trigger transaksi tidak diizinkan menulis baris item sehingga pembayaran ikut gagal.
 
 ```sql
 -- 1) Periksa akun, peran, dan outlet yang terdaftar

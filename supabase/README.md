@@ -9,6 +9,10 @@ berjalan mode lokal untuk pengembangan; build produksi wajib memakai env.
 2. Buka **SQL Editor**, jalankan berurutan:
    - `migrations/0001_init.sql` — tabel, index, trigger, RPC pembuatan outlet.
    - `migrations/0002_rls.sql` — RLS per outlet + hak akses.
+   - `migrations/0003_transaction_items_write.sql` — izin tulis baris item
+     untuk trigger transaksi. **Wajib**: tanpa ini pembayaran ditolak RLS
+     dengan pesan `new row violates row-level security policy for table
+     "transaction_items"`.
 3. Alternatif CLI (butuh Docker):
    ```bash
    supabase link --project-ref <ref>
