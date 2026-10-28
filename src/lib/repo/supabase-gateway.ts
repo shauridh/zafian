@@ -45,7 +45,7 @@ export async function resolveOutletId(client: SupabaseClient, config: SupabaseCo
   return outletId
 }
 
-/** Onboarding: buat outlet pertama + daftarkan akun sebagai pemilik. */
+/** Pembuatan outlet otomatis untuk akun pemilik (tanpa layar onboarding). */
 export async function createOutlet(client: SupabaseClient, name: string): Promise<string> {
   const { data, error } = await client.rpc('create_outlet', { p_name: name })
   if (error) throw new Error(`Gagal membuat outlet: ${error.message}`)

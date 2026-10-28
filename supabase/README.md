@@ -7,7 +7,7 @@ berjalan mode lokal untuk pengembangan; build produksi wajib memakai env.
 
 1. Buat project di <https://supabase.com/dashboard> (region terdekat).
 2. Buka **SQL Editor**, jalankan berurutan:
-   - `migrations/0001_init.sql` — tabel, index, trigger, RPC onboarding.
+   - `migrations/0001_init.sql` — tabel, index, trigger, RPC pembuatan outlet.
    - `migrations/0002_rls.sql` — RLS per outlet + hak akses.
 3. Alternatif CLI (butuh Docker):
    ```bash

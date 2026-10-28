@@ -41,7 +41,7 @@ Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase di
    | --- | --- | --- |
    | `VITE_SUPABASE_URL` | ya | `https://<ref>.supabase.co` |
    | `VITE_SUPABASE_ANON_KEY` | ya | anon/publishable key dari Project Settings → API |
-   | `VITE_OUTLET_ID` | tidak | kosongkan agar outlet diambil dari akun staf |
+   | `VITE_OUTLET_ID` | tidak | kosongkan agar outlet diambil dari akun pemilik |
 
    **Redeploy wajib setelah mengubah env**, karena Vite menanamkan nilai saat build. Jangan memakai `service_role` key, kata sandi database, atau password pemilik di klien.
 4. Deploy menghasilkan URL HTTPS. HTTPS wajib untuk PIN (`crypto.subtle`) dan Web Bluetooth; service worker hanya aktif pada build production.
