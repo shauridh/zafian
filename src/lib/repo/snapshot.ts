@@ -39,8 +39,8 @@ const collections: Collection[] = [
 
 /**
  * Membaca seluruh data outlet dari Supabase. Mengembalikan null bila outlet
- * benar-benar kosong (belum punya app_settings dan belum punya baris data),
- * sehingga pemanggil bisa melakukan seed awal.
+ * belum pernah dipakai (pengaturan masih `{}`/belum ada dan belum punya baris
+ * data), sehingga pemanggil bisa melakukan seed awal sekali.
  */
 export async function loadStore(gateway: RepoGateway, outletId: string): Promise<PosStore | null> {
   const [settingsRows, documentRows, ...collectionRows] = await Promise.all([
@@ -53,7 +53,11 @@ export async function loadStore(gateway: RepoGateway, outletId: string): Promise
   collections.forEach((collection, index) => rowsByTable.set(collection.table, collectionRows[index] ?? []))
 
   const dataRowCount = collectionRows.reduce((sum, rows) => sum + rows.length, 0)
-  if (settingsRows.length === 0 && documentRows.length === 0 && dataRowCount === 0) return null
+  // `create_outlet` sudah membuat baris app_settings dengan data `{}`. Outlet
+  // yang belum pernah disimpan tetap dianggap kosong agar seed contoh jalan
+  // sekali; setelah simpan pertama data pengaturan terisi dan seed berhenti.
+  const untouchedSettings = settingsRows.length === 0 || isEmptyObject(settingsRows[0]?.data)
+  if (untouchedSettings && documentRows.length === 0 && dataRowCount === 0) return null
 
   const documents = documentsFromRows(documentRows)
   const settingsRow = settingsRows[0] ?? {}
@@ -147,6 +151,10 @@ export async function saveStore(
 /* -------------------------------------------------------------------------- */
 /* Seed awal dengan ID uuid                                                   */
 /* -------------------------------------------------------------------------- */
+
+function isEmptyObject(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value as Record<string, unknown>).length === 0
+}
 
 const fallbackUuid = (): string => {
   const bytes = new Uint8Array(16)

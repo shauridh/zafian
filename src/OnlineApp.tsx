@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 
 import { App } from './App'
 import { createOnlineDriver, setOnlineDriver, setOnlineSignOutHandler } from './lib/online'
-import { createOutlet, resolveOutletId, supabaseGateway } from './lib/repo/supabase-gateway'
+import { createOutlet, readOutletAccess, supabaseGateway } from './lib/repo/supabase-gateway'
 import { assignGeneratedIds, loadStore } from './lib/repo/snapshot'
 import { normalizeStore } from './lib/schema'
 import { PRIMARY_STORAGE_KEY, primeStorageCache } from './lib/storage'
@@ -75,13 +75,13 @@ function SupabaseApp({ config, storageWarning }: { config: SupabaseConfig; stora
 
       // Aplikasi personal single-outlet: akun pemilik yang belum punya outlet
       // langsung dibuatkan satu outlet otomatis, tanpa layar onboarding.
-      let outletId: string
-      try {
-        outletId = await resolveOutletId(client, config)
-      } catch (caught) {
-        if (!describeError(caught).includes('OUTLET_NOT_FOUND')) throw caught
-        outletId = await createOutlet(client, 'Outlet utama')
+      // Outlet selalu berasal dari baris staf akun yang login (bukan env),
+      // supaya penulisan tidak pernah memakai outlet yang bukan haknya.
+      const access = await readOutletAccess(client)
+      if (access && access.role !== 'owner') {
+        throw new Error(`Akun ini terdaftar sebagai kasir untuk outlet ${access.outletId}, bukan owner. Ubah role menjadi owner di tabel staff agar bisa mengelola menu dan pengaturan.`)
       }
+      const outletId = access ? access.outletId : await createOutlet(client, 'Outlet utama')
 
       const gateway = supabaseGateway(client)
       const snapshot = await loadStore(gateway, outletId)
@@ -160,13 +160,16 @@ function SupabaseApp({ config, storageWarning }: { config: SupabaseConfig; stora
     )
   }
 
+  const aksesBermasalah = /owner|RLS|row-level security|akses ditolak/i.test(error)
   return (
     <div className="auth-screen">
       <div className="auth-card" role="alert">
         <span className="eyebrow">KONEKSI GAGAL</span>
         <h1>Data outlet belum bisa dimuat</h1>
         <p className="auth-error">{error}</p>
-        <p className="auth-hint">Periksa koneksi internet, URL/anon key Supabase, dan kebijakan RLS. Data lama di perangkat tidak dihapus.</p>
+        <p className="auth-hint">{aksesBermasalah
+          ? 'Buka Supabase → SQL Editor dan jalankan blok "Akses ditolak (RLS)" di supabase/README.md agar akun ini terdaftar sebagai owner outlet, lalu tekan Coba lagi.'
+          : 'Periksa koneksi internet, URL/anon key Supabase, dan kebijakan RLS. Data lama di perangkat tidak dihapus.'}</p>
         <button className="auth-submit" type="button" onClick={() => void boot()}>Coba lagi</button>
         <button className="auth-secondary" type="button" onClick={() => void signOut()}>Keluar</button>
       </div>

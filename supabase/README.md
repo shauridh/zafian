@@ -42,7 +42,9 @@ tetap ada untuk RLS, tetapi aplikasi tidak menampilkan pengelolaan staf.
 | --- | --- | --- |
 | `VITE_SUPABASE_URL` | ya | `https://<ref>.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | ya | anon/publishable key; aman di browser karena RLS |
-| `VITE_OUTLET_ID` | tidak | kosong = outlet diambil dari baris `staff` akun |
+
+Tidak ada env outlet: aplikasi selalu memakai outlet dari baris `staff`
+akun yang login, sehingga tidak ada nilai build yang bisa menunjuk outlet lain.
 
 Isi di Vercel → Project → Settings → Environment Variables (Production dan
 Preview), lalu **redeploy** karena Vite menanamkan nilai saat build. Jangan pakai
@@ -76,6 +78,34 @@ Untuk produksi jangka panjang, unggah ke Supabase Storage dan simpan URL-nya
 - Data operasional (transaksi, shift, stok, dokumen) boleh ditulis staf outlet;
   penghapusan transaksi hanya pemilik.
 - `anon` tidak punya hak tabel; semua akses butuh sesi login.
+
+### Akses ditolak (RLS)
+
+Gejala: `Gagal menyimpan menu_categories: new row violates row-level security
+policy`. Artinya akun yang login bukan `owner` outlet yang dipakai (mis. akun
+dibuat ulang, atau baris `staff` menunjuk outlet lain). Periksa dan perbaiki di
+SQL Editor:
+
+```sql
+-- 1) Periksa akun, peran, dan outlet
+select u.email, s.role, s.outlet_id, o.name as outlet
+from auth.users u
+left join public.staff s on s.user_id = u.id
+left join public.outlets o on o.id = s.outlet_id
+order by u.email;
+
+-- 2) Jadikan akun ini owner outlet yang benar (ganti nilai dalam <...>)
+insert into public.staff (user_id, outlet_id, role, display_name, email)
+select u.id, '<uuid-outlet>', 'owner', coalesce(u.email, 'Pemilik'), u.email
+from auth.users u
+where u.email = '<email-akun>'
+on conflict (user_id) do update
+  set outlet_id = excluded.outlet_id,
+      role = excluded.role;
+```
+
+Muat ulang aplikasi setelah menjalankan SQL. Aplikasi tidak memakai env outlet,
+jadi outlet yang dipakai selalu baris `staff` akun tersebut.
 
 ## 6. Konflik & konsistensi
 

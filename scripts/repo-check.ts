@@ -9,12 +9,17 @@
  *   - dokumen pendukung (kas, held, pre-order, beban, audit) ikut tersimpan,
  *   - numeric PostgREST berbentuk string tetap terbaca sebagai angka,
  *   - isolasi outlet,
- *   - driver online men-debounce perubahan dan menolak error jaringan.
+ *   - driver online men-debounce perubahan dan menolak error jaringan,
+ *   - akses outlet dibaca dari baris staf akun (bukan env) + pesan RLS jelas,
+ *   - outlet yang belum pernah disimpan di-seed sekali, yang sudah dipakai tidak.
  */
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 import { normalizeStore } from '../src/lib/schema'
 import { createOnlineDriver } from '../src/lib/online'
 import type { RepoGateway, Row, TableName } from '../src/lib/repo/gateway'
 import { assignGeneratedIds, loadStore, saveStore } from '../src/lib/repo/snapshot'
+import { describeRepoError, readOutletAccess } from '../src/lib/repo/supabase-gateway'
 
 let passed = 0
 let failed = 0
@@ -197,6 +202,33 @@ let rejected = false
 await failingDriver.save(changedForFailure).catch(() => { rejected = true })
 check('error jaringan ditolak agar UI bisa menampilkan alert', rejected)
 check('ID outlet tetap dipakai pada setiap baris', seeded.menus.every((menu) => gateway.tables.menu_items?.some((row) => row.id === menu.id && row.outlet_id === OUTLET) === true))
+
+/* 11. Akses outlet (baris staf akun, bukan env) ----------------------------- */
+
+type StaffResult = { data: Row | null; error: { message: string } | null }
+
+const staffClient = (result: StaffResult): SupabaseClient => ({
+  from: () => ({ select: () => ({ limit: () => ({ maybeSingle: async () => result }) }) }),
+}) as unknown as SupabaseClient
+
+const ownerAccess = await readOutletAccess(staffClient({ data: { outlet_id: OUTLET, role: 'owner' }, error: null }))
+check('outlet diambil dari baris staf akun', ownerAccess?.outletId === OUTLET && ownerAccess.role === 'owner')
+const cashierAccess = await readOutletAccess(staffClient({ data: { outlet_id: OUTLET, role: 'cashier' }, error: null }))
+check('role kasir terdeteksi agar mode pemilik diblokir dengan pesan jelas', cashierAccess?.role === 'cashier')
+check('akun tanpa baris staf mengembalikan null (memicu create_outlet)', (await readOutletAccess(staffClient({ data: null, error: null }))) === null)
+check('error membaca staf tidak ditelan', await readOutletAccess(staffClient({ data: null, error: { message: 'jaringan mati' } })).then(() => false).catch(() => true))
+check('pesan RLS diterjemahkan menjadi langkah perbaikan', describeRepoError('menyimpan', 'menu_categories', 'new row violates row-level security policy for table "menu_categories"').message.includes('owner'))
+check('pesan non-RLS tetap menyebut tabel', describeRepoError('memuat', 'menu_items', 'jaringan mati').message.includes('menu_items'))
+
+/* 12. Deteksi outlet yang belum pernah dipakai ----------------------------- */
+
+const untouchedGateway = new FakeGateway()
+await untouchedGateway.upsert('app_settings', [{ outlet_id: OUTLET, data: {} }])
+check('app_settings {} dianggap kosong sehingga seed contoh jalan sekali', (await loadStore(untouchedGateway, OUTLET)) === null)
+
+const configuredGateway = new FakeGateway()
+await configuredGateway.upsert('app_settings', [{ outlet_id: OUTLET, data: { businessName: 'Warung Uji' } }])
+check('outlet yang sudah menyimpan pengaturan tidak di-seed ulang', (await loadStore(configuredGateway, OUTLET)) !== null)
 
 /* Ringkasan ---------------------------------------------------------------- */
 

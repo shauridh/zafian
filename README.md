@@ -41,7 +41,8 @@ Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase di
    | --- | --- | --- |
    | `VITE_SUPABASE_URL` | ya | `https://<ref>.supabase.co` |
    | `VITE_SUPABASE_ANON_KEY` | ya | anon/publishable key dari Project Settings → API |
-   | `VITE_OUTLET_ID` | tidak | kosongkan agar outlet diambil dari akun pemilik |
+
+   Tidak ada env outlet: aplikasi selalu memakai outlet dari akun pemilik yang login (tabel `staff`).
 
    **Redeploy wajib setelah mengubah env**, karena Vite menanamkan nilai saat build. Jangan memakai `service_role` key, kata sandi database, atau password pemilik di klien.
 4. Deploy menghasilkan URL HTTPS. HTTPS wajib untuk PIN (`crypto.subtle`) dan Web Bluetooth; service worker hanya aktif pada build production.
@@ -49,6 +50,30 @@ Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase di
 6. `vercel.json` menambahkan rewrite SPA agar refresh/deep link kembali ke `index.html`, header keamanan, cache `sw.js` yang tidak lengket, serta tipe konten manifest.
 
 Catatan: endpoint Hono di `src/worker/index.ts` hanya tersedia pada deployment Cloudflare, bukan pada deployment Vercel statis. Aplikasi POS tidak memanggil endpoint tersebut. Data operasional berada di Supabase sehingga beberapa perangkat melihat outlet yang sama (last-write-wins per baris).
+
+### Jika muncul "new row violates row-level security policy"
+
+Artinya akun yang login belum terdaftar sebagai `owner` untuk outlet yang dipakai (mis. akun dibuat ulang atau baris `staff` menunjuk outlet lain). Buka Supabase → SQL Editor, periksa lalu perbaiki:
+
+```sql
+-- 1) Periksa akun, peran, dan outlet yang terdaftar
+select u.email, s.role, s.outlet_id, o.name as outlet
+from auth.users u
+left join public.staff s on s.user_id = u.id
+left join public.outlets o on o.id = s.outlet_id
+order by u.email;
+
+-- 2) Jadikan akun ini owner outlet yang benar (ganti nilai dalam <...>)
+insert into public.staff (user_id, outlet_id, role, display_name, email)
+select u.id, '<uuid-outlet>', 'owner', coalesce(u.email, 'Pemilik'), u.email
+from auth.users u
+where u.email = '<email-akun>'
+on conflict (user_id) do update
+  set outlet_id = excluded.outlet_id,
+      role = excluded.role;
+```
+
+Lalu muat ulang aplikasi. Outlet tidak bisa diatur lewat env, jadi tidak ada nilai build yang bisa menimpa akses akun.
 
 ## PWA & offline
 

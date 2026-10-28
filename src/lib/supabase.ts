@@ -4,18 +4,20 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
  * Konfigurasi Supabase dibaca dari env build-time Vite. Tanpa dua nilai wajib
  * (URL + anon key) aplikasi berjalan dalam mode lokal untuk pengembangan dan
  * pemeriksaan UI; build produksi wajib mengisi env di dashboard Vercel.
+ *
+ * Outlet tidak dikonfigurasi lewat env: satu akun pemilik selalu memakai outlet
+ * dari baris `staff` miliknya (dibuat otomatis pada login pertama). Dulu ada
+ * VITE_OUTLET_ID, tetapi nilai env yang tidak cocok membuat penulisan ditolak
+ * RLS, jadi sumber kebenaran outlet hanya database.
  */
 export type SupabaseConfig = {
   url: string
   anonKey: string
-  /** Opsional; bila kosong outlet diambil dari baris `staff` milik akun. */
-  outletId: string
 }
 
 export type SupabaseEnv = {
   VITE_SUPABASE_URL?: string
   VITE_SUPABASE_ANON_KEY?: string
-  VITE_OUTLET_ID?: string
 }
 
 export function readSupabaseConfig(env: SupabaseEnv = import.meta.env as SupabaseEnv): SupabaseConfig | null {
@@ -28,7 +30,7 @@ export function readSupabaseConfig(env: SupabaseEnv = import.meta.env as Supabas
   if (!/^https?:\/\//i.test(url)) {
     throw new Error('VITE_SUPABASE_URL harus berupa URL lengkap, mis. https://xxxx.supabase.co')
   }
-  return { url, anonKey, outletId: (env.VITE_OUTLET_ID ?? '').trim() }
+  return { url, anonKey }
 }
 
 let cached: { url: string; anonKey: string; client: SupabaseClient } | null = null
