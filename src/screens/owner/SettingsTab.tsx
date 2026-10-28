@@ -309,11 +309,11 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
         </section>
 
         {online && <section className="owner-settings-card">
-          <div className="owner-setting-head"><span className="owner-stat-icon"><LogOut size={17} /></span><div><h2>Akun & sesi</h2><p className="owner-muted">Perangkat ini memakai sesi Supabase dari akun yang sedang login.</p></div></div>
+          <div className="owner-setting-head"><span className="owner-stat-icon"><LogOut size={17} /></span><div><h2>Akun cloud</h2><p className="owner-muted">Satu akun pemilik untuk satu outlet; tanpa manajemen staf atau pilihan outlet.</p></div></div>
           <button type="button" className="owner-ghost danger" onClick={() => { void signOutOnline().catch((error: unknown) => notify(error instanceof Error ? error.message : 'Gagal keluar dari akun')) }}><LogOut size={14} /> Keluar dari akun</button>
           <div className="owner-setting-note">
             <strong>Keamanan</strong>
-            <span>Semua data dilindungi RLS per outlet. Jangan pakai akun yang sama di dua perangkat untuk mengedit menu bersamaan — perubahan terakhir menang.</span>
+            <span>Data dilindungi RLS. Jangan edit menu dari dua perangkat bersamaan — perubahan terakhir menang per baris.</span>
           </div>
         </section>}
 

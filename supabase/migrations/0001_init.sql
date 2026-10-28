@@ -1,8 +1,7 @@
 -- Sabana POS — skema awal (online-only).
 -- Semua tabel operasional memakai outlet_id dan RLS di 0002_rls.sql.
--- Jalankan migration ini SEBELUM 0002_rls.sql.
-
-create extension if not exists pgcrypto;
+-- Jalankan migration ini SEBELUM 0002_rls.sql, sekali per project baru
+-- (script ini tidak idempoten; buat project/database baru untuk mengulang).
 
 create or replace function public.touch_updated_at()
 returns trigger
@@ -41,7 +40,6 @@ create index staff_outlet_idx on public.staff (outlet_id);
 create table public.app_settings (
   outlet_id uuid primary key references public.outlets (id) on delete cascade,
   data jsonb not null default '{}'::jsonb,
-  next_transaction_number integer not null default 274 check (next_transaction_number > 0),
   updated_at timestamptz not null default now()
 );
 
@@ -185,6 +183,8 @@ create index transaction_items_outlet_idx on public.transaction_items (outlet_id
 create or replace function public.sync_transaction_items()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   delete from public.transaction_items where transaction_id = new.id;
@@ -204,6 +204,10 @@ begin
   return new;
 end;
 $$;
+
+-- Trigger berjalan sebagai pemilik fungsi agar bisa menulis transaction_items,
+-- yang hanya punya policy SELECT untuk staf (baris item tidak ditulis client).
+revoke all on function public.sync_transaction_items() from public;
 
 create trigger transactions_sync_items
 after insert or update of items on public.transactions

@@ -8,7 +8,7 @@ import { normalizeStore } from './lib/schema'
 import { PRIMARY_STORAGE_KEY, primeStorageCache } from './lib/storage'
 import { readSupabaseConfig, supabaseClient, type SupabaseConfig } from './lib/supabase'
 
-type Phase = 'memuat' | 'masuk' | 'onboarding' | 'siap' | 'gagal'
+type Phase = 'memuat' | 'masuk' | 'siap' | 'gagal'
 
 const describeError = (error: unknown): string => {
   if (error instanceof Error) return error.message
@@ -61,7 +61,6 @@ function SupabaseApp({ config, storageWarning }: { config: SupabaseConfig; stora
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [outletName, setOutletName] = useState('Outlet utama')
 
   const boot = useCallback(async () => {
     setPhase('memuat')
@@ -74,15 +73,14 @@ function SupabaseApp({ config, storageWarning }: { config: SupabaseConfig; stora
         return
       }
 
+      // Aplikasi personal single-outlet: akun pemilik yang belum punya outlet
+      // langsung dibuatkan satu outlet otomatis, tanpa layar onboarding.
       let outletId: string
       try {
         outletId = await resolveOutletId(client, config)
       } catch (caught) {
-        if (describeError(caught).includes('OUTLET_NOT_FOUND')) {
-          setPhase('onboarding')
-          return
-        }
-        throw caught
+        if (!describeError(caught).includes('OUTLET_NOT_FOUND')) throw caught
+        outletId = await createOutlet(client, 'Outlet utama')
       }
 
       const gateway = supabaseGateway(client)
@@ -124,19 +122,6 @@ function SupabaseApp({ config, storageWarning }: { config: SupabaseConfig; stora
     await boot()
   }
 
-  const submitOnboarding = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setError('')
-    setPhase('memuat')
-    try {
-      await createOutlet(client, outletName.trim() || 'Outlet utama')
-      await boot()
-    } catch (caught) {
-      setError(describeError(caught))
-      setPhase('onboarding')
-    }
-  }
-
   const signOut = useCallback(async () => {
     await client.auth.signOut().catch(() => undefined)
     setOnlineDriver(null)
@@ -160,7 +145,7 @@ function SupabaseApp({ config, storageWarning }: { config: SupabaseConfig; stora
         <form className="auth-card" onSubmit={submitSignIn}>
           <span className="eyebrow">SABANA POS • ONLINE</span>
           <h1>Masuk pemilik</h1>
-          <p className="auth-hint">Data outlet tersimpan di Supabase. Gunakan email dan kata sandi akun pemilik.</p>
+          <p className="auth-hint">Satu akun pemilik untuk satu outlet. Data kasir tersimpan di Supabase dan hanya bisa dibuka dengan akun ini.</p>
           {error && <p className="auth-error" role="alert">{error}</p>}
           <label>Email
             <input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="pemilik@contoh.com" />
@@ -169,25 +154,7 @@ function SupabaseApp({ config, storageWarning }: { config: SupabaseConfig; stora
             <input type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" />
           </label>
           <button className="auth-submit" type="submit">Masuk</button>
-          <p className="auth-hint">Belum punya akun? Buat lewat dashboard Supabase → Authentication → Users, lalu masuk di sini.</p>
-        </form>
-      </div>
-    )
-  }
-
-  if (phase === 'onboarding') {
-    return (
-      <div className="auth-screen">
-        <form className="auth-card" onSubmit={submitOnboarding}>
-          <span className="eyebrow">AKUN BELUM TERHUBUNG</span>
-          <h1>Buat outlet pertama</h1>
-          <p className="auth-hint">Akun ini belum punya outlet. Beri nama outlet; katalog contoh akan diisi otomatis dan bisa diubah dari mode pemilik.</p>
-          {error && <p className="auth-error" role="alert">{error}</p>}
-          <label>Nama outlet
-            <input required value={outletName} onChange={(event) => setOutletName(event.target.value)} placeholder="Outlet utama" />
-          </label>
-          <button className="auth-submit" type="submit">Buat outlet & mulai</button>
-          <button className="auth-secondary" type="button" onClick={() => void signOut()}>Ganti akun</button>
+          <p className="auth-hint">Pertama kali? Buat satu user di dashboard Supabase → Authentication → Users, lalu masuk di sini. Outlet dibuat otomatis pada login pertama.</p>
         </form>
       </div>
     )

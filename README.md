@@ -3,8 +3,9 @@
 POS untuk outlet FnB, dirancang untuk tablet dan mobile Android.
 Ada dua mode: **kasir** dan **pemilik**.
 
-> **Status backend (28 Oktober 2026):** aplikasi berjalan **100% online**. Data outlet — menu, bahan,
-> pembelian, transaksi, shift, dan pengaturan — disimpan di **Supabase** dan dilindungi RLS per outlet.
+> **Status backend (Oktober 2026):** aplikasi personal **satu outlet** yang berjalan **100% online**. Data
+> outlet — menu, bahan, pembelian, transaksi, shift, dan pengaturan — disimpan di **Supabase** dan
+> dilindungi RLS; login hanya satu akun pemilik, bukan multi-tenant/SaaS.
 > Tanpa env Supabase, build berjalan dalam **mode lokal** (demo) untuk pengembangan dan `check:ui`;
 > build produksi wajib mengisi env Supabase di Vercel.
 
@@ -44,7 +45,7 @@ Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase di
 
    **Redeploy wajib setelah mengubah env**, karena Vite menanamkan nilai saat build. Jangan memakai `service_role` key, kata sandi database, atau password pemilik di klien.
 4. Deploy menghasilkan URL HTTPS. HTTPS wajib untuk PIN (`crypto.subtle`) dan Web Bluetooth; service worker hanya aktif pada build production.
-5. Buka aplikasi → masuk dengan akun pemilik → akun baru tanpa outlet akan diminta **Buat outlet pertama** (RPC `create_outlet`). Setelah itu katalog contoh terisi sekali dan bisa diubah dari mode pemilik.
+5. Buka aplikasi → masuk dengan **satu akun pemilik**. Outlet dibuat otomatis pada login pertama (RPC `create_outlet`), katalog contoh terisi sekali, dan tidak ada onboarding, pilihan outlet, atau manajemen staf.
 6. `vercel.json` menambahkan rewrite SPA agar refresh/deep link kembali ke `index.html`, header keamanan, cache `sw.js` yang tidak lengket, serta tipe konten manifest.
 
 Catatan: endpoint Hono di `src/worker/index.ts` hanya tersedia pada deployment Cloudflare, bukan pada deployment Vercel statis. Aplikasi POS tidak memanggil endpoint tersebut. Data operasional berada di Supabase sehingga beberapa perangkat melihat outlet yang sama (last-write-wins per baris).
@@ -148,8 +149,9 @@ Aplikasi ini **murni web** saat ini: tidak ada folder Capacitor/Android, `capaci
 - Dev server bind `0.0.0.0:3000`: `/`, `/src/main.tsx`, `/src/App.tsx`, `/src/lib/storage.ts`, `/src/lib/pin.ts`, `/src/lib/backup.ts`, `/src/components/OwnerPinDialog.tsx`, `/src/screens/owner/BackupTab.tsx`, `/src/screens/owner/SettingsTab.tsx`, dan `/src/styles.css` merespons HTTP 200.
 - Ikon tombol dapat diganti di `public/icons/`; ilustrasi menu di `public/menu/`.
 
-- `bun run check:repo` — **34 pemeriksaan lolos** dengan gateway Supabase tiruan: round-trip snapshot, seed ber-ID uuid + referensi resep, penyimpanan idempoten (tanpa perubahan = nol tulis), upsert per baris, hapus baris, dokumen kas/audit/pre-order/beban, numeric PostgREST berbentuk string, isolasi outlet, dan penolakan error jaringan.
-- **Mode online (login Supabase, RLS, migration) belum diuji end-to-end** pada turn ini karena tidak ada kredensial project nyata. Validasi SQL baru sebatas review, dan validasi data memakai gateway tiruan (`check:repo`). Login/RLS perlu diuji manual setelah project Supabase dibuat.
+- `bun run check:repo` — **35 pemeriksaan lolos** dengan gateway Supabase tiruan: round-trip snapshot, seed ber-ID uuid + referensi resep, penyimpanan idempoten (tanpa perubahan = nol tulis), upsert per baris, hapus baris, dokumen kas/audit/pre-order/beban, numeric PostgREST berbentuk string, nominasi transaksi diturunkan dari data, isolasi outlet, dan penolakan error jaringan.
+- **Migration Supabase diuji pada PostgreSQL 18.4 lokal** dengan stub Supabase (role `anon`/`authenticated`/`service_role`, schema `auth`, `auth.uid()`/`auth.jwt()`): `0001_init.sql` + `0002_rls.sql` **apply bersih tanpa error di dua database baru** (12 tabel masing-masing), lalu **26/26 pemeriksaan RLS lolos** — owner CRUD master data, kasir hanya baca master data + tulis transaksi/shift/dokumen, kasir ditolak mengubah pengaturan/staf, user outlet lain dan `anon` ditolak, `create_outlet` idempoten, serta trigger `transaction_items` terisi dan diperbarui. Bug yang ditemukan lewat uji ini (trigger tanpa `security definer`, kolom penghitung transaksi di tabel owner-only) sudah diperbaiki.
+- **Mode online belum diuji ke project Supabase hosted** karena tidak ada kredensial project. Login dengan JWT asli, klien PostgREST, dan dashboard Supabase tetap perlu diuji sekali setelah project dibuat.
 
 ### Uji manual cepat
 

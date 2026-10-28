@@ -240,8 +240,9 @@ export function transactionFromRow(row: Row): Transaction {
   }
 }
 
-export function settingsRow(settings: AppSettings, nextTransactionNumber: number, outletId: string): Row {
-  return { outlet_id: outletId, data: settings satisfies AppSettings, next_transaction_number: nextTransactionNumber }
+/** Nomor transaksi berikutnya tidak disimpan: diturunkan dari nomor terakhir di tabel transaksi. */
+export function settingsRow(settings: AppSettings, outletId: string): Row {
+  return { outlet_id: outletId, data: settings satisfies AppSettings }
 }
 
 /* -------------------------------------------------------------------------- */

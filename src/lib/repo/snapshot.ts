@@ -72,7 +72,8 @@ export async function loadStore(gateway: RepoGateway, outletId: string): Promise
     expenses: documents.expenses ?? [],
     auditLog: documents.audit_log ?? [],
     settings: settingsRow.data,
-    nextTransactionNumber: settingsRow.next_transaction_number,
+    // nextTransactionNumber sengaja tidak dibaca dari database: normalizeStore
+    // menurunkannya dari nomor transaksi terakhir (aman untuk multi-perangkat).
   }, { seed: false })
 }
 
@@ -125,8 +126,8 @@ export async function saveStore(
     }
   }
 
-  const nextSettings = settingsRow(next.settings, next.nextTransactionNumber, outletId)
-  const previousSettings = previous ? settingsRow(previous.settings, previous.nextTransactionNumber, outletId) : null
+  const nextSettings = settingsRow(next.settings, outletId)
+  const previousSettings = previous ? settingsRow(previous.settings, outletId) : null
   if (!previousSettings || rowSignature('app_settings', nextSettings) !== rowSignature('app_settings', previousSettings)) {
     await gateway.upsert('app_settings', [{ ...nextSettings, updated_at: now }])
     summary.updated += 1

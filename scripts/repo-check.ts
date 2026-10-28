@@ -104,6 +104,14 @@ check('nama & harga menu sama', loaded?.menus[0]?.name === seeded.menus[0].name 
 check('resep menu utuh', loaded?.menus[0]?.recipe.length === seeded.menus[0].recipe.length)
 check('pengaturan terbaca', loaded?.settings.businessName === seeded.settings.businessName)
 check('nomor transaksi berikutnya terbaca', loaded?.nextTransactionNumber === seeded.nextTransactionNumber)
+const numberedStore = {
+  ...loaded!,
+  transactions: [{
+    id: 'tx-350', number: 'POS-350', createdAt: FIXED_NOW, orderType: 'Takeaway' as const, paymentMethod: 'Cash' as const,
+    items: [], subtotal: 0, paidAmount: 0, change: 0, status: 'completed' as const, shiftId: '',
+  }],
+}
+check('nomor transaksi berikutnya diturunkan dari transaksi terakhir', normalizeStore(numberedStore, { seed: false }).nextTransactionNumber === 351)
 check('dokumen kosong terbaca sebagai array', Array.isArray(loaded?.cashMovements) && loaded?.cashMovements.length === 0)
 
 /* 4. Simpan tanpa perubahan -------------------------------------------------- */

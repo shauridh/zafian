@@ -18,29 +18,23 @@ berjalan mode lokal untuk pengembangan; build produksi wajib memakai env.
 Migration lama (backup cloud / sync) sudah dihapus. Jangan mengubah migration
 yang sudah diterapkan di project produksi; tambahkan file baru bernomor lanjut.
 
-## 2. Aktifkan autentikasi
+## 2. Aktifkan autentikasi (satu akun pemilik)
 
-1. **Authentication → Providers → Email**: aktifkan, matikan "Confirm email"
-   hanya bila Anda menerima risiko (lebih aman biarkan aktif).
-2. **Authentication → Users → Add user**: buat akun pemilik (email + password).
-3. Masuk dari aplikasi. Akun baru tanpa outlet akan melihat layar
-   **Buat outlet pertama**; tombol itu memanggil RPC `create_outlet(nama)` yang:
-   - membuat baris `outlets`,
+Aplikasi ini **satu outlet, satu akun pemilik**; tidak ada onboarding, pilihan
+outlet, atau manajemen staf di UI.
+
+1. **Authentication → Providers → Email**: aktifkan. Matikan "Confirm email"
+   hanya bila Anda menerima risikonya (lebih aman biarkan aktif).
+2. **Authentication → Users → Add user**: buat **satu** akun pemilik.
+3. Masuk dari aplikasi. Pada login pertama, aplikasi memanggil RPC
+   `create_outlet('Outlet utama')` secara otomatis yang:
+   - membuat baris `outlets` bila akun belum punya,
    - mendaftarkan akun sebagai `staff.role = 'owner'`,
    - membuat `app_settings` awal.
 
-Bila ingin onboarding manual lewat SQL:
-
-```sql
-select public.create_outlet('Outlet utama');
-```
-
-Menambah kasir (setelah punya akun):
-
-```sql
-insert into public.staff (user_id, outlet_id, role, display_name, email)
-values ('<uuid auth.users>', '<uuid outlet>', 'cashier', 'Kasir 1', 'kasir@contoh.com');
-```
+Pemanggilan berikutnya mengembalikan outlet yang sama (idempoten), jadi tidak
+ada risiko membuat outlet ganda karena klik/refresh berulang. Tabel `staff`
+tetap ada untuk RLS, tetapi aplikasi tidak menampilkan pengelolaan staf.
 
 ## 3. Environment variable
 
@@ -94,9 +88,31 @@ Untuk produksi jangka panjang, unggah ke Supabase Storage dan simpan URL-nya
 - Penulisan awal beberapa tabel tidak satu transaksi; mengulang simpan aman
   karena operasi berbasis id (idempotent).
 
-## 7. Belum diuji di repo ini
+## 7. Hasil uji pada PostgreSQL lokal
 
-- Migration belum dieksekusi ke project Supabase nyata pada turn ini (butuh
-  kredensial project). Validasi dilakukan lewat review SQL + uji repo dengan
-  gateway tiruan (`bun run check:repo`).
-- Alur login, RLS, dan realtime belum diuji end-to-end tanpa project nyata.
+Migration diuji pada **PostgreSQL 18.4 lokal** dengan stub Supabase (role `anon`,
+`authenticated`, `service_role`, schema `auth` + `auth.uid()`/`auth.jwt()`):
+
+- `0001_init.sql` dan `0002_rls.sql` **apply bersih tanpa error** pada database
+  kosong, dijalankan berurutan di **dua database baru** (masing-masing 12 tabel).
+- RLS terbukti: pemilik outlet A bisa insert/update/select/delete master data
+  outletnya; kasir outlet A bisa membaca master data, menulis transaksi, shift,
+  stok, dan dokumen, tetapi tidak bisa menulis menu/pengaturan/staf; pengguna
+  outlet B tidak melihat atau mengubah satu baris pun outlet A dan ditolak
+  insert dengan `outlet_id` outlet A; `anon` ditolak dengan `42501`.
+- `create_outlet()` mendaftarkan pemanggil sebagai `owner`, membuat
+  `app_settings`, dan idempoten (panggilan kedua mengembalikan outlet yang sama).
+- Trigger `transactions` mengisi `transaction_items` dan memperbaruinya saat item
+  berubah. Fungsi trigger memakai `security definer` agar kasir tidak perlu
+  policy tulis pada tabel item (bug ini ditemukan dan diperbaiki lewat uji SQL).
+
+Migration **tidak idempoten** (memakai `create table` tanpa `if not exists`):
+jalankan sekali pada project baru. Untuk mengulang, buat project/database baru.
+
+## 8. Belum diuji di repo ini
+
+- Ke project **Supabase hosted** belum dieksekusi (butuh kredensial project).
+  Yang terbukti adalah apply + RLS pada PostgreSQL lokal dengan stub Supabase.
+- Login Supabase Auth dengan JWT asli dan klien PostgREST belum diuji end-to-end;
+  validasi data memakai gateway tiruan (`bun run check:repo`) dan SQL lokal.
+- Realtime belum dipakai.
