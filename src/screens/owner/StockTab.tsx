@@ -3,9 +3,10 @@ import { Boxes, ClipboardCheck, PackagePlus, Pencil, Plus, Search, SlidersHorizo
 
 import type { Ingredient } from '../../domain/catalog'
 import { inventoryRows, type StockMovement } from '../../domain/inventory'
+import { removeIngredient } from '../../lib/catalog-ops'
 import { createId } from '../../lib/id'
 import type { OwnerTabProps } from './types'
-import { EmptyState, Field, Modal, money } from './ui'
+import { ConfirmDialog, EmptyState, Field, Modal, money } from './ui'
 import { IngredientEditor } from './IngredientEditor'
 import { OpnameEditor } from './OpnameEditor'
 
@@ -30,6 +31,7 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
   const [adjustQty, setAdjustQty] = useState('')
   const [adjustNote, setAdjustNote] = useState('')
   const [draft, setDraft] = useState<PurchaseLine[]>([])
+  const [pendingDelete, setPendingDelete] = useState<{ ingredient: Ingredient; usedBy: string[] } | null>(null)
   const [lineIngredient, setLineIngredient] = useState(store.ingredients[0]?.id ?? '')
   const [lineQty, setLineQty] = useState('')
   const [lineCost, setLineCost] = useState('')
@@ -108,19 +110,19 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
     setAdjustNote('')
   }
 
-  const deleteIngredient = (ingredient: Ingredient) => {
-    const usedBy = store.menus.filter((menu) => menu.recipe.some((line) => line.ingredientId === ingredient.id))
-    if (usedBy.length > 0) {
-      notify(`Bahan masih dipakai ${usedBy.length} menu: ${usedBy.slice(0, 2).map((menu) => menu.name).join(', ')}`)
-      return
-    }
-    if (!window.confirm(`Hapus bahan "${ingredient.name}"? Riwayat pembelian dan opname tetap tersimpan.`)) return
-    setStore((current) => ({
-      ...current,
-      ingredients: current.ingredients.filter((item) => item.id !== ingredient.id),
-      auditLog: [...current.auditLog, { id: createId(), createdAt: new Date().toISOString(), action: 'ingredient_delete' as const, detail: ingredient.name }],
-    }))
-    notify(`${ingredient.name} dihapus`)
+  const requestDelete = (ingredient: Ingredient) => {
+    setPendingDelete({
+      ingredient,
+      usedBy: store.menus.filter((menu) => menu.recipe.some((line) => line.ingredientId === ingredient.id)).map((menu) => menu.name),
+    })
+  }
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return
+    const { ingredient, usedBy } = pendingDelete
+    setStore((current) => removeIngredient(current, ingredient).store)
+    setPendingDelete(null)
+    notify(usedBy.length > 0 ? `${ingredient.name} dihapus • dilepas dari ${usedBy.length} resep` : `${ingredient.name} dihapus`)
   }
 
   const deleteOpname = (movement: StockMovement) => {
@@ -293,7 +295,7 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
                       <div className="owner-table-actions">
                         <button className="owner-ghost" onClick={() => openAdjust(ingredient)}><SlidersHorizontal size={13} /> Sesuaikan</button>
                         <button className="owner-ghost" onClick={() => setEditing(ingredient)}><Pencil size={13} /> Edit</button>
-                        <button className="owner-ghost danger" onClick={() => deleteIngredient(ingredient)} aria-label={`Hapus bahan ${ingredient.name}`}><Trash2 size={13} /> Hapus</button>
+                        <button className="owner-ghost danger" onClick={() => requestDelete(ingredient)} aria-label={`Hapus bahan ${ingredient.name}`}><Trash2 size={13} /> Hapus</button>
                       </div>
                     </td>
                   </tr>
@@ -322,6 +324,19 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
           notify={notify}
           opname={opnameEditing === 'new' ? null : opnameEditing}
           onClose={() => setOpnameEditing(null)}
+        />
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          eyebrow="HAPUS BAHAN"
+          title={`Hapus bahan "${pendingDelete.ingredient.name}"?`}
+          description={pendingDelete.usedBy.length > 0
+            ? `Bahan ini dipakai ${pendingDelete.usedBy.length} menu: ${pendingDelete.usedBy.slice(0, 3).join(', ')}${pendingDelete.usedBy.length > 3 ? ', …' : ''}. Menghapus bahan akan melepasnya dari resep menu tersebut sehingga HPP menu ikut berubah. Riwayat pembelian, opname, dan transaksi tetap tersimpan.`
+            : 'Riwayat pembelian, opname, dan transaksi tetap tersimpan.'}
+          confirmLabel={pendingDelete.usedBy.length > 0 ? 'Hapus & lepas dari resep' : 'Hapus bahan'}
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
         />
       )}
 

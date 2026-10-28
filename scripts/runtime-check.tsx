@@ -428,9 +428,27 @@ if (categoryFilter) setSelect(categoryFilter, 'Semua')
 const gulaRowAfterEdit = [...window.document.querySelectorAll('.owner-data tbody tr')].find((row) => row.textContent?.includes('Gula aren'))
 const deleteIngredientButton = gulaRowAfterEdit?.querySelector('[aria-label="Hapus bahan Gula aren"]') as HTMLButtonElement | null
 check('tombol hapus bahan tersedia di tabel', Boolean(deleteIngredientButton), gulaRowAfterEdit?.textContent?.slice(0, 120) ?? 'baris tidak ada')
-window.confirm = () => true
 if (deleteIngredientButton) act(() => { deleteIngredientButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
-check('bahan bisa dihapus dari tabel', !persistedState().ingredients?.some((ingredient: { name: string }) => ingredient.name === 'Gula aren'))
+check('hapus bahan membuka dialog di aplikasi (bukan window.confirm)', Boolean(window.document.querySelector('.owner-confirm')), bodyText().slice(-240))
+check('bahan belum terhapus sebelum dikonfirmasi', Boolean(persistedState().ingredients?.find((ingredient: { name: string }) => ingredient.name === 'Gula aren')))
+clickByText('Hapus bahan')
+check('bahan bisa dihapus dari tabel setelah konfirmasi', !persistedState().ingredients?.some((ingredient: { name: string }) => ingredient.name === 'Gula aren'))
+check('dialog konfirmasi tertutup setelah hapus', !window.document.querySelector('.owner-confirm'))
+
+// Bahan yang masih dipakai resep harus bisa dihapus lewat jalur eksplisit "lepas dari resep".
+const dadaRecipeBefore = (persistedState().menus?.find((menu: { id: string }) => menu.id === 'dada')?.recipe ?? []).length
+const bbqRow = [...window.document.querySelectorAll('.owner-data tbody tr')].find((row) => row.textContent?.includes('Saus BBQ'))
+const deleteUsedIngredient = bbqRow?.querySelector('[aria-label="Hapus bahan Saus BBQ"]') as HTMLButtonElement | null
+check('bahan yang dipakai resep punya tombol hapus aktif', Boolean(deleteUsedIngredient) && deleteUsedIngredient?.disabled === false)
+if (deleteUsedIngredient) act(() => { deleteUsedIngredient.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+const usedDialog = window.document.querySelector('.owner-confirm')
+check('dialog menjelaskan bahan dipakai menu', Boolean(usedDialog?.textContent?.includes('dipakai 1 menu')) && Boolean(usedDialog?.textContent?.includes('Rice Bowl BBQ 650')), usedDialog?.textContent ?? 'dialog tidak ada')
+check('tombol konfirmasi menghapus sekaligus melepas resep', Boolean([...window.document.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Hapus & lepas dari resep')))
+clickByText('Hapus & lepas dari resep')
+const afterUsedDelete = persistedState()
+check('bahan dipakai resep bisa dihapus', !afterUsedDelete.ingredients?.some((ingredient: { id: string }) => ingredient.id === 'saus-bbq'))
+check('baris resep menu ikut dilepas', !afterUsedDelete.menus?.find((menu: { id: string }) => menu.id === 'bbq')?.recipe?.some((line: { ingredientId: string }) => line.ingredientId === 'saus-bbq'))
+check('resep menu lain tidak berubah', (afterUsedDelete.menus?.find((menu: { id: string }) => menu.id === 'dada')?.recipe ?? []).length === dadaRecipeBefore, `${dadaRecipeBefore} → ${(afterUsedDelete.menus?.find((menu: { id: string }) => menu.id === 'dada')?.recipe ?? []).length}`)
 
 // ---- Gerbang PIN untuk pengaturan printer dan tutup shift ----
 clickByText('Kasir')

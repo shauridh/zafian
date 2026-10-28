@@ -3,8 +3,9 @@ import { Calculator, Trash2 } from 'lucide-react'
 
 import type { Ingredient } from '../../domain/catalog'
 import type { PosStore } from '../../domain/pos'
+import { removeIngredient } from '../../lib/catalog-ops'
 import { createId } from '../../lib/id'
-import { Field, Modal, money } from './ui'
+import { ConfirmDialog, Field, Modal, money } from './ui'
 
 type Props = {
   store: PosStore
@@ -24,6 +25,7 @@ export function IngredientEditor({ store, setStore, notify, ingredient, onClose 
   const [usage, setUsage] = useState(ingredient ? String(ingredient.usagePerPurchaseUnit) : '')
   const [costPerUnit, setCostPerUnit] = useState(ingredient ? String(ingredient.costPerUnit) : '')
   const [minStock, setMinStock] = useState(ingredient ? String(ingredient.minStock) : '')
+  const [confirming, setConfirming] = useState(false)
 
   const priceValue = Number(purchasePrice) || 0
   const usageValue = Number(usage) || 0
@@ -65,17 +67,9 @@ export function IngredientEditor({ store, setStore, notify, ingredient, onClose 
 
   const remove = () => {
     if (!ingredient) return
-    if (usedBy.length > 0) {
-      notify(`Bahan masih dipakai ${usedBy.length} menu: ${usedBy.slice(0, 2).map((menu) => menu.name).join(', ')}`)
-      return
-    }
-    if (!window.confirm(`Hapus bahan "${ingredient.name}"? Riwayat pembelian tetap tersimpan.`)) return
-    setStore((current) => ({
-      ...current,
-      ingredients: current.ingredients.filter((item) => item.id !== ingredient.id),
-      auditLog: [...current.auditLog, { id: createId(), createdAt: new Date().toISOString(), action: 'ingredient_delete' as const, detail: ingredient.name }],
-    }))
-    notify(`${ingredient.name} dihapus`)
+    setStore((current) => removeIngredient(current, ingredient).store)
+    notify(usedBy.length > 0 ? `${ingredient.name} dihapus • dilepas dari ${usedBy.length} resep` : `${ingredient.name} dihapus`)
+    setConfirming(false)
     onClose()
   }
 
@@ -104,11 +98,24 @@ export function IngredientEditor({ store, setStore, notify, ingredient, onClose 
       <button type="button" className="owner-ghost owner-calc" onClick={() => setCostPerUnit(String(Math.round(computed * 100) / 100))}><Calculator size={14} /> Pakai biaya otomatis {money(computed)}</button>
       {ingredient && <p className="owner-muted">Dipakai oleh {usedBy.length} menu{usedBy.length > 0 ? `: ${usedBy.slice(0, 3).map((menu) => menu.name).join(', ')}` : ''}.</p>}
       <div className="editor-actions">
-        {ingredient && <button className="owner-ghost danger" onClick={remove} disabled={usedBy.length > 0} title={usedBy.length > 0 ? 'Bahan masih dipakai resep menu' : 'Hapus bahan'}><Trash2 size={14} /> Hapus</button>}
+        {ingredient && <button className="owner-ghost danger" onClick={() => setConfirming(true)} title="Hapus bahan"><Trash2 size={14} /> Hapus</button>}
         <span className="editor-spacer" />
         <button className="owner-ghost" onClick={onClose}>Batal</button>
         <button className="owner-primary" onClick={save}>{ingredient ? 'Simpan' : 'Tambah bahan'}</button>
       </div>
+
+      {confirming && ingredient && (
+        <ConfirmDialog
+          eyebrow="HAPUS BAHAN"
+          title={`Hapus bahan "${ingredient.name}"?`}
+          description={usedBy.length > 0
+            ? `Bahan ini dipakai ${usedBy.length} menu: ${usedBy.slice(0, 3).map((menu) => menu.name).join(', ')}${usedBy.length > 3 ? ', …' : ''}. Menghapus bahan akan melepasnya dari resep menu tersebut sehingga HPP menu ikut berubah. Riwayat pembelian, opname, dan transaksi tetap tersimpan.`
+            : 'Riwayat pembelian, opname, dan transaksi tetap tersimpan.'}
+          confirmLabel={usedBy.length > 0 ? 'Hapus & lepas dari resep' : 'Hapus bahan'}
+          onConfirm={remove}
+          onCancel={() => setConfirming(false)}
+        />
+      )}
     </Modal>
   )
 }

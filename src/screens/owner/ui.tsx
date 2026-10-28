@@ -43,6 +43,37 @@ export function FieldGroup({ label, hint, children, wide = false }: { label: str
   )
 }
 
+/**
+ * Konfirmasi di dalam aplikasi, bukan `window.confirm`.
+ * Dialog bawaan browser diblokir di preview iframe/WebView sehingga tombol hapus
+ * tampak tidak berfungsi; dialog ini selalu tampil dan bisa diuji DOM.
+ */
+export function ConfirmDialog({ eyebrow = 'KONFIRMASI', title, description, confirmLabel, cancelLabel = 'Batal', onConfirm, onCancel }: {
+  eyebrow?: string
+  title: string
+  description: ReactNode
+  confirmLabel: string
+  cancelLabel?: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="modal-backdrop">
+      <div className="modal owner-modal owner-confirm" role="dialog" aria-modal="true" aria-label={title}>
+        <button className="modal-close" onClick={onCancel} aria-label="Tutup"><X size={18} /></button>
+        <span className="eyebrow">{eyebrow}</span>
+        <h2>{title}</h2>
+        <p className="owner-muted">{description}</p>
+        <div className="editor-actions">
+          <span className="editor-spacer" />
+          <button className="owner-ghost" onClick={onCancel}>{cancelLabel}</button>
+          <button className="owner-primary danger" onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function EmptyState({ icon, title, hint, action }: { icon: ReactNode; title: string; hint: string; action?: ReactNode }) {
   return (
     <div className="owner-empty">
