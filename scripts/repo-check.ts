@@ -11,14 +11,15 @@
  *   - isolasi outlet,
  *   - driver online men-debounce perubahan dan menolak error jaringan,
  *   - akses outlet dibaca dari baris staf akun (bukan env) + pesan RLS jelas,
- *   - outlet yang belum pernah disimpan di-seed sekali, yang sudah dipakai tidak.
+ *   - outlet online baru memakai store kosong tanpa katalog contoh,
+ *   - outlet yang sudah dipakai tidak di-seed ulang.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { normalizeStore } from '../src/lib/schema'
 import { createOnlineDriver } from '../src/lib/online'
 import type { RepoGateway, Row, TableName } from '../src/lib/repo/gateway'
-import { assignGeneratedIds, loadStore, saveStore } from '../src/lib/repo/snapshot'
+import { assignGeneratedIds, initialOnlineStore, loadStore, saveStore } from '../src/lib/repo/snapshot'
 import { describeRepoError, readOutletAccess } from '../src/lib/repo/supabase-gateway'
 
 let passed = 0
@@ -82,6 +83,11 @@ const nextId = () => `00000000-0000-4000-8000-${String(++counter).padStart(12, '
 const seeded = assignGeneratedIds(normalizeStore({}), nextId)
 const expectedInserts = seeded.menus.length + seeded.ingredients.length + seeded.categories.length
   + seeded.ingredientCategories.length + seeded.stockMovements.length + seeded.shifts.length + seeded.transactions.length
+
+const newOnlineStore = initialOnlineStore(null)
+check('outlet online baru dimulai tanpa katalog contoh', newOnlineStore.menus.length === 0 && newOnlineStore.ingredients.length === 0 && newOnlineStore.categories.length === 0 && newOnlineStore.ingredientCategories.length === 0, `menu=${newOnlineStore.menus.length} bahan=${newOnlineStore.ingredients.length} kategori=${newOnlineStore.categories.length}`)
+check('store awal online tidak memakai ID slug seed', ![...newOnlineStore.menus, ...newOnlineStore.ingredients, ...newOnlineStore.categories].some((item) => ['paket', 'dada', 'teh', 'tepung-bumbu'].includes(item.id)))
+check('snapshot yang sudah ada dikembalikan tanpa perubahan', initialOnlineStore(seeded) === seeded)
 
 const gateway = new FakeGateway()
 
@@ -224,7 +230,7 @@ check('pesan non-RLS tetap menyebut tabel', describeRepoError('memuat', 'menu_it
 
 const untouchedGateway = new FakeGateway()
 await untouchedGateway.upsert('app_settings', [{ outlet_id: OUTLET, data: {} }])
-check('app_settings {} dianggap kosong sehingga seed contoh jalan sekali', (await loadStore(untouchedGateway, OUTLET)) === null)
+check('app_settings {} terdeteksi sebagai outlet baru yang belum punya data', (await loadStore(untouchedGateway, OUTLET)) === null)
 
 const configuredGateway = new FakeGateway()
 await configuredGateway.upsert('app_settings', [{ outlet_id: OUTLET, data: { businessName: 'Warung Uji' } }])

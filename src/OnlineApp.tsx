@@ -3,8 +3,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { App } from './App'
 import { createOnlineDriver, setOnlineDriver, setOnlineSignOutHandler } from './lib/online'
 import { createOutlet, readOutletAccess, supabaseGateway } from './lib/repo/supabase-gateway'
-import { assignGeneratedIds, loadStore } from './lib/repo/snapshot'
-import { normalizeStore } from './lib/schema'
+import { initialOnlineStore, loadStore } from './lib/repo/snapshot'
 import { PRIMARY_STORAGE_KEY, primeStorageCache } from './lib/storage'
 import { readSupabaseConfig, supabaseClient, type SupabaseConfig } from './lib/supabase'
 
@@ -85,8 +84,8 @@ function SupabaseApp({ config, storageWarning }: { config: SupabaseConfig; stora
 
       const gateway = supabaseGateway(client)
       const snapshot = await loadStore(gateway, outletId)
-      // Outlet baru: seed katalog contoh sekali dengan ID uuid, lalu disimpan ke Supabase.
-      const store = snapshot ?? assignGeneratedIds(normalizeStore({}))
+      // Outlet baru mulai kosong; katalog contoh hanya untuk mode lokal.
+      const store = initialOnlineStore(snapshot)
       setOnlineDriver(createOnlineDriver(gateway, outletId, snapshot))
       primeStorageCache(PRIMARY_STORAGE_KEY, store)
       setPhase('siap')

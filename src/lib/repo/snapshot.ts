@@ -40,7 +40,7 @@ const collections: Collection[] = [
 /**
  * Membaca seluruh data outlet dari Supabase. Mengembalikan null bila outlet
  * belum pernah dipakai (pengaturan masih `{}`/belum ada dan belum punya baris
- * data), sehingga pemanggil bisa melakukan seed awal sekali.
+ * data), sehingga pemanggil bisa memulai outlet kosong.
  */
 export async function loadStore(gateway: RepoGateway, outletId: string): Promise<PosStore | null> {
   const [settingsRows, documentRows, ...collectionRows] = await Promise.all([
@@ -54,8 +54,8 @@ export async function loadStore(gateway: RepoGateway, outletId: string): Promise
 
   const dataRowCount = collectionRows.reduce((sum, rows) => sum + rows.length, 0)
   // `create_outlet` sudah membuat baris app_settings dengan data `{}`. Outlet
-  // yang belum pernah disimpan tetap dianggap kosong agar seed contoh jalan
-  // sekali; setelah simpan pertama data pengaturan terisi dan seed berhenti.
+  // yang belum pernah disimpan dianggap kosong agar pemanggil memulai outlet
+  // tanpa katalog contoh; setelah simpan pertama data pengaturan terisi.
   const untouchedSettings = settingsRows.length === 0 || isEmptyObject(settingsRows[0]?.data)
   if (untouchedSettings && documentRows.length === 0 && dataRowCount === 0) return null
 
@@ -79,6 +79,14 @@ export async function loadStore(gateway: RepoGateway, outletId: string): Promise
     // nextTransactionNumber sengaja tidak dibaca dari database: normalizeStore
     // menurunkannya dari nomor transaksi terakhir (aman untuk multi-perangkat).
   }, { seed: false })
+}
+
+/**
+ * Store awal untuk outlet online yang belum punya data. Outlet online mulai
+ * kosong tanpa katalog contoh; seed demo hanya berlaku di mode lokal.
+ */
+export function initialOnlineStore(snapshot: PosStore | null): PosStore {
+  return snapshot ?? normalizeStore({}, { seed: false })
 }
 
 export type SaveSummary = {
@@ -168,8 +176,9 @@ const fallbackUuid = (): string => {
 
 /**
  * Katalog contoh memakai ID slug (mis. "dada"); tabel Supabase memakai uuid.
- * Fungsi ini memberi ID uuid baru sekaligus memperbarui referensi resep/riwayat,
- * dipakai hanya saat outlet masih kosong (seed awal).
+ * Fungsi ini memberi ID uuid baru sekaligus memperbarui referensi resep/riwayat.
+ * Outlet online baru tidak memakainya karena mulai kosong; fungsi dipertahankan
+ * untuk pengujian round-trip repo dan migrasi data seed lama bila diperlukan.
  */
 export function assignGeneratedIds(store: PosStore, makeId: () => string = () => globalThis.crypto?.randomUUID?.() ?? fallbackUuid()): PosStore {
   const menuIds = new Map(store.menus.map((menu) => [menu.id, makeId()]))

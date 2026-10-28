@@ -49,7 +49,7 @@ Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase di
 
    **Redeploy wajib setelah mengubah env**, karena Vite menanamkan nilai saat build. Jangan memakai `service_role` key, kata sandi database, atau password pemilik di klien.
 4. Deploy menghasilkan URL HTTPS. HTTPS wajib untuk PIN (`crypto.subtle`) dan Web Bluetooth; service worker hanya aktif pada build production.
-5. Buka aplikasi → masuk dengan **satu akun pemilik**. Outlet dibuat otomatis pada login pertama (RPC `create_outlet`), katalog contoh terisi sekali, dan tidak ada onboarding, pilihan outlet, atau manajemen staf.
+5. Buka aplikasi → masuk dengan **satu akun pemilik**. Outlet dibuat otomatis pada login pertama (RPC `create_outlet`), katalog dimulai **kosong** tanpa menu/bahan contoh, dan tidak ada onboarding, pilihan outlet, atau manajemen staf. Tambahkan menu dan bahan sendiri dari mode pemilik.
 6. `vercel.json` menambahkan rewrite SPA agar refresh/deep link kembali ke `index.html`, header keamanan, cache `sw.js` yang tidak lengket, serta tipe konten manifest.
 
 ### Checklist deploy
@@ -59,7 +59,7 @@ Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase di
 - [ ] Supabase Authentication: provider Email aktif, satu akun pemilik dibuat.
 - [ ] Vercel Environment Variables (Production + Preview): `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY`; tidak ada service role/password di klien.
 - [ ] Deploy, lalu buka `/` dan refresh di path dalam (mis. `/settings`) — harus memuat aplikasi, bukan 404.
-- [ ] Login pemilik → outlet + katalog contoh dibuat sekali → buka shift → bayar tunai → transaksi tersimpan dan struk bisa dicetak.
+- [ ] Login pemilik → outlet dibuat dengan katalog kosong → tambah menu/bahan → buka shift → bayar tunai → transaksi tersimpan dan struk bisa dicetak.
 - [ ] Setiap mengubah env, redeploy (Vite menanamkan nilai saat build).
 
 Catatan: endpoint Hono di `src/worker/index.ts` hanya tersedia pada deployment Cloudflare, bukan pada deployment Vercel statis. Aplikasi POS tidak memanggil endpoint tersebut. Data operasional berada di Supabase sehingga beberapa perangkat melihat outlet yang sama (last-write-wins per baris).
@@ -169,7 +169,7 @@ Aplikasi ini **murni web** saat ini: tidak ada folder Capacitor/Android, `capaci
 - Restore memvalidasi format, versi skema, serta struktur transaksi/menu/bahan/kategori sebelum menampilkan ringkasan dan meminta konfirmasi. File rusak, versi lebih baru, atau data yang akan hilang ditolak tanpa mengubah state. PIN pemilik perangkat saat ini dipertahankan saat restore.
 - Opname disimpan sebagai `StockMovement` bertipe `opname` dengan snapshot `systemQty`, `countedQty`, dan `unitCost`; `qty` adalah selisih yang dipakai perhitungan stok. Selisihnya dijurnal ke **Persediaan Bahan (1200)** dan **Selisih Persediaan (6100)**, sehingga PNL dan neraca ikut menyesuaikan. Opname bisa diedit/dihapus tanpa mengubah riwayat pembelian.
 - Migrasi bersifat **idempoten**: dijalankan dua kali menghasilkan state yang sama, tanpa menambah transaksi, kas, atau jurnal.
-- State lama tanpa katalog/bahan/kategori/audit akan di-seed otomatis; harga, resep, status menu, dan kategori buatan pengguna **tidak** di-reset.
+- Di **mode lokal**, state lama tanpa katalog/bahan/kategori/audit akan di-seed otomatis; harga, resep, status menu, dan kategori buatan pengguna **tidak** di-reset. Mode online tidak men-seed outlet baru — katalog dimulai kosong.
 - Kategori yang dipakai menu tetap dipertahankan walau belum ada di daftar kategori; urutan kategori tersimpan mengikuti pengaturan pemilik.
 - Transaksi lama tanpa `paidAmount`/`change` diturunkan dari subtotal (`change` = 0) sehingga kas tidak menjadi `NaN`.
 - Pre-order lama tanpa `dp` dianggap DP 0; shift lama tanpa `openingFloat` memakai Rp350.000.
@@ -189,7 +189,7 @@ Aplikasi ini **murni web** saat ini: tidak ada folder Capacitor/Android, `capaci
 - Dev server bind `0.0.0.0:3000`: `/`, `/src/main.tsx`, `/src/App.tsx`, `/src/lib/storage.ts`, `/src/lib/pin.ts`, `/src/lib/backup.ts`, `/src/components/OwnerPinDialog.tsx`, `/src/screens/owner/BackupTab.tsx`, `/src/screens/owner/SettingsTab.tsx`, dan `/src/styles.css` merespons HTTP 200.
 - Ikon tombol dapat diganti di `public/icons/`; ilustrasi menu di `public/menu/`.
 
-- `bun run check:repo` — **35 pemeriksaan lolos** dengan gateway Supabase tiruan: round-trip snapshot, seed ber-ID uuid + referensi resep, penyimpanan idempoten (tanpa perubahan = nol tulis), upsert per baris, hapus baris, dokumen kas/audit/pre-order/beban, numeric PostgREST berbentuk string, nominasi transaksi diturunkan dari data, isolasi outlet, dan penolakan error jaringan.
+- `bun run check:repo` — **46 pemeriksaan lolos** dengan gateway Supabase tiruan: round-trip snapshot, outlet online baru mulai kosong tanpa katalog contoh, seed uji ber-ID uuid + referensi resep, penyimpanan idempoten (tanpa perubahan = nol tulis), upsert per baris, hapus baris, dokumen kas/audit/pre-order/beban, numeric PostgREST berbentuk string, nominasi transaksi diturunkan dari data, isolasi outlet, dan penolakan error jaringan.
 - **Migration Supabase diuji pada PostgreSQL 18.4 lokal** dengan stub Supabase (role `anon`/`authenticated`/`service_role`, schema `auth`, `auth.uid()`/`auth.jwt()`): `0001_init.sql` + `0002_rls.sql` **apply bersih tanpa error di dua database baru** (12 tabel masing-masing), lalu **26/26 pemeriksaan RLS lolos** — owner CRUD master data, kasir hanya baca master data + tulis transaksi/shift/dokumen, kasir ditolak mengubah pengaturan/staf, user outlet lain dan `anon` ditolak, `create_outlet` idempoten, serta trigger `transaction_items` terisi dan diperbarui. Bug yang ditemukan lewat uji ini (trigger tanpa `security definer`, kolom penghitung transaksi di tabel owner-only) sudah diperbaiki.
 - **Mode online belum diuji ke project Supabase hosted** karena tidak ada kredensial project. Login dengan JWT asli, klien PostgREST, dan dashboard Supabase tetap perlu diuji sekali setelah project dibuat.
 
