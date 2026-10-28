@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Rice bowl BBQ">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf3e9"/><stop offset="1" stop-color="#eed9c2"/></linearGradient>
+    <linearGradient id="bowl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffdf9"/><stop offset="1" stop-color="#eadfce"/></linearGradient>
+    <linearGradient id="crisp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e0a152"/><stop offset="1" stop-color="#a95c1d"/></linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#7a4a22" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="676" cy="108" r="120" fill="#f7e5d0" opacity=".7"/>
+  <circle cx="108" cy="486" r="80" fill="#f3e0ca" opacity=".8"/>
+  <ellipse cx="400" cy="492" rx="258" ry="48" fill="#cba98a" opacity=".32"/>
+  <g filter="url(#soft)">
+    <circle cx="400" cy="330" r="214" fill="url(#bowl)" stroke="#dfc9b0" stroke-width="6"/>
+    <circle cx="400" cy="330" r="184" fill="#f3e6d4"/>
+    <ellipse cx="400" cy="330" rx="170" ry="150" fill="#fffdf6"/>
+    <g fill="#e9ddc9" opacity=".7">
+      <ellipse cx="330" cy="260" rx="10" ry="5" transform="rotate(-18 330 260)"/>
+      <ellipse cx="380" cy="236" rx="10" ry="5" transform="rotate(12 380 236)"/>
+      <ellipse cx="440" cy="256" rx="10" ry="5" transform="rotate(-24 440 256)"/>
+      <ellipse cx="470" cy="304" rx="10" ry="5" transform="rotate(8 470 304)"/>
+    </g>
+    <path d="M292 306c32-32 92-30 116 8 24 38 8 90-32 102-40 12-86-12-92-52-4-24 2-42 8-58z" fill="url(#crisp)" stroke="#8f4a14" stroke-width="5"/>
+    <path d="M410 344c26-24 70-20 84 10 14 30-2 66-34 74-32 8-66-12-70-42-2-18 8-32 20-42z" fill="url(#crisp)" stroke="#8f4a14" stroke-width="4"/>
+    <path d="M300 300c20 22 18 64-2 88M348 288c22 26 20 72-2 96M430 344c18 20 16 56 0 76" fill="none" stroke="#5a2b0d" stroke-width="7" stroke-linecap="round" opacity=".65"/>
+    <g fill="#fdf3df" opacity=".95">
+      <circle cx="338" cy="318" r="4"/><circle cx="368" cy="300" r="3"/><circle cx="360" cy="356" r="4"/><circle cx="446" cy="356" r="3"/><circle cx="468" cy="378" r="4"/>
+    </g>
+    <path d="M418 258c28-20 68-6 76 26 8 30-12 58-42 62" fill="#7a3c14" opacity=".85"/>
+    <g fill="#5d8f4e">
+      <circle cx="286" cy="382" r="17"/><circle cx="314" cy="404" r="13"/><circle cx="512" cy="300" r="14"/>
+    </g>
+  </g>
+  <text x="400" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#8a5a32" letter-spacing="4">BBQ</text>
+</svg>

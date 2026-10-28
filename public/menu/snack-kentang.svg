@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Kentang goreng">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf3e9"/><stop offset="1" stop-color="#eed9c2"/></linearGradient>
+    <linearGradient id="fry" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9d27f"/><stop offset="1" stop-color="#d99a33"/></linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#7a4a22" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="686" cy="104" r="118" fill="#f7e5d0" opacity=".7"/>
+  <circle cx="106" cy="490" r="82" fill="#f3e0ca" opacity=".8"/>
+  <ellipse cx="400" cy="492" rx="256" ry="48" fill="#cba98a" opacity=".32"/>
+  <g filter="url(#soft)">
+    <g stroke="#c58a2c" stroke-width="4">
+      <rect x="286" y="196" width="40" height="196" rx="12" fill="url(#fry)" transform="rotate(-12 306 294)"/>
+      <rect x="336" y="176" width="40" height="210" rx="12" fill="url(#fry)" transform="rotate(-4 356 281)"/>
+      <rect x="386" y="188" width="40" height="200" rx="12" fill="url(#fry)" transform="rotate(6 406 288)"/>
+      <rect x="436" y="200" width="40" height="190" rx="12" fill="url(#fry)" transform="rotate(14 456 295)"/>
+      <rect x="360" y="214" width="38" height="190" rx="12" fill="url(#fry)" transform="rotate(1 379 309)"/>
+    </g>
+    <path d="M262 296h276l-34 194c-4 22-22 38-44 38H340c-22 0-40-16-44-38z" fill="#c62828" stroke="#9d1f1f" stroke-width="5"/>
+    <path d="M262 296h276l-10 56H272z" fill="#e53935"/>
+    <circle cx="400" cy="392" r="44" fill="#fff8ef" opacity=".95"/>
+    <text x="400" y="402" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="800" fill="#c62828">S</text>
+    <circle cx="576" cy="404" r="40" fill="#fffdf8" stroke="#e3cdb7" stroke-width="4"/>
+    <circle cx="576" cy="404" r="27" fill="#b3261e"/>
+    <g fill="#f9e3ba" opacity=".9"><circle cx="330" cy="250" r="4"/><circle cx="440" cy="236" r="4"/><circle cx="398" cy="272" r="4"/></g>
+  </g>
+  <text x="400" y="562" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#8a5a32" letter-spacing="4">KENTANG</text>
+</svg>

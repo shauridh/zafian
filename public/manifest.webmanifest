@@ -1,0 +1,33 @@
+{
+  "id": "/",
+  "name": "Sabana POS — Kasir FnB",
+  "short_name": "Sabana POS",
+  "description": "POS offline-first untuk kasir FnB: pesanan, shift, stok bahan, HPP, laporan, dan backup.",
+  "lang": "id",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fffaf3",
+  "theme_color": "#c62828",
+  "icons": [
+    {
+      "src": "/icons/pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/pwa-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Rice bowl katsu">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf3e9"/><stop offset="1" stop-color="#eed9c2"/></linearGradient>
+    <linearGradient id="bowl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffdf9"/><stop offset="1" stop-color="#eadfce"/></linearGradient>
+    <linearGradient id="katsu" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1c07a"/><stop offset="1" stop-color="#c98532"/></linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#7a4a22" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="676" cy="108" r="120" fill="#f7e5d0" opacity=".7"/>
+  <circle cx="108" cy="486" r="80" fill="#f3e0ca" opacity=".8"/>
+  <ellipse cx="400" cy="492" rx="258" ry="48" fill="#cba98a" opacity=".32"/>
+  <g filter="url(#soft)">
+    <circle cx="400" cy="330" r="214" fill="url(#bowl)" stroke="#dfc9b0" stroke-width="6"/>
+    <circle cx="400" cy="330" r="184" fill="#f3e6d4"/>
+    <ellipse cx="400" cy="330" rx="170" ry="150" fill="#fffdf6"/>
+    <g fill="#e9ddc9" opacity=".7">
+      <ellipse cx="330" cy="262" rx="10" ry="5" transform="rotate(-18 330 262)"/>
+      <ellipse cx="386" cy="240" rx="10" ry="5" transform="rotate(12 386 240)"/>
+      <ellipse cx="444" cy="258" rx="10" ry="5" transform="rotate(-24 444 258)"/>
+      <ellipse cx="474" cy="308" rx="10" ry="5" transform="rotate(8 474 308)"/>
+    </g>
+    <g transform="rotate(-12 400 330)">
+      <rect x="300" y="292" width="58" height="116" rx="16" fill="url(#katsu)" stroke="#a96826" stroke-width="4"/>
+      <rect x="366" y="286" width="58" height="122" rx="16" fill="url(#katsu)" stroke="#a96826" stroke-width="4"/>
+      <rect x="432" y="292" width="58" height="116" rx="16" fill="url(#katsu)" stroke="#a96826" stroke-width="4"/>
+      <g fill="#f7dfb4" opacity=".8">
+        <circle cx="326" cy="320" r="3"/><circle cx="338" cy="352" r="3"/><circle cx="392" cy="316" r="3"/><circle cx="404" cy="356" r="3"/><circle cx="458" cy="324" r="3"/><circle cx="470" cy="360" r="3"/>
+      </g>
+      <path d="M310 402h168" stroke="#b3261e" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+    </g>
+    <path d="M416 260c30-16 66-2 74 28 8 30-12 58-42 60" fill="#f0cf8b" opacity=".92"/>
+    <path d="M430 274c22-6 44 6 46 26" fill="none" stroke="#fdf0cc" stroke-width="7" stroke-linecap="round"/>
+    <g fill="#5d8f4e">
+      <circle cx="290" cy="388" r="17"/><circle cx="318" cy="410" r="13"/><circle cx="512" cy="296" r="14"/>
+    </g>
+  </g>
+  <text x="400" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#8a5a32" letter-spacing="4">KATSU</text>
+</svg>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Saus mentai">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf3e9"/><stop offset="1" stop-color="#eed9c2"/></linearGradient>
+    <radialGradient id="sauce" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#fbe6a7"/><stop offset="1" stop-color="#e0b955"/></radialGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#7a4a22" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="686" cy="104" r="118" fill="#f7e5d0" opacity=".7"/>
+  <circle cx="106" cy="490" r="82" fill="#f3e0ca" opacity=".8"/>
+  <ellipse cx="400" cy="488" rx="248" ry="48" fill="#cba98a" opacity=".32"/>
+  <g filter="url(#soft)">
+    <circle cx="400" cy="338" r="188" fill="#fffdf8" stroke="#e0cab2" stroke-width="6"/>
+    <circle cx="400" cy="338" r="154" fill="#f3ead9"/>
+    <circle cx="400" cy="338" r="138" fill="url(#sauce)"/>
+    <path d="M320 312c30-42 96-52 140-14 20 18 26 44 14 68" fill="none" stroke="#fdf3cc" stroke-width="13" stroke-linecap="round" opacity=".8"/>
+    <g fill="#f8efd2" opacity=".95">
+      <ellipse cx="340" cy="360" rx="9" ry="5" transform="rotate(-20 340 360)"/>
+      <ellipse cx="384" cy="386" rx="8" ry="4" transform="rotate(14 384 386)"/>
+      <ellipse cx="452" cy="350" rx="9" ry="5" transform="rotate(-8 452 350)"/>
+    </g>
+    <g fill="#5d8f4e">
+      <circle cx="330" cy="290" r="10"/><circle cx="464" cy="386" r="9"/><circle cx="420" cy="268" r="7"/>
+    </g>
+    <g fill="#b3261e" opacity=".85"><circle cx="474" cy="300" r="8"/><circle cx="344" cy="398" r="7"/></g>
+  </g>
+  <text x="400" y="562" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#8a5a32" letter-spacing="4">SAUS MENTAI</text>
+</svg>

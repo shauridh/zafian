@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Ayam dada dan nasi dalam box">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf3e9"/><stop offset="1" stop-color="#eed9c2"/></linearGradient>
+    <linearGradient id="crisp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5c47c"/><stop offset="1" stop-color="#d7892f"/></linearGradient>
+    <filter id="soft" x="-20%" y="-30%" width="140%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#7a4a22" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="676" cy="104" r="118" fill="#f7e5d0" opacity=".7"/>
+  <circle cx="112" cy="486" r="84" fill="#f3e0ca" opacity=".8"/>
+  <ellipse cx="400" cy="476" rx="286" ry="52" fill="#cba98a" opacity=".32"/>
+  <g filter="url(#soft)">
+    <rect x="160" y="190" width="480" height="300" rx="28" fill="#fffaf3" stroke="#ddc6ac" stroke-width="6"/>
+    <rect x="184" y="214" width="432" height="252" rx="18" fill="#f2e1cc"/>
+    <rect x="184" y="424" width="432" height="42" rx="12" fill="#c62828" opacity=".9"/>
+    <text x="400" y="452" text-anchor="middle" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#fff8ef" letter-spacing="3">SABANA</text>
+    <ellipse cx="300" cy="334" rx="96" ry="78" fill="#fffdf8"/>
+    <ellipse cx="286" cy="310" rx="70" ry="48" fill="#ffffff"/>
+    <g fill="#e9ddc9" opacity=".8">
+      <ellipse cx="260" cy="330" rx="8" ry="4" transform="rotate(-18 260 330)"/>
+      <ellipse cx="292" cy="350" rx="8" ry="4" transform="rotate(12 292 350)"/>
+      <ellipse cx="322" cy="322" rx="8" ry="4" transform="rotate(-22 322 322)"/>
+      <ellipse cx="276" cy="296" rx="7" ry="3.5" transform="rotate(8 276 296)"/>
+    </g>
+    <path d="M398 296c34-34 100-30 126 12 26 42 6 102-42 116-48 14-102-12-110-60-4-28 8-50 26-68z" fill="url(#crisp)" stroke="#bf7727" stroke-width="5"/>
+    <path d="M424 316c28-18 66-10 78 18" fill="none" stroke="#f8d79c" stroke-width="10" stroke-linecap="round" opacity=".7"/>
+    <g fill="#b86f21" opacity=".55">
+      <circle cx="438" cy="344" r="5"/><circle cx="480" cy="330" r="4"/><circle cx="462" cy="384" r="5"/><circle cx="506" cy="368" r="4"/><circle cx="420" cy="380" r="4"/>
+    </g>
+    <path d="M376 404c22-20 58-20 78 2 18 20 14 50-12 62-26 12-62 2-72-22-6-16-2-30 6-42z" fill="url(#crisp)" stroke="#bf7727" stroke-width="4"/>
+    <circle cx="558" cy="392" r="40" fill="#fffdf8" stroke="#e3cdb7" stroke-width="4"/>
+    <circle cx="558" cy="392" r="27" fill="#b3261e"/>
+    <path d="M548 386c8-6 20-2 22 8" fill="none" stroke="#e2705f" stroke-width="4" stroke-linecap="round"/>
+    <g fill="#5d8f4e">
+      <circle cx="626" cy="272" r="16"/><circle cx="654" cy="292" r="12"/>
+    </g>
+  </g>
+</svg>

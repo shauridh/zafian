@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Bakso tusuk">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf3e9"/><stop offset="1" stop-color="#eed9c2"/></linearGradient>
+    <radialGradient id="ball" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#c98f5b"/><stop offset="1" stop-color="#8a4f2a"/></radialGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#7a4a22" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="686" cy="104" r="118" fill="#f7e5d0" opacity=".7"/>
+  <circle cx="106" cy="490" r="82" fill="#f3e0ca" opacity=".8"/>
+  <ellipse cx="400" cy="486" rx="268" ry="50" fill="#cba98a" opacity=".32"/>
+  <g filter="url(#soft)">
+    <ellipse cx="392" cy="348" rx="232" ry="160" fill="#fffdf7" stroke="#dfc9b0" stroke-width="6"/>
+    <ellipse cx="392" cy="348" rx="204" ry="134" fill="#f6ead8"/>
+    <g transform="rotate(-24 400 344)">
+      <rect x="310" y="238" width="12" height="238" rx="6" fill="#c9a06a"/>
+      <circle cx="316" cy="268" r="42" fill="url(#ball)"/>
+      <circle cx="316" cy="352" r="44" fill="url(#ball)"/>
+      <circle cx="316" cy="438" r="40" fill="url(#ball)"/>
+    </g>
+    <g fill="#f3cba4" opacity=".7">
+      <circle cx="300" cy="252" r="8"/><circle cx="300" cy="336" r="8"/><circle cx="300" cy="424" r="8"/>
+    </g>
+    <circle cx="566" cy="300" r="38" fill="#fffdf8" stroke="#e3cdb7" stroke-width="4"/>
+    <circle cx="566" cy="300" r="25" fill="#b3261e"/>
+    <path d="M556 294c8-6 20-2 22 8" fill="none" stroke="#e2705f" stroke-width="4" stroke-linecap="round"/>
+    <g fill="#5d8f4e"><circle cx="578" cy="428" r="16"/><circle cx="604" cy="448" r="11"/></g>
+  </g>
+  <text x="400" y="562" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#8a5a32" letter-spacing="4">BAKSO TUSUK</text>
+</svg>

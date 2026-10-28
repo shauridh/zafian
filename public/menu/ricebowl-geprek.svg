@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Rice bowl geprek">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf3e9"/><stop offset="1" stop-color="#eed9c2"/></linearGradient>
+    <linearGradient id="bowl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffdf9"/><stop offset="1" stop-color="#eadfce"/></linearGradient>
+    <linearGradient id="crisp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6c982"/><stop offset="1" stop-color="#d7862c"/></linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#7a4a22" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="676" cy="108" r="120" fill="#f7e5d0" opacity=".7"/>
+  <circle cx="108" cy="486" r="80" fill="#f3e0ca" opacity=".8"/>
+  <ellipse cx="400" cy="492" rx="258" ry="48" fill="#cba98a" opacity=".32"/>
+  <g filter="url(#soft)">
+    <circle cx="400" cy="330" r="214" fill="url(#bowl)" stroke="#dfc9b0" stroke-width="6"/>
+    <circle cx="400" cy="330" r="184" fill="#f3e6d4"/>
+    <ellipse cx="400" cy="330" rx="170" ry="150" fill="#fffdf6"/>
+    <g fill="#e9ddc9" opacity=".7">
+      <ellipse cx="330" cy="260" rx="10" ry="5" transform="rotate(-18 330 260)"/>
+      <ellipse cx="380" cy="236" rx="10" ry="5" transform="rotate(12 380 236)"/>
+      <ellipse cx="440" cy="256" rx="10" ry="5" transform="rotate(-24 440 256)"/>
+      <ellipse cx="470" cy="304" rx="10" ry="5" transform="rotate(8 470 304)"/>
+      <ellipse cx="360" cy="330" rx="9" ry="4" transform="rotate(22 360 330)"/>
+    </g>
+    <path d="M300 300c34-30 92-26 114 10 22 36 6 88-34 100-40 12-88-10-94-50-4-24 4-44 14-60z" fill="url(#crisp)" stroke="#bf7727" stroke-width="5"/>
+    <path d="M410 348c26-22 68-18 82 10 14 28 0 64-30 74-32 10-68-8-72-38-2-18 8-34 20-46z" fill="url(#crisp)" stroke="#bf7727" stroke-width="4"/>
+    <g fill="#b86f21" opacity=".5">
+      <circle cx="338" cy="318" r="5"/><circle cx="374" cy="304" r="4"/><circle cx="352" cy="358" r="5"/><circle cx="446" cy="370" r="4"/>
+    </g>
+    <path d="M418 258c30-18 68-2 76 30 8 32-14 62-46 64" fill="#b3261e" opacity=".92"/>
+    <path d="M434 272c20-8 42 2 46 22" fill="none" stroke="#e2705f" stroke-width="7" stroke-linecap="round"/>
+    <g fill="#5d8f4e">
+      <circle cx="286" cy="382" r="17"/><circle cx="314" cy="404" r="13"/><circle cx="512" cy="300" r="14"/>
+    </g>
+    <g fill="#f4d9a7" opacity=".9"><circle cx="300" cy="266" r="4"/><circle cx="326" cy="248" r="3"/><circle cx="486" cy="406" r="4"/></g>
+  </g>
+  <text x="400" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#8a5a32" letter-spacing="4">GEPREK</text>
+</svg>

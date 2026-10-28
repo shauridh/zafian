@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+.git
+.vercel
+node_modules
+dist
+.screenshots
+artifacts
+supabase
+docs
+.agents
+.claude
+agent
+skills-lock.json
+*.log
