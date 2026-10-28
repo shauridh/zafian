@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Banknote, ChefHat, ChevronRight, Cloud, CreditCard, History, MoreHorizontal, Moon, Package, Plus, Printer, Receipt, ShoppingBag, Sun, X } from 'lucide-react'
 import { cashMovementsForShift, cashSalesForShift, expectedCashForShift, type CartItem, type CashMovement, type HeldOrder, type PaymentMethod, type PosStore, type PreOrder, type Shift, type Transaction } from './domain/pos'
-import { createAndStoreBackup, ensureDailyBackup } from './lib/backup'
+import { createAndStoreBackup, ensureDailyBackup, readLatestBackup } from './lib/backup'
 import { ensureCloudConnection, getCloudStatus, hydrateCloudStatus, subscribeCloudStatus, uploadBackupQuietly, type CloudStatus } from './lib/cloud-backup'
 import { enqueueSale, getSyncStatus, hydrateSyncStatus, pushOutboxQuietly, startRealtimeBridge, subscribeSyncStatus, syncNow, type SyncStatus } from './lib/sync-client'
 import { createId } from './lib/id'
@@ -82,20 +82,21 @@ export function App({ storageWarning }: AppProps = {}) {
   useEffect(() => { storeRef.current = store }, [store])
   useEffect(() => {
     let active = true
-    const runDailyBackup = () => {
-      void ensureDailyBackup(storeRef.current)
-        .then((result) => {
-          // Unggahan cloud berjalan di latar belakang; kegagalannya hanya muncul di status, bukan di kasir.
-          if (result.created && result.record) void uploadBackupQuietly(result.record)
-        })
-        .catch((error: unknown) => {
-          if (active) setStorageError(`Backup harian gagal: ${describeStorageError(error)}`)
-        })
+    const runAutomaticBackup = () => {
+      void (async () => {
+        const result = await ensureDailyBackup(storeRef.current)
+        // Backup terbaru tetap diunggah walau harian sudah dibuat: unggahan yang gagal dicoba lagi otomatis.
+        const record = result.record ?? await readLatestBackup()
+        if (record) void uploadBackupQuietly(record)
+      })().catch((error: unknown) => {
+        if (active) setStorageError(`Backup otomatis gagal: ${describeStorageError(error)}`)
+      })
     }
-    // Cek saat dibuka, lalu berkala agar pergantian hari tetap tercakup saat aplikasi dibiarkan terbuka.
-    runDailyBackup()
-    const timer = window.setInterval(runDailyBackup, 30 * 60 * 1000)
-    return () => { active = false; window.clearInterval(timer) }
+    // Cek saat dibuka, lalu berkala agar pergantian hari dan percobaan unggah ulang tetap tercakup.
+    runAutomaticBackup()
+    const timer = window.setInterval(runAutomaticBackup, 30 * 60 * 1000)
+    window.addEventListener('online', runAutomaticBackup)
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener('online', runAutomaticBackup) }
   }, [])
   useEffect(() => {
     let active = true
@@ -105,6 +106,9 @@ export function App({ storageWarning }: AppProps = {}) {
       const initial = await hydrateCloudStatus()
       if (active) setCloudStatus(initial)
       await ensureCloudConnection()
+      // Begitu sesi cloud tersambung, backup otomatis terbaru langsung diunggah tanpa aksi pemilik.
+      const latest = await readLatestBackup()
+      if (active && latest) void uploadBackupQuietly(latest)
     })()
     return () => { active = false; unsubscribe() }
   }, [])

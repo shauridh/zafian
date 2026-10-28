@@ -82,7 +82,7 @@ Dijalankan pada project production dengan sesi owner sungguhan (magic link) dan 
 
 1. Reset password owner seperti di atas.
 2. Buka aplikasi → **Backup → Backup cloud**. Isi: project URL `https://lwirpcrggtsxcooqlriz.supabase.co`, **anon/publishable key** (bukan secret/service role), outlet id `cbddce27-79ad-4d1c-9964-9364c806161a`, email owner + password baru, dan frasa sandi enkripsi (min. 8 karakter).
-3. Klik **Backup sekarang ke cloud** lalu cek snapshot muncul; unduh/restore sekali untuk membuktikan alur UI.
+3. Tidak ada tombol backup manual. Setelah sesi tersambung, snapshot otomatis diunggah (saat aplikasi dibuka, setiap 30 menit, dan setelah tutup shift); cek daftar snapshot lalu unduh/restore sekali untuk membuktikan alur UI.
 4. Ganti katalog contoh dan identitas toko lewat mode pemilik. Data operasional tetap IndexedDB per perangkat; tablet kedua tidak otomatis berbagi transaksi.
 
 ### Perintah

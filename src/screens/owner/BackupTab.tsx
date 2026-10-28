@@ -178,7 +178,6 @@ export function BackupTab({ store, setStore, notify }: OwnerTabProps) {
       <SyncPanel store={store} setStore={setStore} notify={notify} />
 
       <CloudBackupPanel
-        store={store}
         notify={notify}
         onRestoreRequest={(nextStore, meta, label) => setPendingRestore({ store: nextStore, meta, fileName: label })}
       />

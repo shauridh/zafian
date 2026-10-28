@@ -280,9 +280,18 @@ const failureStatus = await cloud.uploadBackupQuietly(otherRecord, { config, ses
 check('kegagalan unggah tidak melempar ke kasir', failureStatus.state === 'error')
 check('status gagal memuat pesan diagnostik', (failureStatus.lastError ?? '').length > 0)
 
+const retryRecord = createBackupRecord(store, 'daily', '2026-10-28T08:00:00.000Z')
 reset(() => { throw new Error('offline total') })
-const offlineStatus = await cloud.uploadBackupQuietly(createBackupRecord(store, 'daily', '2026-10-28T08:00:00.000Z'), { config, session, fetchImpl: fakeFetch })
+const offlineStatus = await cloud.uploadBackupQuietly(retryRecord, { config, session, fetchImpl: fakeFetch })
 check('jaringan mati → status error, bukan exception', offlineStatus.state === 'error' && (offlineStatus.lastError ?? '').includes('offline total'), offlineStatus.lastError)
+
+reset((call) => {
+  if (call.url.includes('/storage/v1/object/')) return new Response('{}', { status: 200 })
+  if (call.url.includes('/rest/v1/outlet_snapshots')) return new Response('', { status: 201 })
+  return new Response('{}', { status: 200 })
+})
+const retriedStatus = await cloud.uploadBackupQuietly(retryRecord, { config, session, fetchImpl: fakeFetch })
+check('backup otomatis dicoba ulang setelah jaringan pulih', retriedStatus.state === 'ok', JSON.stringify(retriedStatus))
 
 /* -------------------------------------------------------------------------- */
 /* 6. Daftar & restore                                                        */

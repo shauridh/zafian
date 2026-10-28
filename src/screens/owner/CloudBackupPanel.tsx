@@ -19,7 +19,6 @@ import {
   saveCloudSession,
   signInWithPassword,
   subscribeCloudStatus,
-  uploadBackupQuietly,
   listCloudSnapshots,
   validateCloudConfigInput,
   type CloudBackupConfig,
@@ -27,7 +26,6 @@ import {
   type CloudSnapshotRow,
   type CloudStatus,
 } from '../../lib/cloud-backup'
-import { createAndStoreBackup } from '../../lib/backup'
 import { mergeSupabaseDefaults, supabaseEnvDefaults } from '../../lib/env'
 import { ConfirmDialog, Field } from './ui'
 
@@ -62,12 +60,11 @@ function formatBytes(value: number): string {
 const ENV_DEFAULTS = supabaseEnvDefaults()
 
 type Props = {
-  store: PosStore
   notify: (message: string) => void
   onRestoreRequest: (store: PosStore, meta: BackupMeta, label: string) => void
 }
 
-export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
+export function CloudBackupPanel({ notify, onRestoreRequest }: Props) {
   const [config, setConfig] = useState<CloudBackupConfig | null>(null)
   const [session, setSession] = useState<CloudSession | null>(null)
   const [status, setStatus] = useState<CloudStatus>(() => getCloudStatus())
@@ -144,30 +141,6 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
       setStatus(await hydrateCloudStatus({ config: nextConfig }))
       await refreshList(nextConfig, nextSession)
       notify('Backup cloud aktif • kunci enkripsi dibuat (PBKDF2 + AES-GCM)')
-    } catch (caught) {
-      const message = describeCloudError(caught)
-      setError(message)
-      notify(message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const uploadNow = async () => {
-    if (!config?.enabled) return
-    setBusy(true)
-    setError('')
-    try {
-      const record = await createAndStoreBackup(store, 'manual')
-      const result = await uploadBackupQuietly(record, { config, session })
-      if (result.state === 'ok') {
-        notify('Snapshot manual terenkripsi dan terunggah')
-        if (session) await refreshList(config, session)
-      } else {
-        const message = result.lastError ?? 'Snapshot tidak terunggah'
-        setError(message)
-        notify(message)
-      }
     } catch (caught) {
       const message = describeCloudError(caught)
       setError(message)
@@ -321,7 +294,6 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
             <span>Perangkat ini memakai sesi pemilik yang tersimpan dan memperbarui token di latar belakang, jadi tidak perlu mengisi apa pun lagi setiap aplikasi dibuka. Buka panel ini hanya untuk mengganti akun, frasa sandi, atau memulihkan snapshot.</span>
           </div>
           <div className="owner-backup-actions">
-            <button className="owner-primary" onClick={() => void uploadNow()} disabled={busy}><CloudUpload size={15} /> Backup sekarang ke cloud</button>
             <button className="owner-ghost" onClick={() => { if (config && session) void refreshList(config, session) }} disabled={busy || !session}><RefreshCw size={15} /> Muat daftar snapshot</button>
             <button className="owner-ghost" onClick={() => void disconnect()} disabled={busy || !session}><LogOut size={15} /> Putuskan sesi</button>
             <button className="owner-ghost danger" onClick={() => setConfirmingDeactivate(true)} disabled={busy}><CloudOff size={15} /> Matikan backup cloud</button>
@@ -368,6 +340,11 @@ export function CloudBackupPanel({ store, notify, onRestoreRequest }: Props) {
           onCancel={() => setConfirmingDeactivate(false)}
         />
       )}
+
+      <div className="owner-setting-note">
+        <strong>Backup otomatis</strong>
+        <span>Tidak ada tombol backup manual. Snapshot dibuat otomatis setelah backup harian dan sebelum tutup shift, lalu diunggah di latar belakang; unggahan yang gagal dicoba ulang otomatis saat jaringan kembali.</span>
+      </div>
 
       <div className="owner-setting-note">
         <strong>Batas Fase 2</strong>

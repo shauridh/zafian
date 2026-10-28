@@ -565,6 +565,8 @@ check('form aktivasi cloud meminta URL, anon key, outlet, dan frasa sandi', ['UR
 const cloudUrlInput = window.document.querySelector('input[placeholder="https://xxxx.supabase.co"]') as HTMLInputElement | null
 check('form cloud tetap kosong tanpa env build', Boolean(cloudUrlInput) && cloudUrlInput.value === '')
 check('panel cloud menegaskan kasir tetap lokal', bodyText().includes('Kasir tetap bekerja dari IndexedDB'))
+check('tidak ada tombol backup cloud manual', !bodyText().includes('Backup sekarang ke cloud'))
+check('panel cloud menjelaskan backup otomatis + percobaan ulang', bodyText().includes('Backup otomatis') && bodyText().includes('dibuat otomatis') && bodyText().includes('dicoba ulang'), bodyText().slice(-320))
 check('panel sinkronisasi tampil di tab backup', bodyText().includes('Sinkronisasi katalog'))
 check('panel sync menampilkan seq, pull terakhir, dan antrean', ['Seq terakhir', 'Pull terakhir', 'Perubahan tertunda'].every((label) => bodyText().includes(label)))
 check('panel sync menjelaskan strategi konflik', bodyText().includes('Strategi konflik') && bodyText().includes('row_version'))
