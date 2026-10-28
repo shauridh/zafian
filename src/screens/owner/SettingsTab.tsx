@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bluetooth, DatabaseBackup, KeyRound, Printer, RefreshCw, Save, ShieldCheck, Smartphone, Store, SwatchBook, Unplug } from 'lucide-react'
+import { Bluetooth, DatabaseBackup, KeyRound, LogOut, Printer, RefreshCw, Save, ShieldCheck, Smartphone, Store, SwatchBook, Unplug } from 'lucide-react'
 
 import type { AppSettings, OwnerPinRecord, ReceiptAlign, ReceiptFontSize, ThemeMode } from '../../domain/settings'
 import {
@@ -10,6 +10,7 @@ import {
   type PrinterConnectionStatus,
 } from '../../lib/printer-connection'
 import { createId } from '../../lib/id'
+import { isOnlineMode, signOutOnline } from '../../lib/online'
 import { getPwaStatus, hydratePwaStatus, subscribePwaStatus, type PwaStatus } from '../../lib/pwa'
 import { buildTestReceiptText, printOutcomeMessage, printTestReceiptPreferred } from '../../lib/receipt'
 import { OwnerPinDialog } from '../../components/OwnerPinDialog'
@@ -34,6 +35,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
   const [printerBusy, setPrinterBusy] = useState(false)
   const [pinDialogOpen, setPinDialogOpen] = useState(false)
   const [pwa, setPwa] = useState<PwaStatus>(() => getPwaStatus())
+  const online = isOnlineMode()
 
   useEffect(() => { setTheme(store.settings.theme) }, [store.settings.theme])
   useEffect(() => {
@@ -295,7 +297,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
         </section>
 
         <section className="owner-settings-card">
-          <div className="owner-setting-head"><span className="owner-stat-icon"><DatabaseBackup size={17} /></span><div><h2>Data aplikasi</h2><p className="owner-muted">Tersimpan lokal di perangkat ini.</p></div></div>
+          <div className="owner-setting-head"><span className="owner-stat-icon"><DatabaseBackup size={17} /></span><div><h2>Data aplikasi</h2><p className="owner-muted">{online ? 'Tersimpan di Supabase untuk outlet ini.' : 'Tersimpan lokal di perangkat ini.'}</p></div></div>
           <div className="owner-metric-list">
             <div><span>Versi skema</span><b>{store.schemaVersion}</b></div>
             <div><span>Transaksi</span><b>{store.transactions.length}</b></div>
@@ -306,6 +308,15 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
           <button className="owner-ghost" onClick={() => goTab('backup')}><DatabaseBackup size={14} /> Buka backup & restore</button>
         </section>
 
+        {online && <section className="owner-settings-card">
+          <div className="owner-setting-head"><span className="owner-stat-icon"><LogOut size={17} /></span><div><h2>Akun & sesi</h2><p className="owner-muted">Perangkat ini memakai sesi Supabase dari akun yang sedang login.</p></div></div>
+          <button type="button" className="owner-ghost danger" onClick={() => { void signOutOnline().catch((error: unknown) => notify(error instanceof Error ? error.message : 'Gagal keluar dari akun')) }}><LogOut size={14} /> Keluar dari akun</button>
+          <div className="owner-setting-note">
+            <strong>Keamanan</strong>
+            <span>Semua data dilindungi RLS per outlet. Jangan pakai akun yang sama di dua perangkat untuk mengedit menu bersamaan — perubahan terakhir menang.</span>
+          </div>
+        </section>}
+
         <section className="owner-settings-card">
           <div className="owner-setting-head"><span className="owner-stat-icon"><Smartphone size={17} /></span><div><h2>Aplikasi & offline</h2><p className="owner-muted">Shell aplikasi disimpan agar kasir tetap bisa dibuka tanpa jaringan.</p></div></div>
           <div className="owner-metric-list">
@@ -315,7 +326,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
           </div>
           <div className="owner-setting-note">
             <strong>PWA</strong>
-            <span>{pwa.error || (pwa.active ? 'Setelah kunjungan pertama, aplikasi bisa dibuka ulang tanpa jaringan. Data tetap tersimpan di perangkat ini.' : 'Aktif setelah build produksi dimuat ulang. Mode pengembangan tidak mendaftarkan service worker.')}</span>
+            <span>{pwa.error || (pwa.active ? `Setelah kunjungan pertama, shell aplikasi bisa dibuka ulang tanpa jaringan. Data operasional ${online ? 'berada di Supabase dan butuh koneksi' : 'tetap tersimpan di perangkat ini'}.` : 'Aktif setelah build produksi dimuat ulang. Mode pengembangan tidak mendaftarkan service worker.')}</span>
           </div>
         </section>
       </div>

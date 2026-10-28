@@ -11,9 +11,11 @@
     "check:domain": "bun run scripts/domain-check.ts",
     "check:runtime": "bun run scripts/runtime-check.tsx",
     "check:ui": "bun run scripts/ui-check.ts",
-    "check:storage": "bun run scripts/storage-check.ts"
+    "check:storage": "bun run scripts/storage-check.ts",
+    "check:repo": "bun run scripts/repo-check.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "hono": "^4.13.0",
     "lucide-react": "^1.60.0",
     "motion": "^14.4.0",

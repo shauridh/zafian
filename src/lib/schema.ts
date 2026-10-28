@@ -316,7 +316,13 @@ function nextNumber(transactions: Transaction[], provided: unknown): number {
  * - seed katalog hanya dipakai bila daftar benar-benar kosong;
  * - data pengguna (harga, resep, riwayat) tidak ditimpa.
  */
-export function normalizeStore(input: unknown): PosStore {
+export type NormalizeOptions = {
+  /** false = jangan isi katalog contoh saat daftar kosong (dipakai data online). */
+  seed?: boolean
+}
+
+export function normalizeStore(input: unknown, options: NormalizeOptions = {}): PosStore {
+  const seed = options.seed !== false
   const raw = isObject(input) ? input : {}
   const menus = asArray(raw.menus).map(normalizeMenu).filter((item): item is Menu => item !== null)
   const ingredients = asArray(raw.ingredients).map(normalizeIngredient).filter((item): item is Ingredient => item !== null)
@@ -344,14 +350,14 @@ export function normalizeStore(input: unknown): PosStore {
     }]
   })
   const auditLog = asArray(raw.auditLog).map(normalizeAudit).filter((item): item is AuditEntry => item !== null)
-  const finalMenus = menus.length > 0 ? menus : cloneSeeds(seedMenus)
-  const finalIngredients = ingredients.length > 0 ? ingredients : cloneSeeds(seedIngredients)
+  const finalMenus = menus.length > 0 ? menus : seed ? cloneSeeds(seedMenus) : []
+  const finalIngredients = ingredients.length > 0 ? ingredients : seed ? cloneSeeds(seedIngredients) : []
   const finalCategories = mergeCategories(
-    storedCategories.length > 0 ? storedCategories : cloneSeeds(seedCategories),
+    storedCategories.length > 0 ? storedCategories : seed ? cloneSeeds(seedCategories) : [],
     finalMenus.map((menu) => menu.category),
   )
   const finalIngredientCategories = mergeCategories(
-    storedIngredientCategories.length > 0 ? storedIngredientCategories : cloneSeeds(seedIngredientCategories),
+    storedIngredientCategories.length > 0 ? storedIngredientCategories : seed ? cloneSeeds(seedIngredientCategories) : [],
     finalIngredients.map((ingredient) => ingredient.category),
   )
 

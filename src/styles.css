@@ -594,3 +594,57 @@
 }
 .modal-close { position: sticky; top: 0; float: right; margin: -12px -12px 0 0; }
 @media (min-width:641px) { .modal-close { position: absolute; float: none; margin: 0; } }
+
+/* Layar autentikasi Supabase (mode online) */
+.auth-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at 20% 10%, #ecfdf5, #f8fafc 55%);
+}
+.auth-card {
+  width: min(430px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 28px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+}
+.auth-card h1 { margin: 0; font-size: 24px; line-height: 1.2; color: #0f172a; }
+.auth-card label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: #334155; }
+.auth-card input {
+  width: 100%;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  font-size: 15px;
+  color: #0f172a;
+  background: #fff;
+}
+.auth-card input:focus { outline: 2px solid #0f766e; outline-offset: 1px; }
+.auth-submit {
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.auth-submit:hover { background: #115e59; }
+.auth-secondary {
+  padding: 10px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #334155;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-hint { margin: 0; font-size: 13px; line-height: 1.5; color: #64748b; }
+.auth-error { margin: 0; padding: 10px 12px; border-radius: 10px; background: #fef2f2; color: #b91c1c; font-size: 13px; line-height: 1.45; }
+.dark-theme ~ .auth-screen, .auth-screen.dark-theme { background: radial-gradient(circle at 20% 10%, #0b3b34, #020617 60%); }

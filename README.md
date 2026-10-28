@@ -1,9 +1,12 @@
 # Sabana POS — aplikasi kasir FnB
 
-POS offline-first untuk outlet FnB, dirancang untuk tablet dan mobile Android.
+POS untuk outlet FnB, dirancang untuk tablet dan mobile Android.
 Ada dua mode: **kasir** dan **pemilik**.
 
-> **Status backend (28 Oktober 2026):** seluruh integrasi Supabase (backup cloud, sinkronisasi, migration, wizard hosted) sudah **dihapus dari repo**. Aplikasi berjalan 100% lokal dari IndexedDB dan siap disambungkan ulang dari nol.
+> **Status backend (28 Oktober 2026):** aplikasi berjalan **100% online**. Data outlet — menu, bahan,
+> pembelian, transaksi, shift, dan pengaturan — disimpan di **Supabase** dan dilindungi RLS per outlet.
+> Tanpa env Supabase, build berjalan dalam **mode lokal** (demo) untuk pengembangan dan `check:ui`;
+> build produksi wajib mengisi env Supabase di Vercel.
 
 Tampilan mengikuti ukuran layar: di tablet lanskap katalog dan keranjang menggulir sendiri di dalam viewport sehingga tombol bayar selalu terlihat tanpa menggeser halaman; di tablet potret kedua panel berbagi satu viewport (masing-masing menggulir sendiri), sedangkan di ponsel halaman menggulir normal; mode pemilik memakai sidebar di layar lebar dan tab horizontal yang bisa digeser di layar sempit.
 
@@ -18,28 +21,37 @@ bun run check:domain    # domain: kas, HPP, forecast, jurnal, struk, migrasi sta
 bun run check:runtime   # jsdom: mount App, PIN, buka layar pemilik, ubah harga, kembali ke POS
 bun run check:ui        # Chromium: CRUD, kategori, gambar, bulk, printer, shift/struk, overflow
 bun run check:storage   # fake-indexeddb: migrasi localStorage, idempotensi, backup, gagal tulis
+bun run check:repo      # repo Supabase dengan gateway tiruan: load/save, diff, hapus, dokumen, error
 ```
 
 `bun run check:ui` memerlukan Chromium Playwright sekali: `bunx playwright install --with-deps chromium`. Skrip memakai dev server di `:3000` bila sedang hidup, atau menyalakan server Vite sendiri; set `UI_BASE_URL` untuk menunjuk server lain, `UI_CHECK_OWN_SERVER=1` untuk selalu menyalakan server sendiri (CI), dan `UI_CHECK_SCREENSHOTS=0` untuk mematikan screenshot. Screenshot tersimpan di `.screenshots/ui-check/` (gitignored). Hasil per pemeriksaan ditulis ke `artifacts/ui-check-report.json` bila `UI_CHECK_REPORT` diisi, atau `.screenshots/ui-check/report.json` bila tidak.
 
-Workflow `.github/workflows/ci.yml` menjalankan `bun run typecheck`, seluruh `check:*` (domain, runtime, storage), dan `check:ui` headless pada setiap push, lalu mengunggah laporan JSON + screenshot sebagai artefak.
+Workflow `.github/workflows/ci.yml` menjalankan `bun run typecheck`, seluruh `check:*` (domain, runtime, storage, repo), dan `check:ui` headless pada setiap push, lalu mengunggah laporan JSON + screenshot sebagai artefak.
 
 ## Deploy production di Vercel
 
-Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, jadi tidak memerlukan server API atau kredensial cloud saat build.
+Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase diakses langsung dari browser memakai anon key + RLS. Vercel hanya perlu build env, bukan server API.
 
-1. Import repo ke Vercel. Konfigurasi dari `vercel.json` sudah menetapkan **install** `bun install --frozen-lockfile`, **build** `bun run build`, dan **output** `dist/client`.
-2. Saat build di Vercel (`VERCEL=1`), plugin Worker Cloudflare dilewati sehingga hanya client SPA yang dibangun. Build lokal tetap membangun Worker untuk deployment Cloudflare.
-3. **Tidak ada environment variable yang wajib** untuk build, kasir, mode pemilik, PWA, maupun backup lokal. Jangan menaruh kredensial, token, atau kata sandi di Vercel.
+1. **Siapkan Supabase lebih dulu** — ikuti [`supabase/README.md`](supabase/README.md): jalankan `0001_init.sql` + `0002_rls.sql`, aktifkan provider Email, dan buat akun pemilik.
+2. Import repo ke Vercel. Konfigurasi dari `vercel.json` menetapkan **install** `bun install --frozen-lockfile`, **build** `bun run build`, dan **output** `dist/client`.
+3. Isi **Environment Variables** (Production dan Preview):
+
+   | Variabel | Wajib | Isi |
+   | --- | --- | --- |
+   | `VITE_SUPABASE_URL` | ya | `https://<ref>.supabase.co` |
+   | `VITE_SUPABASE_ANON_KEY` | ya | anon/publishable key dari Project Settings → API |
+   | `VITE_OUTLET_ID` | tidak | kosongkan agar outlet diambil dari akun staf |
+
+   **Redeploy wajib setelah mengubah env**, karena Vite menanamkan nilai saat build. Jangan memakai `service_role` key, kata sandi database, atau password pemilik di klien.
 4. Deploy menghasilkan URL HTTPS. HTTPS wajib untuk PIN (`crypto.subtle`) dan Web Bluetooth; service worker hanya aktif pada build production.
-5. `vercel.json` menambahkan rewrite SPA agar refresh/deep link kembali ke `index.html`, header keamanan, cache `sw.js` yang tidak lengket, serta tipe konten manifest.
-6. Jalankan `bunx vercel --prod` hanya setelah login Vercel, atau gunakan tombol deploy di dashboard. Deploy tidak dilakukan otomatis oleh repo ini.
+5. Buka aplikasi → masuk dengan akun pemilik → akun baru tanpa outlet akan diminta **Buat outlet pertama** (RPC `create_outlet`). Setelah itu katalog contoh terisi sekali dan bisa diubah dari mode pemilik.
+6. `vercel.json` menambahkan rewrite SPA agar refresh/deep link kembali ke `index.html`, header keamanan, cache `sw.js` yang tidak lengket, serta tipe konten manifest.
 
-Catatan: endpoint Hono di `src/worker/index.ts` hanya tersedia pada deployment Cloudflare, bukan pada deployment Vercel statis. Aplikasi POS tidak memanggil endpoint tersebut. Data operasional tetap per perangkat di IndexedDB; untuk multi-perangkat gunakan backup cloud/restore atau sinkronisasi yang sudah dikonfigurasi.
+Catatan: endpoint Hono di `src/worker/index.ts` hanya tersedia pada deployment Cloudflare, bukan pada deployment Vercel statis. Aplikasi POS tidak memanggil endpoint tersebut. Data operasional berada di Supabase sehingga beberapa perangkat melihat outlet yang sama (last-write-wins per baris).
 
 ## PWA & offline
 
-`bun run build` menyalin `manifest.webmanifest` + ikon 192/512/maskable dan menghasilkan `sw.js` yang mem-precache shell (`/`, JS/CSS ber-hash, ikon, aset menu) dengan nama cache berversi per build. `/index.html` sengaja tidak di-precache karena hosting produksi me-redirect-nya ke `/`, dan respons redirect tidak boleh memenuhi navigasi offline. Service worker hanya didaftarkan pada build produksi; navigasi memakai network-first dengan fallback `index.html` dari cache (deep link tetap bekerja), aset memakai stale-while-revalidate, dan request non-GET serta `/api/*` tidak pernah di-cache. Status service worker dan ketersediaan install tampil di **Pengaturan → Aplikasi & offline**. `check:ui` membangun produksi, menyajikannya lokal, memutus jaringan, lalu reload untuk membuktikan shell dan katalog tetap berfungsi.
+`bun run build` menyalin `manifest.webmanifest` + ikon 192/512/maskable dan menghasilkan `sw.js` yang mem-precache shell (`/`, JS/CSS ber-hash, ikon, aset menu) dengan nama cache berversi per build. `/index.html` sengaja tidak di-precache karena hosting produksi me-redirect-nya ke `/`, dan respons redirect tidak boleh memenuhi navigasi offline. Service worker hanya didaftarkan pada build produksi; navigasi memakai network-first dengan fallback `index.html` dari cache (deep link tetap bekerja), aset memakai stale-while-revalidate, dan request non-GET serta `/api/*` tidak pernah di-cache. Status service worker dan ketersediaan install tampil di **Pengaturan → Aplikasi & offline**. `check:ui` membangun produksi, menyajikannya lokal, memutus jaringan, lalu reload untuk membuktikan shell dan katalog tetap berfungsi. Pada mode online, shell tetap dimuat offline tetapi data Supabase baru tersedia setelah jaringan kembali.
 
 ## Alur kasir
 
@@ -99,7 +111,10 @@ Aplikasi ini **murni web** saat ini: tidak ada folder Capacitor/Android, `capaci
 
 ## Data, skema, dan migrasi
 
-- Penyimpanan utama adalah **IndexedDB** (`sabana-pos` → object store `kv`, key `pos-store`) melalui `src/lib/storage.ts`. `localStorage` hanya menjadi fallback runtime lama/WebView dan lokasi migrasi satu kali.
+- **Mode online (produksi):** env Supabase terisi → aplikasi meminta login, membaca seluruh data outlet dari tabel Supabase, lalu setiap perubahan dikirim sebagai upsert baris yang berubah (hapus dikirim sebagai delete). `src/lib/repo/*` adalah satu-satunya jalur data; IndexedDB tidak ditulis. Bila jaringan gagal, penyimpanan ditolak dan alert muncul di aplikasi (tidak ada antrean offline).
+- **Mode lokal (tanpa env, untuk pengembangan/check:ui):** data memakai **IndexedDB** (`sabana-pos` → object store `kv`, key `pos-store`) melalui `src/lib/storage.ts`; `localStorage` hanya fallback runtime lama/WebView dan lokasi migrasi satu kali. Mode ini bukan mode produksi.
+- Skema Supabase ada di `supabase/migrations/` (tabel per entitas, RLS per outlet, trigger `transaction_items`, RPC `create_outlet`). Detail operasional ada di [`supabase/README.md`](supabase/README.md).
+- Konflik antar perangkat memakai *last-write-wins* lewat `updated_at`; tidak ada merge per field.
 - Saat pertama dibuka, state `sabana-pos-store-v1` dari localStorage dimigrasikan ke IndexedDB. Migrasi hanya berjalan bila key `pos-store` belum ada, ditandai `meta:legacy-migration`, dan **tidak menghapus** data lama. Membuka ulang tidak menimpa IndexedDB.
 - Kegagalan tulis/kuota penuh ditampilkan sebagai alert penyimpanan di aplikasi dengan tombol coba lagi; tidak ada catch kosong pada jalur simpan.
 - Versi skema saat ini `8`, disimpan di field `schemaVersion` dan key `sabana-pos-schema-version`.
@@ -133,6 +148,9 @@ Aplikasi ini **murni web** saat ini: tidak ada folder Capacitor/Android, `capaci
 - Dev server bind `0.0.0.0:3000`: `/`, `/src/main.tsx`, `/src/App.tsx`, `/src/lib/storage.ts`, `/src/lib/pin.ts`, `/src/lib/backup.ts`, `/src/components/OwnerPinDialog.tsx`, `/src/screens/owner/BackupTab.tsx`, `/src/screens/owner/SettingsTab.tsx`, dan `/src/styles.css` merespons HTTP 200.
 - Ikon tombol dapat diganti di `public/icons/`; ilustrasi menu di `public/menu/`.
 
+- `bun run check:repo` — **34 pemeriksaan lolos** dengan gateway Supabase tiruan: round-trip snapshot, seed ber-ID uuid + referensi resep, penyimpanan idempoten (tanpa perubahan = nol tulis), upsert per baris, hapus baris, dokumen kas/audit/pre-order/beban, numeric PostgREST berbentuk string, isolasi outlet, dan penolakan error jaringan.
+- **Mode online (login Supabase, RLS, migration) belum diuji end-to-end** pada turn ini karena tidak ada kredensial project nyata. Validasi SQL baru sebatas review, dan validasi data memakai gateway tiruan (`check:repo`). Login/RLS perlu diuji manual setelah project Supabase dibuat.
+
 ### Uji manual cepat
 
 1. Buka aplikasi dari data localStorage lama → pastikan katalog/transaksi lama muncul, lalu buka DevTools → Application → IndexedDB → `sabana-pos` → `kv` → key `pos-store`.
@@ -150,13 +168,15 @@ Aplikasi ini **murni web** saat ini: tidak ada folder Capacitor/Android, `capaci
 
 ## Batasan saat ini
 
-- Kategori bahan (`ingredientCategories`) dan pengaturan perangkat (nama printer, auto-print, PIN, tema) tetap lokal saja sesuai audit skema.
+- Saat mode online, seluruh data outlet (termasuk kategori bahan dan pengaturan printer/PIN) berada di Supabase, bukan di perangkat. Multi-perangkat membaca outlet yang sama; perubahan terakhir menang per baris.
 - Google Sheets belum terhubung; tersedia ekspor CSV sebagai jalur laporan.
 - Build saat ini murni web; belum ada wrapper Capacitor/Android. Jalur native hanya aktif bila shell masa depan menyediakan `window.SabanaPrinter`.
 - Cetak memakai Web Bluetooth untuk printer thermal **BLE** dan otomatis jatuh ke dialog print WebView/Android bila belum terhubung. Printer **Bluetooth Classic/SPP** memerlukan bridge native dan belum bisa dipakai langsung dari browser.
 - Pairing Web Bluetooth bergantung pada browser (Chrome/Edge Android atau desktop, HTTPS/localhost) dan izin perangkat; pada WebView tanpa Web Bluetooth panel menampilkan transport **Dialog cetak sistem** dan tombol pairing dinonaktifkan.
 - Belum ada verifikasi dengan printer fisik pada sesi ini; pengujian memakai mock BLE/native dan jsdom.
 - Foto menu disimpan sebagai data URL di IndexedDB (maks. 560 px JPEG). Backup JSON memuat foto tersebut; untuk katalog sangat besar, kapasitas perangkat tetap perlu dipantau.
-- Backup tersimpan di perangkat yang sama; unduh file JSON secara rutin untuk salinan di luar perangkat. Backup cloud otomatis belum ada karena integrasi Supabase sudah dihapus dan akan dibangun ulang.
+- Backup JSON otomatis/unduh tetap tersedia sebagai ekspor eksplisit dan disimpan di perangkat; sumber kebenaran tetap Supabase. Belum ada backup cloud otomatis terjadwal.
 - PIN memakai `crypto.subtle`; buka aplikasi lewat **HTTPS atau localhost**. Pada origin HTTP LAN biasa, PIN tidak bisa dibuat/diverifikasi (aplikasi menampilkan pesan; kasir tetap bisa berjualan, tetapi mode pemilik terkunci sampai origin aman dipakai).
-- Capacitor/SQLite dan backend cloud (dihapus 2026-10-28) adalah tahap berikutnya; penyambungan Supabase + Vercel akan dimulai dari nol sesuai rencana di `docs/superpowers/plans/`.
+- Gambar menu disimpan sebagai URL/data URL di kolom `menu_items.image_url`. Data URL besar membebani baris database; untuk katalog besar, gunakan Supabase Storage dan simpan URL-nya.
+- Antrean offline belum ada: di mode online, transaksi memerlukan koneksi ke Supabase. Shell PWA tetap bisa dibuka offline, tetapi data tidak dapat dimuat/ditulis sampai jaringan kembali.
+- Migration Supabase belum dieksekusi ke project nyata pada turn ini; validasi baru sebatas review SQL + `check:repo` dengan gateway tiruan.

@@ -206,6 +206,14 @@ export function getCachedJson<T>(key: string): T | undefined {
   return memory.has(key) ? memory.get(key) as T : undefined
 }
 
+/**
+ * Isi cache memori tanpa menulis ke backend. Dipakai mode online: data berasal
+ * dari Supabase dan IndexedDB tidak menjadi sumber kebenaran.
+ */
+export function primeStorageCache(key: string, value: unknown): void {
+  memory.set(key, value)
+}
+
 export async function readJson<T>(key: string): Promise<T | undefined> {
   if (memory.has(key)) return memory.get(key) as T
   if (backend === 'indexeddb') {

@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import { App } from './App'
+import { OnlineApp } from './OnlineApp'
 import { registerPwa } from './lib/pwa'
 import { initStorage } from './lib/storage'
 import './styles.css'
@@ -18,7 +18,7 @@ void initStorage()
   .then((storage) => {
     root.render(
       <StrictMode>
-        <App storageWarning={storage.warning} />
+        <OnlineApp storageWarning={storage.warning} />
       </StrictMode>,
     )
   })

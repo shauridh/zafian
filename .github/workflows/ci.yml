@@ -45,6 +45,9 @@ jobs:
       - name: check:storage
         run: bun run check:storage
 
+      - name: check:repo (Supabase, gateway tiruan)
+        run: bun run check:repo
+
       - name: check:ui (Chromium headless)
         run: bun run check:ui
 

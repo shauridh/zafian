@@ -1,5 +1,6 @@
 import { SCHEMA_VERSION, type PosStore } from '../domain/pos'
 import { createBackupRecord, inspectBackup, serializeBackup } from './backup'
+import { getOnlineDriver } from './online'
 import { normalizeStore } from './schema'
 import { getCachedJson, PRIMARY_STORAGE_KEY, rememberSchemaVersion, writeJson } from './storage'
 
@@ -23,6 +24,12 @@ export function loadPosStore(): PosStore {
 
 export async function savePosStore(store: PosStore): Promise<void> {
   const normalized = normalizeStore(store)
+  const online = getOnlineDriver()
+  if (online) {
+    // Sumber kebenaran = Supabase; IndexedDB tidak ditulis saat mode online.
+    await online.save(normalized)
+    return
+  }
   await writeJson(PRIMARY_STORAGE_KEY, normalized)
   rememberSchemaVersion(SCHEMA_VERSION)
 }
