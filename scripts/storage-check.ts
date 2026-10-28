@@ -19,6 +19,8 @@ Object.defineProperty(globalThis, 'localStorage', { value: new MemoryStorage(), 
 
 const storage = await import('../src/lib/storage')
 const backup = await import('../src/lib/backup')
+const persistence = await import('../src/lib/persistence')
+const online = await import('../src/lib/online')
 const { normalizeStore } = await import('../src/lib/schema')
 const { SCHEMA_VERSION } = await import('../src/domain/pos')
 
@@ -105,6 +107,25 @@ try {
   Object.defineProperty(URL, 'revokeObjectURL', { value: originalRevokeObjectUrl, configurable: true })
 }
 check('backup bisa diunduh sebagai file JSON', downloadedFile.endsWith('.json') && downloadedFile.includes('before-shift-close'), downloadedFile)
+
+// Regression: outlet online yang kosong tidak boleh diisi katalog contoh.
+// Katalog seed memakai ID slug ("paket", "dada") yang bukan UUID sehingga
+// upsert ke Supabase ditolak 22P02. Seed hanya untuk mode lokal.
+const emptyOnline = normalizeStore({}, { seed: false })
+storage.primeStorageCache('pos-store', emptyOnline)
+const onlineLoaded = persistence.loadPosStore({ seed: false })
+check('mode online tidak mengisi seed saat outlet kosong', onlineLoaded.menus.length === 0 && onlineLoaded.ingredients.length === 0 && onlineLoaded.categories.length === 0, `menu=${onlineLoaded.menus.length} bahan=${onlineLoaded.ingredients.length} kategori=${onlineLoaded.categories.length}`)
+check('tidak ada ID slug seed pada outlet online', ![...onlineLoaded.menus, ...onlineLoaded.ingredients, ...onlineLoaded.categories].some((item) => ['paket', 'dada', 'teh', 'tepung-bumbu'].includes(item.id)))
+const localLoaded = persistence.loadPosStore()
+check('mode lokal tetap mengisi katalog contoh', localLoaded.menus.length > 0 && localLoaded.ingredients.length > 0, `menu=${localLoaded.menus.length} bahan=${localLoaded.ingredients.length}`)
+let onlineSavedMenus = -1
+online.setOnlineDriver({ save: async (value) => { onlineSavedMenus = value.menus.length }, flush: async () => {} })
+try {
+  await persistence.savePosStore(emptyOnline)
+} finally {
+  online.setOnlineDriver(null)
+}
+check('simpan online tidak menambahkan katalog contoh', onlineSavedMenus === 0, String(onlineSavedMenus))
 
 await storage.resetStorageForTests()
 const originalConsoleError = console.error

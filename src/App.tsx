@@ -3,6 +3,7 @@ import { Banknote, ChefHat, ChevronRight, Cloud, CreditCard, History, MoreHorizo
 import { cashMovementsForShift, cashSalesForShift, expectedCashForShift, type CartItem, type CashMovement, type HeldOrder, type PaymentMethod, type PosStore, type PreOrder, type Shift, type Transaction } from './domain/pos'
 import { createAndStoreBackup, ensureDailyBackup } from './lib/backup'
 import { createId } from './lib/id'
+import { isOnlineMode } from './lib/online'
 import { loadPosStore, savePosStore } from './lib/persistence'
 import { describeStorageError } from './lib/storage'
 import { brandingFromSettings, printOutcomeMessage, printReceiptPreferred } from './lib/receipt'
@@ -45,8 +46,8 @@ export function App({ storageWarning }: AppProps = {}) {
   const [voidReason, setVoidReason] = useState('')
   const [preOrderCustomer, setPreOrderCustomer] = useState('')
   const [preOrderPickup, setPreOrderPickup] = useState('')
-  const [store, setStore] = useState<PosStore>(() => loadPosStore())
-  const [activeShiftId, setActiveShiftId] = useState(() => loadPosStore().shifts.find((shift) => shift.status === 'open')?.id ?? '')
+  const [store, setStore] = useState<PosStore>(() => loadPosStore({ seed: !isOnlineMode() }))
+  const [activeShiftId, setActiveShiftId] = useState(() => loadPosStore({ seed: !isOnlineMode() }).shifts.find((shift) => shift.status === 'open')?.id ?? '')
   const [ownerTab, setOwnerTab] = useState<OwnerTab>('ringkasan')
   const [storageError, setStorageError] = useState('')
   const [storageWarningDismissed, setStorageWarningDismissed] = useState(false)

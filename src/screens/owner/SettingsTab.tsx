@@ -11,7 +11,7 @@ import {
 } from '../../lib/printer-connection'
 import { createId } from '../../lib/id'
 import { isOnlineMode, signOutOnline } from '../../lib/online'
-import { getPwaStatus, hydratePwaStatus, subscribePwaStatus, type PwaStatus } from '../../lib/pwa'
+import { getPwaStatus, hydratePwaStatus, promptPwaInstall, subscribePwaStatus, type PwaStatus } from '../../lib/pwa'
 import { buildTestReceiptText, printOutcomeMessage, printTestReceiptPreferred } from '../../lib/receipt'
 import { OwnerPinDialog } from '../../components/OwnerPinDialog'
 import type { OwnerTabProps } from './types'
@@ -172,6 +172,13 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
     notify(printOutcomeMessage(outcome))
   }
 
+  const installPwa = async () => {
+    const outcome = await promptPwaInstall()
+    if (outcome === 'accepted') notify('Aplikasi dipasang ke layar utama')
+    else if (outcome === 'dismissed') notify('Pemasangan dibatalkan')
+    else notify('Gunakan menu Chrome ⋮ → Instal aplikasi / Tambahkan ke layar utama')
+  }
+
   return (
     <>
       <div className="owner-settings-grid">
@@ -231,6 +238,10 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
             <div className="owner-setting-note">
               <strong>Transport & pairing</strong>
               <span>{printerStatus.kind === 'native' ? 'Bridge native aktif. Printer BLE maupun Classic/SPP ditangani shell Android; aplikasi web hanya mengirim payload ESC/POS.' : printerStatus.kind === 'web-bluetooth' ? 'Web Bluetooth aktif di Chrome/Edge (HTTPS). Hanya printer BLE yang didukung; printer Classic/SPP memerlukan bridge native.' : 'Runtime ini hanya bisa membuka dialog cetak sistem. Untuk pairing langsung, jalankan di Chrome/Edge Android atau pasang shell Android dengan bridge native.'}</span>
+            </div>
+            <div className="owner-setting-note">
+              <strong>Panduan pairing RPP02N</strong>
+              <span>Nyalakan printer → tekan <b>Cari &amp; pasangkan</b> → pilih <b>RPP02N</b> → tunggu status <b>TERHUBUNG</b> → <b>Tes cetak struk</b> → <b>Simpan pengaturan</b>. Pairing harus dilakukan dari Chrome di tablet (HTTPS), bukan dari preview desktop. Jika RPP02N tidak muncul, printer mungkin Bluetooth Classic/SPP; gunakan dialog cetak sistem atau shell Android dengan bridge native.</span>
             </div>
           </div>
 
@@ -322,7 +333,12 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
           <div className="owner-metric-list">
             <div><span>Service worker</span><b>{pwa.active ? 'Aktif' : pwa.production ? 'Belum aktif' : 'Mode pengembangan'}</b></div>
             <div><span>Shell offline</span><b>{pwa.controller ? 'Siap' : 'Belum siap'}</b></div>
-            <div><span>Install ke layar utama</span><b>{pwa.installed ? 'Sudah terpasang' : pwa.canInstall ? 'Tersedia' : 'Belum tersedia'}</b></div>
+            <div><span>Install ke layar utama</span><b>{pwa.installed ? 'Sudah terpasang' : pwa.canInstall ? 'Tersedia' : 'Lewat menu Chrome'}</b></div>
+          </div>
+          {pwa.canInstall && !pwa.installed && <button type="button" className="owner-primary" onClick={() => void installPwa()}><Smartphone size={14} /> Instal aplikasi</button>}
+          <div className="owner-setting-note">
+            <strong>Cara install di Chrome</strong>
+            <span>{pwa.installed ? 'Aplikasi sudah terpasang dan berjalan sebagai PWA.' : 'Buka Chrome di tablet → menu ⋮ → pilih "Instal aplikasi" atau "Tambahkan ke layar utama". Jika opsi belum muncul, pastikan halaman dibuka lewat HTTPS, tunggu service worker aktif, lalu muat ulang. Tombol Instal aplikasi di atas muncul bila Chrome menawarkan pemasangan otomatis.'}</span>
           </div>
           <div className="owner-setting-note">
             <strong>PWA</strong>

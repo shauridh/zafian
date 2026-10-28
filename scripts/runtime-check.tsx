@@ -488,6 +488,8 @@ const printerPinInput = window.document.querySelector('input[aria-label="PIN pem
 if (printerPinInput) setInput(printerPinInput, ownerPin)
 await clickByTextAsync('Buka')
 check('pengaturan terbuka setelah PIN benar', bodyText().includes('Printer & struk'))
+check('panduan pairing RPP02N tampil di pengaturan', bodyText().includes('Panduan pairing RPP02N'), bodyText().slice(0, 200))
+check('instruksi install PWA di Chrome tampil', bodyText().includes('Cara install di Chrome') && bodyText().includes('Tambahkan ke layar utama'), bodyText().slice(0, 200))
 
 clickByText('Kasir')
 clickByLabel('Menu')
