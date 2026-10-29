@@ -115,7 +115,15 @@ const promoReceipt = buildReceiptText(cashSale, {
   promo: 'Promo hari ini\nBeli 2 gratis 1',
 })
 check('struk memuat baris promo', promoReceipt.includes('Promo hari ini') && promoReceipt.includes('Beli 2 gratis 1'), JSON.stringify(promoReceipt.slice(-120)))
-check('baris promo tampil sebelum footer', promoReceipt.indexOf('Promo hari ini') < promoReceipt.indexOf('Terima kasih'))
+check('baris promo tampil di bawah catatan kaki', promoReceipt.indexOf('Promo hari ini') > promoReceipt.indexOf('Terima kasih'))
+
+const longPromo = 'Promo akhir pekan: gratis es teh untuk setiap pembelian dua paket ayam geprek spesial'
+const wrappedPromo = buildReceiptText(cashSale, { businessName: 'SABANA FRIED CHICKEN', outletName: 'Outlet utama', footer: 'Terima kasih', paperWidth: 58, promo: longPromo })
+const wrappedLines = wrappedPromo.split('\n')
+const wrappedFooterIndex = wrappedLines.findIndex((receiptLine) => receiptLine.trim() === 'Terima kasih')
+const wrappedPromoLines = wrappedLines.slice(wrappedFooterIndex + 2)
+check('promo panjang dibungkus tanpa terpotong', wrappedPromoLines.every((receiptLine) => receiptLine.length <= 32) && wrappedPromoLines.join(' ').replace(/\s+/g, ' ').trim() === longPromo, JSON.stringify(wrappedPromoLines))
+check('promo panjang tetap di tengah', wrappedPromoLines.every((receiptLine) => receiptLine.length - receiptLine.trimStart().length === Math.floor((32 - receiptLine.trim().length) / 2)), JSON.stringify(wrappedPromoLines))
 
 // ---- Migrasi state versi lama ----
 const legacyState = {

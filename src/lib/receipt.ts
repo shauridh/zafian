@@ -70,6 +70,20 @@ function alignLine(text: string, width: number, align: ReceiptAlign): string {
   return `${' '.repeat(Math.max(0, Math.floor((width - clipped.length) / 2)))}${clipped}`
 }
 
+/** Bungkus teks per kata agar tidak terpotong oleh lebar kertas thermal. */
+function wrapLine(text: string, width: number): string[] {
+  const lines: string[] = []
+  let rest = text.trim()
+  while (rest.length > width) {
+    let cut = rest.lastIndexOf(' ', width)
+    if (cut <= 0) cut = width
+    lines.push(rest.slice(0, cut).trim())
+    rest = rest.slice(cut).trim()
+  }
+  if (rest) lines.push(rest)
+  return lines
+}
+
 /** Teks struk siap kirim ke printer thermal 58/80 mm. */
 export function buildReceiptText(transaction: Transaction, branding: ReceiptBranding = {}): string {
   const config = resolveBranding(branding)
@@ -99,12 +113,14 @@ export function buildReceiptText(transaction: Transaction, branding: ReceiptBran
   }
   if (transaction.status !== 'completed') rows.push(`STATUS: ${transaction.status.toUpperCase()}`)
   rows.push(line)
+  for (const footerLine of config.footer.split('\n')) rows.push(alignLine(footerLine, width, config.footerAlign))
   const promoLines = config.promo.split('\n').map((promoLine) => promoLine.trim()).filter(Boolean).slice(0, 3)
   if (promoLines.length > 0) {
-    for (const promoLine of promoLines) rows.push(alignLine(promoLine, width, config.footerAlign))
     rows.push(line)
+    for (const promoLine of promoLines) {
+      for (const wrapped of wrapLine(promoLine, width)) rows.push(alignLine(wrapped, width, 'center'))
+    }
   }
-  for (const footerLine of config.footer.split('\n')) rows.push(alignLine(footerLine, width, config.footerAlign))
   return rows.join('\n')
 }
 

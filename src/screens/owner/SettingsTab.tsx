@@ -193,7 +193,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
           <Field label="Nama usaha"><input value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="SABANA FRIED CHICKEN" /></Field>
           <Field label="Nama outlet"><input value={outletName} onChange={(event) => setOutletName(event.target.value)} placeholder="Outlet utama" /></Field>
           <Field label="Catatan kaki struk" hint="Mis. ucapan terima kasih atau nomor WhatsApp outlet."><textarea className="owner-textarea" value={receiptFooter} onChange={(event) => setReceiptFooter(event.target.value)} rows={3} /></Field>
-          <Field label="Baris promo struk" hint="Opsional. Satu baris per baris, maksimal 3 baris; tampil di atas catatan kaki."><textarea className="owner-textarea" value={receiptPromo} onChange={(event) => setReceiptPromo(event.target.value)} rows={2} placeholder="Promo: Beli 2 gratis 1" /></Field>
+          <Field label="Baris promo struk" hint="Opsional. Satu baris per baris, maksimal 3 baris; tampil di bawah catatan kaki, teks panjang dibungkus dan tetap di tengah."><textarea className="owner-textarea" value={receiptPromo} onChange={(event) => setReceiptPromo(event.target.value)} rows={2} placeholder="Promo: Beli 2 gratis 1" /></Field>
         </section>
 
         <section className="owner-settings-card">
