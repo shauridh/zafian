@@ -236,6 +236,11 @@
 .image-drop-copy small { font-size:10px; opacity:.6; line-height:1.4; }
 .image-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:5px; }
 .image-actions .owner-ghost { height:30px; padding:0 8px; font-size:10px; }
+.recipe-copy { margin-top:10px; }
+.recipe-copy-row { display:grid; grid-template-columns:1fr auto; gap:6px; }
+.recipe-copy-row input { height:38px; padding:0 9px; border:1px solid var(--color-line-strong); border-radius:8px; background:var(--color-surface-2); color:inherit; font-size:12px; }
+.recipe-copy-row .owner-ghost { height:38px; padding:0 10px; font-size:11px; white-space:nowrap; }
+.recipe-copy-note { margin:6px 0 0; }
 .recipe-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; max-height:280px; overflow:auto; padding-right:2px; }
 .recipe-row { display:grid; grid-template-columns:1.6fr .7fr .55fr .8fr 26px; gap:5px; align-items:center; }
 .recipe-row select, .recipe-row input { height:34px; min-width:0; padding:0 7px; border:1px solid var(--color-line-strong); border-radius:7px; background:var(--color-surface-2); font-size:10.5px; }

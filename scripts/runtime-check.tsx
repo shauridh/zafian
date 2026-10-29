@@ -194,6 +194,28 @@ if (saveMenu) act(() => { saveMenu.dispatchEvent(new window.MouseEvent('click', 
 check('editor tertutup setelah simpan', !window.document.querySelector('.modal.editor'))
 check('notifikasi perubahan menu tampil', bodyText().includes('diperbarui'))
 
+clickByText('Menu baru')
+const newMenuEditor = window.document.querySelector('.modal.editor')
+check('form menu baru menyediakan salin resep', Boolean(newMenuEditor?.querySelector('[aria-label="Menu sumber resep"]')))
+const copySourceSelect = newMenuEditor?.querySelector('[aria-label="Menu sumber resep"]') as HTMLSelectElement | null
+const copyFactorInput = newMenuEditor?.querySelector('[aria-label="Faktor porsi resep"]') as HTMLInputElement | null
+if (copySourceSelect) {
+  const dadaOption = [...copySourceSelect.options].find((option) => option.textContent?.includes('Ayam Dada + Nasi'))
+  check('menu sumber resep tersedia di pilihan', Boolean(dadaOption))
+  if (dadaOption) setSelect(copySourceSelect, dadaOption.value)
+}
+if (copyFactorInput) setInput(copyFactorInput, '2')
+const copyRecipeButton = [...(newMenuEditor?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Salin resep')
+if (copyRecipeButton) act(() => { copyRecipeButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+const copiedRows = [...(newMenuEditor?.querySelectorAll('.recipe-row') ?? [])]
+check('salin resep mengisi seluruh baris resep', copiedRows.length === 9, String(copiedRows.length))
+const firstCopiedQty = copiedRows[0]?.querySelector('input[type="number"]') as HTMLInputElement | null
+check('porsi salinan mengikuti faktor 2', firstCopiedQty?.value === '2', String(firstCopiedQty?.value))
+check('catatan salin resep tampil', bodyText().includes('disalin (2× porsi)'), bodyText().slice(-160))
+const cancelNewMenu = [...(newMenuEditor?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Batal')
+if (cancelNewMenu) act(() => { cancelNewMenu.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+check('editor menu baru tertutup tanpa menyimpan', !window.document.querySelector('.modal.editor'))
+
 clickByText('Pengaturan')
 check('tab pengaturan terbuka', bodyText().includes('Printer & struk'))
 check('pengaturan printer 58/80 mm tersedia', bodyText().includes('58 mm') && bodyText().includes('80 mm'))

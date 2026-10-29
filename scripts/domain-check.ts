@@ -1,6 +1,6 @@
 import { buildJournals, balanceSheet, chartOfAccounts, pnl, trialBalance } from '../src/domain/accounting'
 import { buildOverviewSummary, percentDelta, resolvePeriod } from '../src/domain/analytics'
-import { defaultRecipeQty, menuHpp, menuMargin, mergeIngredientUsage, seedCategories, seedIngredientCategories, seedIngredients, seedMenus } from '../src/domain/catalog'
+import { defaultRecipeQty, menuHpp, menuMargin, mergeIngredientUsage, scaleRecipe, seedCategories, seedIngredientCategories, seedIngredients, seedMenus } from '../src/domain/catalog'
 import { createDefaultSettings } from '../src/domain/settings'
 import { cogsForTransactions, inventoryRows } from '../src/domain/inventory'
 import { cashSalesForShift, expectedCashForShift, initialPosStore, preOrderCanStartProcessing, preOrderRemaining, SCHEMA_VERSION, type PosStore, type Shift, type Transaction } from '../src/domain/pos'
@@ -69,6 +69,11 @@ check('tanpa standar, jumlah diambil dari resep yang paling sering dipakai', def
 check('bahan tanpa riwayat resep memakai jumlah 1', defaultRecipeQty('bahan-baru', seedMenus, {}) === 1, String(defaultRecipeQty('bahan-baru', seedMenus, {})))
 check('standar tidak valid diabaikan', defaultRecipeQty('tepung-bumbu', seedMenus, { 'tepung-bumbu': -5 }) === 37.5, String(defaultRecipeQty('tepung-bumbu', seedMenus, { 'tepung-bumbu': -5 })))
 check('pemakaian standar disaring saat normalisasi', normalizeStore({ settings: { ingredientUsage: { a: 37, b: 0, c: 'x' } } }).settings.ingredientUsage?.['a'] === 37 && Object.keys(normalizeStore({ settings: { ingredientUsage: { a: 37, b: 0, c: 'x' } } }).settings.ingredientUsage ?? {}).length === 1, JSON.stringify(normalizeStore({ settings: { ingredientUsage: { a: 37, b: 0, c: 'x' } } }).settings.ingredientUsage))
+
+const scaled = scaleRecipe([{ ingredientId: 'tepung-bumbu', qty: 37.5 }, { ingredientId: 'beras', qty: 110 }, { ingredientId: '', qty: 5 }, { ingredientId: 'gas', qty: 0 }], 0.5)
+check('salin resep menggandakan porsi sesuai faktor', scaled.length === 2 && scaled[0].qty === 18.75 && scaled[1].qty === 55, JSON.stringify(scaled))
+check('salin resep membuang baris bahan tidak valid', scaled.every((line) => line.ingredientId && line.qty > 0))
+check('faktor porsi tidak valid dianggap 1', scaleRecipe([{ ingredientId: 'beras', qty: 110 }], -2)[0].qty === 110)
 
 const bulkUsage = mergeIngredientUsage({ a: 10, b: 20, zombie: 5 }, { a: '37', b: '', c: '12', d: '-3' }, ['a', 'b', 'c', 'd'])
 check('isi standar massal menyimpan beberapa bahan sekaligus', bulkUsage.usage.a === 37 && bulkUsage.usage.c === 12 && bulkUsage.set === 2, JSON.stringify(bulkUsage))

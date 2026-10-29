@@ -1,7 +1,7 @@
 import { useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react'
 import { ImagePlus, Plus, Trash2, X } from 'lucide-react'
 
-import { defaultRecipeQty, type Menu, type RecipeLine } from '../../domain/catalog'
+import { defaultRecipeQty, scaleRecipe, type Menu, type RecipeLine } from '../../domain/catalog'
 import type { PosStore } from '../../domain/pos'
 import { createId } from '../../lib/id'
 import { fileToMenuImage } from '../../lib/image'
@@ -26,12 +26,17 @@ export function MenuEditor({ store, setStore, notify, menu, onClose }: Props) {
   const [uploading, setUploading] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [copySourceId, setCopySourceId] = useState('')
+  const [copyFactor, setCopyFactor] = useState('1')
+  const [copyNotice, setCopyNotice] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const transactionCount = menu
     ? store.transactions.filter((transaction) => transaction.items.some((item) => item.id === menu.id)).length
     : 0
 
   const standards = store.settings.ingredientUsage ?? {}
+  const copySources = store.menus.filter((item) => item.recipe.length > 0)
+  const copySource = copySources.find((item) => item.id === copySourceId) ?? copySources[0]
   const priceValue = Number(price) || 0
   const hpp = recipe.reduce((sum, line) => {
     const ingredient = store.ingredients.find((item) => item.id === line.ingredientId)
@@ -62,6 +67,17 @@ export function MenuEditor({ store, setStore, notify, menu, onClose }: Props) {
     const next = store.ingredients.find((item) => !used.has(item.id)) ?? store.ingredients[0]
     if (!next) { notify('Tambahkan bahan baku terlebih dahulu'); return }
     setRecipe((current) => [...current, { ingredientId: next.id, qty: defaultRecipeQty(next.id, store.menus, standards) }])
+  }
+
+  const copyRecipe = () => {
+    if (!copySource) { notify('Belum ada menu lain yang punya resep'); return }
+    const factor = Number(copyFactor) || 1
+    const copied = scaleRecipe(copySource.recipe, factor)
+    const usable = copied.filter((line) => store.ingredients.some((item) => item.id === line.ingredientId))
+    if (usable.length === 0) { notify('Bahan pada resep sumber sudah tidak ada'); return }
+    setRecipe(usable)
+    setCopyNotice(`Resep ${copySource.name} disalin (${factor}× porsi) • sesuaikan jumlah bila perlu`)
+    notify(`Resep ${copySource.name} disalin${factor !== 1 ? ` • ${factor}× porsi` : ''}`)
   }
 
   const updateLine = (index: number, patch: Partial<RecipeLine>) => {
@@ -149,6 +165,24 @@ export function MenuEditor({ store, setStore, notify, menu, onClose }: Props) {
           <div className="owner-panel-head">
             <div><h3>Resep & HPP</h3><p className="owner-muted">HPP dihitung otomatis dari harga bahan.</p></div>
           </div>
+          {!menu && copySources.length > 0 && (
+            <>
+              <div className="owner-field-grid recipe-copy">
+                <FieldGroup label="Salin resep dari menu" hint="Resep menu ini disalin sebagai titik awal saat membuat menu baru.">
+                  <select value={copySource?.id ?? ''} onChange={(event) => setCopySourceId(event.target.value)} aria-label="Menu sumber resep">
+                    {copySources.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.recipe.length} bahan)</option>)}
+                  </select>
+                </FieldGroup>
+                <FieldGroup label="Faktor porsi" hint="1 = porsi sama, 0,5 = setengah, 2 = dobel.">
+                  <div className="recipe-copy-row">
+                    <input type="number" min="0.1" step="0.1" value={copyFactor} onChange={(event) => setCopyFactor(event.target.value)} aria-label="Faktor porsi resep" />
+                    <button type="button" className="owner-ghost" onClick={copyRecipe}>Salin resep</button>
+                  </div>
+                </FieldGroup>
+              </div>
+              {copyNotice && <p className="owner-muted recipe-copy-note">{copyNotice}</p>}
+            </>
+          )}
           <div className="recipe-list">
             {recipe.length === 0 && <p className="owner-muted">Belum ada bahan. Menu tetap bisa dijual tanpa resep, tetapi HPP tercatat Rp0.</p>}
             {recipe.map((line, index) => {

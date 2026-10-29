@@ -273,6 +273,20 @@ export function mergeIngredientUsage(
   return { usage, set, cleared }
 }
 
+/**
+ * Salin resep menu lain dengan porsi berbeda.
+ * Faktor porsi yang tidak valid dianggap 1; jumlah dibulatkan 2 desimal agar
+ * gramasi seperti 37,5 × 0,5 = 18,75 tetap rapi. Baris tanpa bahan valid dibuang.
+ */
+export function scaleRecipe(recipe: RecipeLine[], factor: number): RecipeLine[] {
+  const safeFactor = Number.isFinite(factor) && factor > 0 ? factor : 1
+  return recipe.flatMap((line) => {
+    if (!line.ingredientId || !Number.isFinite(line.qty) || line.qty <= 0) return []
+    const qty = Math.round(line.qty * safeFactor * 100) / 100
+    return qty > 0 ? [{ ingredientId: line.ingredientId, qty }] : []
+  })
+}
+
 /** Kategori menu yang benar-benar dipakai, urut sesuai daftar kategori. */
 export function menuCategories(menus: Menu[], categories: MenuCategory[]): MenuCategory[] {
   const used = new Set(menus.filter((menu) => menu.active).map((menu) => menu.category))
