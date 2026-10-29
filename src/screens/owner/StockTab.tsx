@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Boxes, ClipboardCheck, PackagePlus, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from 'lucide-react'
+import { Boxes, ClipboardCheck, PackagePlus, Pencil, Plus, Ruler, Search, SlidersHorizontal, Trash2 } from 'lucide-react'
 
 import type { Ingredient } from '../../domain/catalog'
 import { inventoryRows, type StockMovement } from '../../domain/inventory'
-import { removeIngredient } from '../../lib/catalog-ops'
+import { applyIngredientUsageBulk, removeIngredient } from '../../lib/catalog-ops'
 import { createId } from '../../lib/id'
 import type { OwnerTabProps } from './types'
 import { ConfirmDialog, EmptyState, Field, Modal, money } from './ui'
@@ -38,6 +38,9 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
   const [lineCost, setLineCost] = useState('')
   const [lineNote, setLineNote] = useState('')
   const [purchaseMode, setPurchaseMode] = useState<'unit' | 'pack'>('unit')
+  const [standardOpen, setStandardOpen] = useState(false)
+  const [standardQuery, setStandardQuery] = useState('')
+  const [standardDraft, setStandardDraft] = useState<Record<string, string>>({})
 
   const rows = useMemo(() => inventoryRows(store.ingredients, store.menus, store.transactions, store.stockMovements), [store])
   const categoryOptions = useMemo(() => {
@@ -61,6 +64,9 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
   const packUsage = enteredQty * (selected?.usagePerPurchaseUnit ?? 0)
   const draftTotal = draft.reduce((sum, line) => sum + line.totalCost, 0)
   const opnames = useMemo(() => store.stockMovements.filter((movement) => movement.type === 'opname').slice().reverse(), [store.stockMovements])
+  const standards = store.settings.ingredientUsage ?? {}
+  const standardRows = store.ingredients.filter((ingredient) => !standardQuery.trim() || ingredient.name.toLowerCase().includes(standardQuery.trim().toLowerCase()))
+  const standardFilled = Object.values(standardDraft).filter((value) => Number(value) > 0).length
 
   const switchMode = (mode: 'unit' | 'pack') => {
     setPurchaseMode(mode)
@@ -124,6 +130,26 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
     setStore((current) => removeIngredient(current, ingredient).store)
     setPendingDelete(null)
     notify(usedBy.length > 0 ? `${ingredient.name} dihapus • dilepas dari ${usedBy.length} resep` : `${ingredient.name} dihapus`)
+  }
+
+  const openStandards = () => {
+    const draft: Record<string, string> = {}
+    for (const ingredient of store.ingredients) {
+      const qty = standards[ingredient.id]
+      if (typeof qty === 'number' && qty > 0) draft[ingredient.id] = String(qty)
+    }
+    setStandardDraft(draft)
+    setStandardQuery('')
+    setStandardOpen(true)
+  }
+
+  const saveStandards = () => {
+    const { store: next, set, cleared } = applyIngredientUsageBulk(store, standardDraft)
+    setStore(next)
+    setStandardOpen(false)
+    notify(set > 0
+      ? `Pemakaian standar ${set} bahan disimpan${cleared > 0 ? ` • ${cleared} dikosongkan` : ''}`
+      : cleared > 0 ? `${cleared} pemakaian standar dikosongkan` : 'Belum ada pemakaian standar yang diisi')
   }
 
   const deleteOpname = () => {
@@ -264,7 +290,10 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
       <section className="owner-panel">
         <div className="owner-panel-head">
           <div><h2>Bahan baku</h2><p className="owner-muted">{store.ingredients.length} bahan • stok dihitung dari pembelian, penyesuaian, dan pemakaian resep.</p></div>
-          <button className="owner-primary" onClick={() => setEditing('new')}><Plus size={15} /> Bahan baru</button>
+          <div className="owner-panel-actions">
+            <button className="owner-ghost" onClick={openStandards}><Ruler size={15} /> Atur standar</button>
+            <button className="owner-primary" onClick={() => setEditing('new')}><Plus size={15} /> Bahan baru</button>
+          </div>
         </div>
         <div className="owner-toolbar">
           <label className="owner-search">
@@ -283,7 +312,7 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
         ) : (
           <div className="owner-table-wrap">
             <table className="owner-data">
-              <thead><tr><th>Bahan</th><th>Stok</th><th>Min</th><th>Terpakai</th><th>HPP / satuan</th><th>Aksi</th></tr></thead>
+              <thead><tr><th>Bahan</th><th>Stok</th><th>Min</th><th>Standar</th><th>Terpakai</th><th>HPP / satuan</th><th>Aksi</th></tr></thead>
               <tbody>
                 {filteredRows.map((row) => {
                   const ingredient = store.ingredients.find((item) => item.id === row.ingredientId)
@@ -292,6 +321,7 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
                     <td><strong>{row.name}</strong><span className="owner-cell-sub">{ingredient.category || 'Lainnya'} • {row.unit} • {ingredient.usagePerPurchaseUnit} {row.unit} per {ingredient.purchaseUnit}</span></td>
                     <td><span className={row.stock < row.minStock ? 'owner-pill danger' : 'owner-pill ok'}>{Math.round(row.stock)} {row.unit}</span></td>
                     <td>{Math.round(row.minStock)}</td>
+                    <td>{standards[ingredient.id] ? `${standards[ingredient.id]} ${row.unit}` : '—'}</td>
                     <td>{Math.round(row.used)}</td>
                     <td>{money(ingredient.costPerUnit)}</td>
                     <td>
@@ -352,6 +382,45 @@ export function StockTab({ store, setStore, notify }: OwnerTabProps) {
           onConfirm={deleteOpname}
           onCancel={() => setPendingOpnameDelete(null)}
         />
+      )}
+
+      {standardOpen && (
+        <Modal eyebrow="PEMAKAIAN STANDAR" title="Atur pemakaian standar" onClose={() => setStandardOpen(false)} wide>
+          <p className="owner-muted">Isi gramasi/potongan yang biasa dipakai per porsi. Nilai ini otomatis mengisi jumlah bahan saat Anda menambahkannya ke resep menu. Kosongkan sel untuk menghapus standar bahan.</p>
+          <label className="owner-search standard-search">
+            <Search size={15} />
+            <input placeholder="Cari bahan…" value={standardQuery} onChange={(event) => setStandardQuery(event.target.value)} aria-label="Cari bahan standar" />
+          </label>
+          <div className="standard-list">
+            {standardRows.length === 0
+              ? <p className="owner-muted standard-empty">Bahan tidak ditemukan.</p>
+              : standardRows.map((ingredient) => (
+                <label className="standard-row" key={ingredient.id}>
+                  <span>
+                    <strong>{ingredient.name}</strong>
+                    <small>{ingredient.category || 'Lainnya'} • {standards[ingredient.id] ? `standar kini ${standards[ingredient.id]} ${ingredient.unit}` : 'belum ada standar'}</small>
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={standardDraft[ingredient.id] ?? ''}
+                    onChange={(event) => setStandardDraft((current) => ({ ...current, [ingredient.id]: event.target.value }))}
+                    aria-label={`Standar ${ingredient.name}`}
+                    placeholder="—"
+                  />
+                  <span className="standard-unit">{ingredient.unit}</span>
+                </label>
+              ))}
+          </div>
+          <div className="editor-actions">
+            <span className="owner-muted standard-count">{standardFilled} bahan terisi</span>
+            <span className="editor-spacer" />
+            <button className="owner-ghost" onClick={() => setStandardOpen(false)}>Batal</button>
+            <button className="owner-primary" onClick={saveStandards}>Simpan standar</button>
+          </div>
+        </Modal>
       )}
 
       {adjusting && (

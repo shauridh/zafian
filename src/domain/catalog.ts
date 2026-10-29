@@ -242,6 +242,37 @@ export function defaultRecipeQty(ingredientId: string, menus: Menu[], usage: Rec
   return bestQty > 0 ? bestQty : 1
 }
 
+/**
+ * Gabungkan pemakaian standar yang diisi sekaligus dengan nilai tersimpan.
+ * Hanya bahan yang masih ada yang dipakai; sel kosong atau 0 menghapus standar,
+ * sedangkan nilai tidak valid diabaikan agar salah ketik tidak menimpa data.
+ */
+export function mergeIngredientUsage(
+  current: Record<string, number>,
+  input: Record<string, string | number>,
+  ingredientIds: string[],
+): { usage: Record<string, number>; set: number; cleared: number } {
+  const valid = new Set(ingredientIds)
+  const usage: Record<string, number> = {}
+  for (const [id, qty] of Object.entries(current)) {
+    if (valid.has(id) && Number.isFinite(qty) && qty > 0) usage[id] = qty
+  }
+  let set = 0
+  let cleared = 0
+  for (const [id, raw] of Object.entries(input)) {
+    if (!valid.has(id)) continue
+    const qty = typeof raw === 'number' ? raw : raw.trim() === '' ? 0 : Number(raw)
+    if (!Number.isFinite(qty) || qty < 0) continue
+    if (qty === 0) {
+      if (id in usage) { delete usage[id]; cleared += 1 }
+      continue
+    }
+    usage[id] = qty
+    set += 1
+  }
+  return { usage, set, cleared }
+}
+
 /** Kategori menu yang benar-benar dipakai, urut sesuai daftar kategori. */
 export function menuCategories(menus: Menu[], categories: MenuCategory[]): MenuCategory[] {
   const used = new Set(menus.filter((menu) => menu.active).map((menu) => menu.category))

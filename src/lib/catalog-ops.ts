@@ -1,6 +1,36 @@
-import type { Ingredient } from '../domain/catalog'
+import { mergeIngredientUsage, type Ingredient } from '../domain/catalog'
 import type { PosStore } from '../domain/pos'
 import { createId } from './id'
+
+/**
+ * Simpan pemakaian standar beberapa bahan sekaligus. Dipakai dialog
+ * "Atur standar" agar gramasi semua bahan bisa diisi satu kali, bukan per bahan.
+ */
+export function applyIngredientUsageBulk(
+  store: PosStore,
+  input: Record<string, string | number>,
+): { store: PosStore; set: number; cleared: number } {
+  const { usage, set, cleared } = mergeIngredientUsage(
+    store.settings.ingredientUsage ?? {},
+    input,
+    store.ingredients.map((item) => item.id),
+  )
+  if (set === 0 && cleared === 0) return { store, set, cleared }
+  return {
+    store: {
+      ...store,
+      settings: { ...store.settings, ingredientUsage: usage },
+      auditLog: [...store.auditLog, {
+        id: createId(),
+        createdAt: new Date().toISOString(),
+        action: 'settings_update' as const,
+        detail: `Pemakaian standar ${set} bahan${cleared > 0 ? ` • ${cleared} dikosongkan` : ''}`,
+      }],
+    },
+    set,
+    cleared,
+  }
+}
 
 /**
  * Hapus bahan dari katalog sekaligus lepaskan dari semua resep menu.

@@ -357,6 +357,29 @@ check('biaya satuan bahan baru dihitung otomatis', Math.abs((addedIngredient?.co
 check('bahan baru tampil di tabel stok', bodyText().includes('Gula aren'))
 check('pemakaian standar bahan tersimpan di pengaturan', persistedState().settings?.ingredientUsage?.[addedIngredient?.id] === 37, JSON.stringify(persistedState().settings?.ingredientUsage))
 
+clickByText('Atur standar')
+const standardModal = window.document.querySelector('.modal')
+check('dialog isi standar massal terbuka', Boolean(standardModal))
+const standardGula = standardModal?.querySelector('[aria-label="Standar Gula aren"]') as HTMLInputElement | null
+const standardTepung = standardModal?.querySelector('[aria-label="Standar Tepung bumbu"]') as HTMLInputElement | null
+check('dialog standar menampilkan satu input per bahan', (standardModal?.querySelectorAll('[aria-label^="Standar "]').length ?? 0) >= 10, String(standardModal?.querySelectorAll('[aria-label^="Standar "]').length ?? 0))
+check('nilai standar tersimpan terisi saat dialog dibuka', standardGula?.value === '37', String(standardGula?.value))
+if (standardGula) setInput(standardGula, '45')
+if (standardTepung) setInput(standardTepung, '42')
+const saveStandards = [...(standardModal?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Simpan standar')
+if (saveStandards) act(() => { saveStandards.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+await settle(20)
+const bulkUsageState = persistedState().settings?.ingredientUsage ?? {}
+check('beberapa standar tersimpan sekali simpan', bulkUsageState['tepung-bumbu'] === 42 && bulkUsageState[addedIngredient?.id] === 45, JSON.stringify(bulkUsageState))
+check('dialog standar tertutup setelah simpan', !window.document.querySelector('.modal'))
+clickByText('Atur standar')
+const reopenedStandard = window.document.querySelector('.modal')
+const reopenedTepung = reopenedStandard?.querySelector('[aria-label="Standar Tepung bumbu"]') as HTMLInputElement | null
+check('dialog standar menampilkan nilai yang baru disimpan', reopenedTepung?.value === '42', String(reopenedTepung?.value))
+const closeStandards = [...(reopenedStandard?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Batal')
+if (closeStandards) act(() => { closeStandards.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
+check('batal menutup dialog standar tanpa menyimpan', !window.document.querySelector('.modal'))
+
 const purchaseSelect = window.document.querySelector('.purchase-form select') as HTMLSelectElement | null
 const purchaseQty = window.document.querySelector('.purchase-form input[type="number"]') as HTMLInputElement | null
 const purchaseCost = window.document.querySelectorAll('.purchase-form input[type="number"]')[1] as HTMLInputElement | undefined

@@ -1,6 +1,6 @@
 import { buildJournals, balanceSheet, chartOfAccounts, pnl, trialBalance } from '../src/domain/accounting'
 import { buildOverviewSummary, percentDelta, resolvePeriod } from '../src/domain/analytics'
-import { defaultRecipeQty, menuHpp, menuMargin, seedCategories, seedIngredientCategories, seedIngredients, seedMenus } from '../src/domain/catalog'
+import { defaultRecipeQty, menuHpp, menuMargin, mergeIngredientUsage, seedCategories, seedIngredientCategories, seedIngredients, seedMenus } from '../src/domain/catalog'
 import { createDefaultSettings } from '../src/domain/settings'
 import { cogsForTransactions, inventoryRows } from '../src/domain/inventory'
 import { cashSalesForShift, expectedCashForShift, initialPosStore, preOrderCanStartProcessing, preOrderRemaining, SCHEMA_VERSION, type PosStore, type Shift, type Transaction } from '../src/domain/pos'
@@ -69,6 +69,12 @@ check('tanpa standar, jumlah diambil dari resep yang paling sering dipakai', def
 check('bahan tanpa riwayat resep memakai jumlah 1', defaultRecipeQty('bahan-baru', seedMenus, {}) === 1, String(defaultRecipeQty('bahan-baru', seedMenus, {})))
 check('standar tidak valid diabaikan', defaultRecipeQty('tepung-bumbu', seedMenus, { 'tepung-bumbu': -5 }) === 37.5, String(defaultRecipeQty('tepung-bumbu', seedMenus, { 'tepung-bumbu': -5 })))
 check('pemakaian standar disaring saat normalisasi', normalizeStore({ settings: { ingredientUsage: { a: 37, b: 0, c: 'x' } } }).settings.ingredientUsage?.['a'] === 37 && Object.keys(normalizeStore({ settings: { ingredientUsage: { a: 37, b: 0, c: 'x' } } }).settings.ingredientUsage ?? {}).length === 1, JSON.stringify(normalizeStore({ settings: { ingredientUsage: { a: 37, b: 0, c: 'x' } } }).settings.ingredientUsage))
+
+const bulkUsage = mergeIngredientUsage({ a: 10, b: 20, zombie: 5 }, { a: '37', b: '', c: '12', d: '-3' }, ['a', 'b', 'c', 'd'])
+check('isi standar massal menyimpan beberapa bahan sekaligus', bulkUsage.usage.a === 37 && bulkUsage.usage.c === 12 && bulkUsage.set === 2, JSON.stringify(bulkUsage))
+check('sel kosong di dialog standar menghapus nilai lama', !('b' in bulkUsage.usage) && bulkUsage.cleared === 1, JSON.stringify(bulkUsage.usage))
+check('isi standar massal mengabaikan bahan tak dikenal dan angka negatif', !('zombie' in bulkUsage.usage) && !('d' in bulkUsage.usage), JSON.stringify(bulkUsage.usage))
+check('bahan yang tidak diubah tetap memakai standar lama', mergeIngredientUsage({ a: 10, b: 20 }, { b: '0' }, ['a', 'b']).usage.a === 10 && !('b' in mergeIngredientUsage({ a: 10, b: 20 }, { b: '0' }, ['a', 'b']).usage))
 
 check('cash sales memakai uang bersih (paid - change)', cashSalesForShift(baseStore, shift.id) === 15000, String(cashSalesForShift(baseStore, shift.id)))
 check('QRIS tidak masuk kas fisik', expectedCashForShift(baseStore, shift) === 370000, String(expectedCashForShift(baseStore, shift)))

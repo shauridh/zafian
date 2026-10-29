@@ -7,6 +7,7 @@
  *   2. Kategori: tambah, ubah, hapus, proteksi kategori terpakai, strip kasir
  *   3. Foto menu di kasir: object-fit contain, konten tidak gepeng/terpotong
  *   4. Bulk pembelian 3 baris sekali simpan menambah stok ketiga bahan
+ *   4b. Isi pemakaian standar beberapa bahan sekaligus lalu dipakai resep menu
  *   5. Mode pemilik: PIN dan 8 tab terjangkau
  *   6. Pengaturan printer: 80 mm + 2 salinan persist setelah reload dan dipakai tes cetak
  *   7. Buka shift, transaksi tunai, struk tercetak (80 mm/2 salinan), lalu tutup shift
@@ -440,6 +441,40 @@ async function main(): Promise<number> {
     check('bahan dibuat', Boolean(createdIngredient))
     check('pemakaian standar bahan tersimpan', createdIngredient ? store.settings.ingredientUsage?.[createdIngredient.id] === 37 : false, JSON.stringify(store.settings.ingredientUsage))
 
+    // ---------- 1a. Isi pemakaian standar beberapa bahan sekaligus ----------
+    await page.getByRole('button', { name: 'Atur standar', exact: true }).click()
+    await page.waitForSelector('.modal.editor')
+    const standardDialog = page.locator('.modal.editor')
+    check('dialog standar massal menyediakan input per bahan', (await standardDialog.locator('[aria-label^="Standar "]').count()) >= 10, String(await standardDialog.locator('[aria-label^="Standar "]').count()))
+    check('standar yang sudah ada terisi saat dialog dibuka', (await page.locator('[aria-label="Standar Bahan Uji UI"]').inputValue()) === '37')
+    const saveStandardBox = await page.getByRole('button', { name: 'Simpan standar' }).boundingBox()
+    check('tombol simpan standar terlihat tanpa perlu menggulir', Boolean(saveStandardBox) && saveStandardBox!.y + saveStandardBox!.height <= 600, JSON.stringify(saveStandardBox))
+    await page.locator('[aria-label="Standar Tepung bumbu"]').fill('42')
+    await page.locator('[aria-label="Standar Saus BBQ"]').fill('12')
+    await page.getByRole('button', { name: 'Batal', exact: true }).click()
+    await settle(300)
+    store = await readStore()
+    check('batal tidak mengubah pemakaian standar', store.settings.ingredientUsage?.['tepung-bumbu'] === undefined, JSON.stringify(store.settings.ingredientUsage))
+
+    await page.getByRole('button', { name: 'Atur standar', exact: true }).click()
+    await page.waitForSelector('.modal.editor')
+    await page.locator('[aria-label="Standar Tepung bumbu"]').fill('42')
+    await page.locator('[aria-label="Standar Saus BBQ"]').fill('12')
+    await shot('standar-massal')
+    await page.getByRole('button', { name: 'Simpan standar' }).click()
+    await settle(500)
+    store = await readStore()
+    check('dua standar tersimpan sekali simpan', store.settings.ingredientUsage?.['tepung-bumbu'] === 42 && store.settings.ingredientUsage?.['saus-bbq'] === 12, JSON.stringify(store.settings.ingredientUsage))
+    check('kolom standar tampil di tabel bahan', (await page.locator('.owner-data tbody tr', { hasText: 'Tepung bumbu' }).first().innerText()).includes('42 gram'))
+    await page.getByRole('button', { name: 'Atur standar', exact: true }).click()
+    await page.waitForSelector('.modal.editor')
+    check('nilai standar tampil lagi saat dialog dibuka', (await page.locator('[aria-label="Standar Tepung bumbu"]').inputValue()) === '42')
+    await page.locator('[aria-label="Standar Saus BBQ"]').fill('')
+    await page.getByRole('button', { name: 'Simpan standar' }).click()
+    await settle(500)
+    store = await readStore()
+    check('mengosongkan sel menghapus standar bahan', store.settings.ingredientUsage?.['saus-bbq'] === undefined && store.settings.ingredientUsage?.['tepung-bumbu'] === 42, JSON.stringify(store.settings.ingredientUsage))
+
     const options = await page.locator('.purchase-form select option').evaluateAll((elements: HTMLOptionElement[]) => elements.map((option) => ({ value: option.value, label: option.textContent?.trim() ?? '' })))
     const picks = options.slice(0, 3)
     const before: { label: string; text: string; value: number }[] = []
@@ -512,6 +547,13 @@ async function main(): Promise<number> {
     await settle(250)
     const autoQty = await lastRecipeRow.locator('input[type=number]').inputValue()
     check('jumlah resep terisi otomatis dari pemakaian standar', autoQty === '37', autoQty)
+    await page.getByRole('button', { name: 'Tambah bahan', exact: true }).click()
+    await settle(250)
+    const bulkRecipeRow = page.locator('.recipe-row').last()
+    const tepungOptionValue = await bulkRecipeRow.locator('select option', { hasText: 'Tepung bumbu' }).first().getAttribute('value')
+    if (tepungOptionValue) await bulkRecipeRow.locator('select').selectOption(tepungOptionValue)
+    await settle(250)
+    check('standar hasil isi massal dipakai resep menu', (await bulkRecipeRow.locator('input[type=number]').inputValue()) === '42', await bulkRecipeRow.locator('input[type=number]').inputValue())
     await shot('resep-otomatis')
     await page.locator('.modal.editor').getByRole('button', { name: 'Batal' }).click()
     await settle(300)
