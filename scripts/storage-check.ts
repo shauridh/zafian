@@ -116,6 +116,17 @@ storage.primeStorageCache('pos-store', emptyOnline)
 const onlineLoaded = persistence.loadPosStore({ seed: false })
 check('mode online tidak mengisi seed saat outlet kosong', onlineLoaded.menus.length === 0 && onlineLoaded.ingredients.length === 0 && onlineLoaded.categories.length === 0, `menu=${onlineLoaded.menus.length} bahan=${onlineLoaded.ingredients.length} kategori=${onlineLoaded.categories.length}`)
 check('tidak ada ID slug seed pada outlet online', ![...onlineLoaded.menus, ...onlineLoaded.ingredients, ...onlineLoaded.categories].some((item) => ['paket', 'dada', 'teh', 'tepung-bumbu'].includes(item.id)))
+
+// Regression: kategori turunan (mis. "Lainnya") pada mode online harus memakai
+// UUID, karena kolom Supabase bertipe uuid dan upsert string ditolak 22P02.
+const inferredOnline = normalizeStore({
+  menus: [{ id: 'menu-uji', name: 'Menu Uji', category: 'Kategori Turunan', price: 1000, emoji: '🍽️', active: true, recipe: [] }],
+  ingredients: [{ id: 'bahan-uji', name: 'Bahan Uji', category: 'Lainnya', unit: 'gram', costPerUnit: 1, purchaseUnit: 'pack', purchasePrice: 1000, usagePerPurchaseUnit: 1000, minStock: 0 }],
+}, { seed: false })
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/
+const inferredCategories = [...inferredOnline.categories, ...inferredOnline.ingredientCategories]
+check('kategori turunan online memakai UUID', inferredCategories.every((category) => uuidPattern.test(category.id)), JSON.stringify(inferredCategories))
+check('ID kategori turunan stabil antar-normalisasi', JSON.stringify(normalizeStore(inferredOnline, { seed: false }).categories) === JSON.stringify(inferredOnline.categories), JSON.stringify(normalizeStore(inferredOnline, { seed: false }).categories))
 const localLoaded = persistence.loadPosStore()
 check('mode lokal tetap mengisi katalog contoh', localLoaded.menus.length > 0 && localLoaded.ingredients.length > 0, `menu=${localLoaded.menus.length} bahan=${localLoaded.ingredients.length}`)
 let onlineSavedMenus = -1

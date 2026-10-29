@@ -78,8 +78,32 @@ function normalizeCategory(value: unknown, index: number): MenuCategory | null {
   return { id: text(value.id, slugify(name) || `kategori-${index + 1}`), name }
 }
 
+/**
+ * ID UUID deterministik untuk kategori turunan pada mode online. Tabel
+ * Supabase memakai kolom uuid, sedangkan kategori lokal memakai slug; tanpa
+ * konversi ini, kategori default seperti "Lainnya" dikirim sebagai string dan
+ * ditolak Postgres (22P02: invalid input syntax for type uuid).
+ */
+function stableCategoryUuid(name: string): string {
+  const key = name.trim().toLowerCase()
+  const hash = (seed: number): string => {
+    let value = seed >>> 0
+    for (let index = 0; index < key.length; index += 1) {
+      value ^= key.charCodeAt(index)
+      value = Math.imul(value, 0x01000193) >>> 0
+    }
+    return value.toString(16).padStart(8, '0')
+  }
+  const hex = `${hash(0x811c9dc5)}${hash(0x9e3779b9)}${hash(0x85ebca6b)}${hash(0xc2b2ae35)}`
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`
+}
+
 /** Tambahkan kategori yang dipakai menu tetapi belum ada di daftar kategori. */
-function mergeCategories<T extends Category>(base: T[], usedNames: string[]): T[] {
+function mergeCategories<T extends Category>(
+  base: T[],
+  usedNames: string[],
+  createId: (name: string, index: number) => string = (name, index) => slugify(name) || `kategori-${index + 1}`,
+): T[] {
   const categories = base.filter((category, index) => base.findIndex((item) => item.name.toLowerCase() === category.name.toLowerCase()) === index)
   const names = new Set(categories.map((category) => category.name.trim().toLowerCase()))
   const ids = new Set(categories.map((category) => category.id))
@@ -87,7 +111,7 @@ function mergeCategories<T extends Category>(base: T[], usedNames: string[]): T[
     const name = rawName.trim()
     const key = name.toLowerCase()
     if (!key || names.has(key)) continue
-    let id = slugify(name) || `kategori-${categories.length + 1}`
+    let id = createId(name, categories.length)
     while (ids.has(id)) id = `${id}-${categories.length + 1}`
     names.add(key)
     ids.add(id)
@@ -353,13 +377,18 @@ export function normalizeStore(input: unknown, options: NormalizeOptions = {}): 
   const auditLog = asArray(raw.auditLog).map(normalizeAudit).filter((item): item is AuditEntry => item !== null)
   const finalMenus = menus.length > 0 ? menus : seed ? cloneSeeds(seedMenus) : []
   const finalIngredients = ingredients.length > 0 ? ingredients : seed ? cloneSeeds(seedIngredients) : []
+  // Mode online (seed:false) memakai UUID agar kategori turunan bisa disimpan
+  // ke Supabase; mode lokal tetap memakai slug agar data lama tidak berubah.
+  const inferredCategoryId = seed ? undefined : stableCategoryUuid
   const finalCategories = mergeCategories(
     storedCategories.length > 0 ? storedCategories : seed ? cloneSeeds(seedCategories) : [],
     finalMenus.map((menu) => menu.category),
+    inferredCategoryId,
   )
   const finalIngredientCategories = mergeCategories(
     storedIngredientCategories.length > 0 ? storedIngredientCategories : seed ? cloneSeeds(seedIngredientCategories) : [],
     finalIngredients.map((ingredient) => ingredient.category),
+    inferredCategoryId,
   )
 
   return {
