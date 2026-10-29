@@ -16,9 +16,12 @@ export function removeIngredient(store: PosStore, ingredient: Ingredient): { sto
     detachedFrom += 1
     return { ...menu, recipe: menu.recipe.filter((line) => line.ingredientId !== ingredient.id) }
   })
+  const ingredientUsage = { ...(store.settings.ingredientUsage ?? {}) }
+  delete ingredientUsage[ingredient.id]
   return {
     store: {
       ...store,
+      settings: { ...store.settings, ingredientUsage },
       ingredients: store.ingredients.filter((item) => item.id !== ingredient.id),
       menus,
       auditLog: [...store.auditLog, {

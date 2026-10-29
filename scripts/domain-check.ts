@@ -1,6 +1,6 @@
 import { buildJournals, balanceSheet, chartOfAccounts, pnl, trialBalance } from '../src/domain/accounting'
 import { buildOverviewSummary, percentDelta, resolvePeriod } from '../src/domain/analytics'
-import { menuHpp, menuMargin, seedCategories, seedIngredientCategories, seedIngredients, seedMenus } from '../src/domain/catalog'
+import { defaultRecipeQty, menuHpp, menuMargin, seedCategories, seedIngredientCategories, seedIngredients, seedMenus } from '../src/domain/catalog'
 import { createDefaultSettings } from '../src/domain/settings'
 import { cogsForTransactions, inventoryRows } from '../src/domain/inventory'
 import { cashSalesForShift, expectedCashForShift, initialPosStore, preOrderCanStartProcessing, preOrderRemaining, SCHEMA_VERSION, type PosStore, type Shift, type Transaction } from '../src/domain/pos'
@@ -63,6 +63,12 @@ const baseStore: PosStore = {
   settings: createDefaultSettings(),
   nextTransactionNumber: 1,
 }
+
+check('pemakaian standar bahan mengisi jumlah resep otomatis', defaultRecipeQty('tepung-bumbu', seedMenus, { 'tepung-bumbu': 37 }) === 37, String(defaultRecipeQty('tepung-bumbu', seedMenus, { 'tepung-bumbu': 37 })))
+check('tanpa standar, jumlah diambil dari resep yang paling sering dipakai', defaultRecipeQty('tepung-bumbu', seedMenus, {}) === 37.5, String(defaultRecipeQty('tepung-bumbu', seedMenus, {})))
+check('bahan tanpa riwayat resep memakai jumlah 1', defaultRecipeQty('bahan-baru', seedMenus, {}) === 1, String(defaultRecipeQty('bahan-baru', seedMenus, {})))
+check('standar tidak valid diabaikan', defaultRecipeQty('tepung-bumbu', seedMenus, { 'tepung-bumbu': -5 }) === 37.5, String(defaultRecipeQty('tepung-bumbu', seedMenus, { 'tepung-bumbu': -5 })))
+check('pemakaian standar disaring saat normalisasi', normalizeStore({ settings: { ingredientUsage: { a: 37, b: 0, c: 'x' } } }).settings.ingredientUsage?.['a'] === 37 && Object.keys(normalizeStore({ settings: { ingredientUsage: { a: 37, b: 0, c: 'x' } } }).settings.ingredientUsage ?? {}).length === 1, JSON.stringify(normalizeStore({ settings: { ingredientUsage: { a: 37, b: 0, c: 'x' } } }).settings.ingredientUsage))
 
 check('cash sales memakai uang bersih (paid - change)', cashSalesForShift(baseStore, shift.id) === 15000, String(cashSalesForShift(baseStore, shift.id)))
 check('QRIS tidak masuk kas fisik', expectedCashForShift(baseStore, shift) === 370000, String(expectedCashForShift(baseStore, shift)))

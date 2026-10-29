@@ -332,6 +332,7 @@ const ingredientFields: Record<string, HTMLInputElement | HTMLSelectElement | nu
   purchasePrice: fieldByLabel(ingredientModal, 'Harga beli')?.querySelector('input') ?? null,
   usage: fieldByLabel(ingredientModal, 'Isi per pembelian')?.querySelector('input') ?? null,
   minStock: fieldByLabel(ingredientModal, 'Stok minimum')?.querySelector('input') ?? null,
+  standardQty: fieldByLabel(ingredientModal, 'Pemakaian standar per porsi')?.querySelector('input') ?? null,
 }
 const ingredientUnitSelect = ingredientFields.unit as HTMLSelectElement | null
 const ingredientPurchaseUnitSelect = ingredientFields.purchaseUnit as HTMLSelectElement | null
@@ -346,6 +347,7 @@ if (ingredientPurchaseUnitSelect) setSelect(ingredientPurchaseUnitSelect, 'pack'
 if (ingredientFields.purchasePrice) setInput(ingredientFields.purchasePrice, '20000')
 if (ingredientFields.usage) setInput(ingredientFields.usage, '1000')
 if (ingredientFields.minStock) setInput(ingredientFields.minStock, '500')
+if (ingredientFields.standardQty) setInput(ingredientFields.standardQty, '37')
 const addIngredient = [...(ingredientModal?.querySelectorAll('button') ?? [])].find((button) => button.textContent?.trim() === 'Tambah bahan')
 if (addIngredient) act(() => { addIngredient.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
 const addedIngredient = persistedState().ingredients?.find((ingredient: { name: string }) => ingredient.name === 'Gula aren')
@@ -353,6 +355,7 @@ check('bahan baru tersimpan', Boolean(addedIngredient))
 check('bahan baru memakai kategori bahan terpilih', addedIngredient?.category === 'Bumbu Dapur', String(addedIngredient?.category))
 check('biaya satuan bahan baru dihitung otomatis', Math.abs((addedIngredient?.costPerUnit ?? 0) - 20) < 0.001, String(addedIngredient?.costPerUnit))
 check('bahan baru tampil di tabel stok', bodyText().includes('Gula aren'))
+check('pemakaian standar bahan tersimpan di pengaturan', persistedState().settings?.ingredientUsage?.[addedIngredient?.id] === 37, JSON.stringify(persistedState().settings?.ingredientUsage))
 
 const purchaseSelect = window.document.querySelector('.purchase-form select') as HTMLSelectElement | null
 const purchaseQty = window.document.querySelector('.purchase-form input[type="number"]') as HTMLInputElement | null

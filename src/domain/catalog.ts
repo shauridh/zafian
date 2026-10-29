@@ -213,6 +213,35 @@ export function menuMargin(menu: Menu, ingredients: Ingredient[]): { hpp: number
   return { hpp, margin, marginPct }
 }
 
+/**
+ * Jumlah bahan yang dipakai saat baris resep baru ditambahkan.
+ *
+ * Urutan sumber: pemakaian standar bahan (diatur di form bahan) → jumlah yang
+ * dipakai resep menu terbaru untuk bahan yang sama → 1. Dengan begitu pemilik
+ * tidak perlu mengetik ulang gramasi yang sama di setiap menu.
+ */
+export function defaultRecipeQty(ingredientId: string, menus: Menu[], usage: Record<string, number> = {}): number {
+  const standard = usage[ingredientId]
+  if (typeof standard === 'number' && Number.isFinite(standard) && standard > 0) return standard
+  const counts = new Map<number, number>()
+  // Menu terbaru di akhir array; iterasi mundur agar seri dimenangkan menu terbaru.
+  for (const menu of [...menus].reverse()) {
+    for (const line of menu.recipe) {
+      if (line.ingredientId !== ingredientId || !Number.isFinite(line.qty) || line.qty <= 0) continue
+      counts.set(line.qty, (counts.get(line.qty) ?? 0) + 1)
+    }
+  }
+  let bestQty = 0
+  let bestCount = 0
+  for (const [qty, count] of counts) {
+    if (count > bestCount) {
+      bestQty = qty
+      bestCount = count
+    }
+  }
+  return bestQty > 0 ? bestQty : 1
+}
+
 /** Kategori menu yang benar-benar dipakai, urut sesuai daftar kategori. */
 export function menuCategories(menus: Menu[], categories: MenuCategory[]): MenuCategory[] {
   const used = new Set(menus.filter((menu) => menu.active).map((menu) => menu.category))

@@ -38,6 +38,12 @@ export type AppSettings = {
   receiptFooter: string
   /** Baris promo opsional di atas catatan kaki; satu baris per baris. */
   receiptPromo: string
+  /**
+   * Pemakaian standar per porsi untuk tiap bahan (id bahan → jumlah dalam
+   * satuan pakai). Dipakai untuk mengisi otomatis jumlah bahan saat resep menu
+   * baru disusun, sehingga gramasi yang sama tidak perlu diketik ulang.
+   */
+  ingredientUsage?: Record<string, number>
   theme: ThemeMode
   printer: PrinterSettings
   /** PIN pemilik bersifat opsional sampai pemilik membuatnya. */

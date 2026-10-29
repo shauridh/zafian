@@ -28,6 +28,7 @@ export function IngredientEditor({ store, setStore, notify, ingredient, onClose 
   const [usage, setUsage] = useState(ingredient ? String(ingredient.usagePerPurchaseUnit) : '')
   const [costPerUnit, setCostPerUnit] = useState(ingredient ? String(ingredient.costPerUnit) : '')
   const [minStock, setMinStock] = useState(ingredient ? String(ingredient.minStock) : '')
+  const [standardQty, setStandardQty] = useState(ingredient ? String(store.settings.ingredientUsage?.[ingredient.id] ?? '') : '')
   const [confirming, setConfirming] = useState(false)
 
   const priceValue = Number(purchasePrice) || 0
@@ -54,16 +55,23 @@ export function IngredientEditor({ store, setStore, notify, ingredient, onClose 
       costPerUnit: Math.max(0, costValue || 0),
       minStock: Math.max(0, Number(minStock) || 0),
     }
-    setStore((current) => ({
-      ...current,
-      ingredients: ingredient ? current.ingredients.map((item) => item.id === ingredient.id ? payload : item) : [...current.ingredients, payload],
-      auditLog: [...current.auditLog, {
-        id: createId(),
-        createdAt: new Date().toISOString(),
-        action: ingredient ? 'ingredient_update' as const : 'ingredient_create' as const,
-        detail: `${cleanName} • ${money(payload.costPerUnit)}/${payload.unit}`,
-      }],
-    }))
+    const standardValue = Math.max(0, Number(standardQty) || 0)
+    setStore((current) => {
+      const ingredientUsage = { ...(current.settings.ingredientUsage ?? {}) }
+      if (standardValue > 0) ingredientUsage[payload.id] = standardValue
+      else delete ingredientUsage[payload.id]
+      return {
+        ...current,
+        settings: { ...current.settings, ingredientUsage },
+        ingredients: ingredient ? current.ingredients.map((item) => item.id === ingredient.id ? payload : item) : [...current.ingredients, payload],
+        auditLog: [...current.auditLog, {
+          id: createId(),
+          createdAt: new Date().toISOString(),
+          action: ingredient ? 'ingredient_update' as const : 'ingredient_create' as const,
+          detail: `${cleanName} • ${money(payload.costPerUnit)}/${payload.unit}`,
+        }],
+      }
+    })
     notify(ingredient ? `${cleanName} diperbarui` : `${cleanName} ditambahkan`)
     onClose()
   }
@@ -105,6 +113,9 @@ export function IngredientEditor({ store, setStore, notify, ingredient, onClose 
         <Field label="Isi per pembelian" hint={`= ${usageValue || 0} ${unit || 'unit'}`}><input type="number" min="0" step="0.01" value={usage} onChange={(event) => setUsage(event.target.value)} /></Field>
         <Field label="Stok minimum" hint="Dipakai untuk peringatan stok rendah dan forecast."><input type="number" min="0" value={minStock} onChange={(event) => setMinStock(event.target.value)} /></Field>
       </div>
+      <Field label="Pemakaian standar per porsi" hint={`Otomatis mengisi jumlah saat bahan ini ditambahkan ke resep menu (${unit || 'satuan'}). Kosongkan bila belum diatur.`}>
+        <input type="number" min="0" step="0.01" value={standardQty} onChange={(event) => setStandardQty(event.target.value)} placeholder="mis. 37" />
+      </Field>
       <Field label={`Biaya per ${unit || 'satuan'}`} hint={`Otomatis: ${money(computed)}`}>
         <input type="number" min="0" step="0.01" value={costPerUnit} onChange={(event) => setCostPerUnit(event.target.value)} />
       </Field>

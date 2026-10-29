@@ -95,6 +95,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
       outletPhone: outletPhone.trim(),
       receiptFooter: receiptFooter.trim() || 'Terima kasih',
       receiptPromo: receiptPromo.trim(),
+      ingredientUsage: store.settings.ingredientUsage ?? {},
       theme,
       ownerPin: store.settings.ownerPin,
       printer: {

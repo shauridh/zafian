@@ -132,6 +132,19 @@ function normalizeOwnerPin(value: unknown): OwnerPinRecord | undefined {
   return { salt, hash, recoverySalt, recoveryHash, updatedAt }
 }
 
+/** Pemakaian standar bahan: hanya entri dengan jumlah positif yang disimpan. */
+function normalizeIngredientUsage(value: unknown): Record<string, number> {
+  if (!isObject(value)) return {}
+  const entries: [string, number][] = []
+  for (const [key, raw] of Object.entries(value)) {
+    const id = key.trim()
+    const qty = typeof raw === 'number' ? raw : typeof raw === 'string' && raw.trim() ? Number(raw) : Number.NaN
+    if (!id || !Number.isFinite(qty) || qty <= 0) continue
+    entries.push([id, qty])
+  }
+  return Object.fromEntries(entries)
+}
+
 function normalizeSettings(value: unknown): AppSettings {
   const raw = isObject(value) ? value : {}
   const printer = isObject(raw.printer) ? raw.printer : {}
@@ -142,6 +155,7 @@ function normalizeSettings(value: unknown): AppSettings {
     outletPhone: text(raw.outletPhone, ''),
     receiptFooter: text(raw.receiptFooter, defaultSettings.receiptFooter),
     receiptPromo: text(raw.receiptPromo, ''),
+    ingredientUsage: normalizeIngredientUsage(raw.ingredientUsage),
     theme: oneOf<ThemeMode>(raw.theme, ['light', 'dark'], defaultSettings.theme),
     ...(ownerPin ? { ownerPin } : {}),
     printer: {

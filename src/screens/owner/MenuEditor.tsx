@@ -1,7 +1,7 @@
 import { useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react'
 import { ImagePlus, Plus, Trash2, X } from 'lucide-react'
 
-import type { Menu, RecipeLine } from '../../domain/catalog'
+import { defaultRecipeQty, type Menu, type RecipeLine } from '../../domain/catalog'
 import type { PosStore } from '../../domain/pos'
 import { createId } from '../../lib/id'
 import { fileToMenuImage } from '../../lib/image'
@@ -31,6 +31,7 @@ export function MenuEditor({ store, setStore, notify, menu, onClose }: Props) {
     ? store.transactions.filter((transaction) => transaction.items.some((item) => item.id === menu.id)).length
     : 0
 
+  const standards = store.settings.ingredientUsage ?? {}
   const priceValue = Number(price) || 0
   const hpp = recipe.reduce((sum, line) => {
     const ingredient = store.ingredients.find((item) => item.id === line.ingredientId)
@@ -60,7 +61,7 @@ export function MenuEditor({ store, setStore, notify, menu, onClose }: Props) {
     const used = new Set(recipe.map((line) => line.ingredientId))
     const next = store.ingredients.find((item) => !used.has(item.id)) ?? store.ingredients[0]
     if (!next) { notify('Tambahkan bahan baku terlebih dahulu'); return }
-    setRecipe((current) => [...current, { ingredientId: next.id, qty: 1 }])
+    setRecipe((current) => [...current, { ingredientId: next.id, qty: defaultRecipeQty(next.id, store.menus, standards) }])
   }
 
   const updateLine = (index: number, patch: Partial<RecipeLine>) => {
@@ -154,7 +155,10 @@ export function MenuEditor({ store, setStore, notify, menu, onClose }: Props) {
               const ingredient = store.ingredients.find((item) => item.id === line.ingredientId)
               return (
                 <div className="recipe-row" key={`${line.ingredientId}-${index}`}>
-                  <select value={line.ingredientId} onChange={(event) => updateLine(index, { ingredientId: event.target.value })}>
+                  <select value={line.ingredientId} onChange={(event) => {
+                    const ingredientId = event.target.value
+                    updateLine(index, { ingredientId, qty: defaultRecipeQty(ingredientId, store.menus, standards) })
+                  }}>
                     {store.ingredients.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                   </select>
                   <input type="number" min="0" step="0.1" value={line.qty} onChange={(event) => updateLine(index, { qty: Number(event.target.value) || 0 })} aria-label={`Jumlah ${ingredient?.name ?? 'bahan'}`} />
@@ -166,6 +170,7 @@ export function MenuEditor({ store, setStore, notify, menu, onClose }: Props) {
             })}
           </div>
           <button type="button" className="owner-ghost recipe-add" onClick={addLine} disabled={store.ingredients.length === 0}><Plus size={14} /> Tambah bahan</button>
+          <p className="owner-muted">Jumlah terisi otomatis dari pemakaian standar bahan; ubah bila porsi menu ini berbeda.</p>
           <div className="hpp-summary">
             <div><span>HPP per porsi</span><b>{money(hpp)}</b></div>
             <div><span>Margin per porsi</span><b className={margin >= 0 ? 'ok' : 'bad'}>{money(margin)} • {marginPct.toFixed(0)}%</b></div>
