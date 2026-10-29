@@ -139,6 +139,7 @@ function normalizeSettings(value: unknown): AppSettings {
   return {
     businessName: text(raw.businessName, defaultSettings.businessName),
     outletName: text(raw.outletName, defaultSettings.outletName),
+    outletPhone: text(raw.outletPhone, ''),
     receiptFooter: text(raw.receiptFooter, defaultSettings.receiptFooter),
     receiptPromo: text(raw.receiptPromo, ''),
     theme: oneOf<ThemeMode>(raw.theme, ['light', 'dark'], defaultSettings.theme),

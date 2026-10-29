@@ -213,6 +213,10 @@ const outletField = [...window.document.querySelectorAll('.owner-field')].find((
 const outletInput = outletField?.querySelector('input') as HTMLInputElement | null
 check('input nama outlet tersedia', Boolean(outletInput))
 if (outletInput) setInput(outletInput, 'Cabang Uji')
+const phoneField = [...window.document.querySelectorAll('.owner-field')].find((field) => field.textContent?.includes('Nomor telepon outlet'))
+const phoneInput = phoneField?.querySelector('input') as HTMLInputElement | null
+check('input nomor telepon outlet tersedia', Boolean(phoneInput))
+if (phoneInput) setInput(phoneInput, '0812-9999-0000')
 const footerField = [...window.document.querySelectorAll('.owner-field')].find((field) => field.textContent?.includes('Catatan kaki struk'))
 const footerInput = footerField?.querySelector('textarea') as HTMLTextAreaElement | null
 check('input footer struk tersedia', Boolean(footerInput))
@@ -222,10 +226,14 @@ check('toggle auto print tersedia', Boolean(autoPrintButton))
 if (autoPrintButton) act(() => { autoPrintButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
 clickByText('Simpan pengaturan')
 check('pengaturan outlet tersimpan', persistedState().settings?.outletName === 'Cabang Uji', String(persistedState().settings?.outletName))
+check('nomor telepon outlet tersimpan', persistedState().settings?.outletPhone === '0812-9999-0000', String(persistedState().settings?.outletPhone))
+const settingsReceiptPreview = window.document.querySelector('.printer-preview')?.textContent ?? ''
+check('nomor telepon tampil di bawah nama outlet pada struk', settingsReceiptPreview.indexOf('0812-9999-0000') > settingsReceiptPreview.indexOf('Cabang Uji'), settingsReceiptPreview.slice(0, 160))
 check('footer struk tersimpan', persistedState().settings?.receiptFooter === 'WA 0812-3456', String(persistedState().settings?.receiptFooter))
 check('auto print tersimpan', persistedState().settings?.printer?.autoPrint === true, JSON.stringify(persistedState().settings?.printer))
 check('tata letak printer tersimpan', persistedState().settings?.printer?.headerAlign === 'center' && persistedState().settings?.printer?.footerAlign === 'center' && persistedState().settings?.printer?.fontSize === 'large' && persistedState().settings?.printer?.copies === 2, JSON.stringify(persistedState().settings?.printer))
 check('header pemilik memakai outlet baru', bodyText().includes('Cabang Uji'))
+check('nomor telepon tampil di bawah nama outlet', bodyText().includes('0812-9999-0000'))
 
 clickByText('Kasir')
 check('kembali ke POS', bodyText().includes('Keranjang'))
@@ -317,21 +325,24 @@ check('kategori tetap ada setelah menu dihapus', Boolean(persistedState().catego
 clickByText('Bahan & stok')
 clickByText('Bahan baru')
 const ingredientModal = window.document.querySelector('.owner-modal')
-const ingredientFields: Record<string, HTMLInputElement | null> = {
+const ingredientFields: Record<string, HTMLInputElement | HTMLSelectElement | null> = {
   name: fieldByLabel(ingredientModal, 'Nama bahan')?.querySelector('input') ?? null,
-  unit: fieldByLabel(ingredientModal, 'Satuan pakai')?.querySelector('input') ?? null,
-  purchaseUnit: fieldByLabel(ingredientModal, 'Satuan pembelian')?.querySelector('input') ?? null,
+  unit: fieldByLabel(ingredientModal, 'Satuan pakai')?.querySelector('select') ?? null,
+  purchaseUnit: fieldByLabel(ingredientModal, 'Satuan pembelian')?.querySelector('select') ?? null,
   purchasePrice: fieldByLabel(ingredientModal, 'Harga beli')?.querySelector('input') ?? null,
   usage: fieldByLabel(ingredientModal, 'Isi per pembelian')?.querySelector('input') ?? null,
   minStock: fieldByLabel(ingredientModal, 'Stok minimum')?.querySelector('input') ?? null,
 }
+const ingredientUnitSelect = ingredientFields.unit as HTMLSelectElement | null
+const ingredientPurchaseUnitSelect = ingredientFields.purchaseUnit as HTMLSelectElement | null
 const ingredientCategorySelect = fieldByLabel(ingredientModal, 'Kategori bahan')?.querySelector('select') as HTMLSelectElement | null
 check('editor bahan punya pilihan kategori', Boolean(ingredientCategorySelect))
 check('form bahan baru lengkap', Object.values(ingredientFields).every(Boolean))
+check('satuan pakai & pembelian memakai dropdown semua unit', Boolean(ingredientUnitSelect && ingredientPurchaseUnitSelect) && ingredientUnitSelect.options.length >= 20 && ingredientPurchaseUnitSelect.options.length >= 20, `${ingredientUnitSelect?.options.length ?? 0}/${ingredientPurchaseUnitSelect?.options.length ?? 0}`)
 if (ingredientCategorySelect) setSelect(ingredientCategorySelect, 'Bumbu Dapur')
 if (ingredientFields.name) setInput(ingredientFields.name, 'Gula aren')
-if (ingredientFields.unit) setInput(ingredientFields.unit, 'gram')
-if (ingredientFields.purchaseUnit) setInput(ingredientFields.purchaseUnit, 'pack 1 kg')
+if (ingredientUnitSelect) setSelect(ingredientUnitSelect, 'gram')
+if (ingredientPurchaseUnitSelect) setSelect(ingredientPurchaseUnitSelect, 'pack')
 if (ingredientFields.purchasePrice) setInput(ingredientFields.purchasePrice, '20000')
 if (ingredientFields.usage) setInput(ingredientFields.usage, '1000')
 if (ingredientFields.minStock) setInput(ingredientFields.minStock, '500')
@@ -366,7 +377,7 @@ if (savePurchases) act(() => { savePurchases.dispatchEvent(new window.MouseEvent
 const purchaseMovements = persistedState().stockMovements ?? []
 check('pembelian massal tersimpan dua pergerakan', purchaseMovements.length === 2, String(purchaseMovements.length))
 check('total biaya pembelian massal tersimpan', purchaseMovements.reduce((sum: number, movement: { totalCost: number }) => sum + movement.totalCost, 0) === 32000)
-const packMovement = purchaseMovements.find((movement: { note: string }) => movement.note.includes('pack 1 kg'))
+const packMovement = purchaseMovements.find((movement: { note: string }) => movement.note.includes('1 pack'))
 check('pembelian pack dikonversi ke 1000 gram', packMovement?.qty === 1000, String(packMovement?.qty))
 check('biaya pack memakai harga kemasan', packMovement?.totalCost === 20000, String(packMovement?.totalCost))
 

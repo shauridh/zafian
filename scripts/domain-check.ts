@@ -203,7 +203,7 @@ check('kategori bahan hasil migrasi idempoten', JSON.stringify(normalizeStore(cu
 
 const configured = normalizeStore({
   settings: {
-    businessName: 'Sabana Cabang 2', outletName: 'Cabang 2', receiptFooter: 'WA 0812-3456', theme: 'dark',
+    businessName: 'Sabana Cabang 2', outletName: 'Cabang 2', outletPhone: '0812-3456-7890', receiptFooter: 'WA 0812-3456', theme: 'dark',
     printer: {
       deviceName: 'Thermal Kasir 1', paperWidth: 80, autoPrint: true,
       headerAlign: 'center', footerAlign: 'center', fontSize: 'large',
@@ -214,12 +214,15 @@ const configured = normalizeStore({
 check('pengaturan printer & outlet dipertahankan', configured.settings.printer.paperWidth === 80 && configured.settings.printer.autoPrint && configured.settings.printer.deviceName === 'Thermal Kasir 1', JSON.stringify(configured.settings))
 check('tata letak struk pengguna dipertahankan', configured.settings.printer.headerAlign === 'center' && configured.settings.printer.footerAlign === 'center' && configured.settings.printer.fontSize === 'large' && !configured.settings.printer.showOrderType && !configured.settings.printer.showPaymentDetail && configured.settings.printer.copies === 2, JSON.stringify(configured.settings.printer))
 check('tema gelap dipertahankan', configured.settings.theme === 'dark')
+check('nomor telepon outlet dipertahankan', configured.settings.outletPhone === '0812-3456-7890', configured.settings.outletPhone)
 const configuredReceipt = buildReceiptText(cashSale, brandingFromSettings(configured.settings))
 check('pengaturan tersimpan dipakai menyusun struk', configuredReceipt.includes('SABANA CABANG 2') && configuredReceipt.includes('Cabang 2') && configuredReceipt.includes('WA 0812-3456'), configuredReceipt.slice(0, 180))
+check('nomor telepon tampil di bawah nama outlet pada struk', configuredReceipt.indexOf('0812-3456-7890') > configuredReceipt.indexOf('Cabang 2') && configuredReceipt.indexOf('0812-3456-7890') < configuredReceipt.indexOf('----'), configuredReceipt.slice(0, 160))
 check('struk mengikuti lebar 80mm dan menyembunyikan detail', configuredReceipt.split('\n').find((line) => line.startsWith('---'))?.length === 42 && !configuredReceipt.includes('Tipe:') && !configuredReceipt.includes('BAYAR') && configuredReceipt.includes('TOTAL'), configuredReceipt.slice(0, 360))
 const invalidSettings = normalizeStore({ settings: { theme: 'neon', printer: { paperWidth: 76, autoPrint: 'ya', headerAlign: 'tengah', fontSize: 'raksasa', copies: 9 } } })
 check('pengaturan tidak valid jatuh ke default aman', invalidSettings.settings.theme === 'light' && invalidSettings.settings.printer.paperWidth === 58 && invalidSettings.settings.printer.autoPrint === false, JSON.stringify(invalidSettings.settings.printer))
 check('tata letak tidak valid jatuh ke default & salinan dibatasi', invalidSettings.settings.printer.headerAlign === 'left' && invalidSettings.settings.printer.fontSize === 'normal' && invalidSettings.settings.printer.copies === 3, JSON.stringify(invalidSettings.settings.printer))
+check('nomor telepon kosong aman untuk data lama', invalidSettings.settings.outletPhone === '', JSON.stringify(invalidSettings.settings.outletPhone))
 
 const imageTransaction = normalizeStore({
   transactions: [{

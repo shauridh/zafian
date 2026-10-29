@@ -3,6 +3,7 @@ import { Calculator, Trash2 } from 'lucide-react'
 
 import type { Ingredient } from '../../domain/catalog'
 import type { PosStore } from '../../domain/pos'
+import { unitOptionsWithCurrent } from '../../domain/units'
 import { removeIngredient } from '../../lib/catalog-ops'
 import { createId } from '../../lib/id'
 import { ConfirmDialog, Field, Modal, money } from './ui'
@@ -21,6 +22,8 @@ export function IngredientEditor({ store, setStore, notify, ingredient, onClose 
   const [category, setCategory] = useState(ingredient?.category ?? categoryNames[0] ?? 'Lainnya')
   const [unit, setUnit] = useState(ingredient?.unit ?? '')
   const [purchaseUnit, setPurchaseUnit] = useState(ingredient?.purchaseUnit ?? '')
+  const unitChoices = unitOptionsWithCurrent(unit)
+  const purchaseUnitChoices = unitOptionsWithCurrent(purchaseUnit)
   const [purchasePrice, setPurchasePrice] = useState(ingredient ? String(ingredient.purchasePrice) : '')
   const [usage, setUsage] = useState(ingredient ? String(ingredient.usagePerPurchaseUnit) : '')
   const [costPerUnit, setCostPerUnit] = useState(ingredient ? String(ingredient.costPerUnit) : '')
@@ -82,10 +85,20 @@ export function IngredientEditor({ store, setStore, notify, ingredient, onClose 
             {categoryNames.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </Field>
-        <Field label="Satuan pakai" hint="dipakai di resep, mis. gram / potong / ml"><input value={unit} onChange={(event) => setUnit(event.target.value)} placeholder="gram" /></Field>
+        <Field label="Satuan pakai" hint="Dipakai di resep, mis. gram / potong / ml.">
+          <select value={unit} onChange={(event) => setUnit(event.target.value)} aria-label="Satuan pakai">
+            <option value="">Pilih satuan</option>
+            {unitChoices.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </Field>
       </div>
       <div className="owner-field-grid">
-        <Field label="Satuan pembelian"><input value={purchaseUnit} onChange={(event) => setPurchaseUnit(event.target.value)} placeholder="pack 500 gram" /></Field>
+        <Field label="Satuan pembelian" hint="Satuan kemasan saat membeli; konversi diisi di kolom isi.">
+          <select value={purchaseUnit} onChange={(event) => setPurchaseUnit(event.target.value)} aria-label="Satuan pembelian">
+            <option value="">{unit ? `Sama dengan satuan pakai (${unit})` : 'Sama dengan satuan pakai'}</option>
+            {purchaseUnitChoices.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </Field>
         <Field label="Harga beli"><input type="number" min="0" value={purchasePrice} onChange={(event) => setPurchasePrice(event.target.value)} /></Field>
       </div>
       <div className="owner-field-grid">

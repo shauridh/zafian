@@ -5,6 +5,7 @@ import { getPrinterTransportStatus, sendReceiptText } from './printer-connection
 export type ReceiptBranding = {
   businessName?: string
   outletName?: string
+  outletPhone?: string
   footer?: string
   promo?: string
   paperWidth?: 58 | 80
@@ -19,6 +20,7 @@ export type ReceiptBranding = {
 const fallback: Required<ReceiptBranding> = {
   businessName: 'SABANA FRIED CHICKEN',
   outletName: 'Outlet utama',
+  outletPhone: '',
   footer: 'Terima kasih',
   promo: '',
   paperWidth: 58,
@@ -36,6 +38,7 @@ function resolveBranding(branding: ReceiptBranding = {}): Required<ReceiptBrandi
   return {
     businessName: branding.businessName?.trim() || fallback.businessName,
     outletName: branding.outletName?.trim() || fallback.outletName,
+    outletPhone: branding.outletPhone?.trim() ?? '',
     footer: branding.footer?.trim() || fallback.footer,
     promo: branding.promo?.trim() ?? '',
     paperWidth: branding.paperWidth === 80 ? 80 : fallback.paperWidth,
@@ -52,6 +55,7 @@ export function brandingFromSettings(settings: AppSettings): ReceiptBranding {
   return {
     businessName: settings.businessName,
     outletName: settings.outletName,
+    outletPhone: settings.outletPhone,
     footer: settings.receiptFooter,
     promo: settings.receiptPromo,
     paperWidth: settings.printer.paperWidth,
@@ -93,6 +97,7 @@ export function buildReceiptText(transaction: Transaction, branding: ReceiptBran
   const rows: string[] = []
   rows.push(alignLine(config.businessName.toUpperCase(), width, config.headerAlign))
   if (config.outletName) rows.push(alignLine(config.outletName, width, config.headerAlign))
+  if (config.outletPhone) rows.push(alignLine(config.outletPhone, width, config.headerAlign))
   rows.push(line)
   rows.push(transaction.number)
   rows.push(new Date(transaction.createdAt).toLocaleString('id-ID'))

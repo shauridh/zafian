@@ -33,6 +33,8 @@ export type OwnerPinRecord = {
 export type AppSettings = {
   businessName: string
   outletName: string
+  /** Nomor telepon outlet, tampil di bawah nama outlet dan pada struk. */
+  outletPhone: string
   receiptFooter: string
   /** Baris promo opsional di atas catatan kaki; satu baris per baris. */
   receiptPromo: string
@@ -45,6 +47,7 @@ export type AppSettings = {
 export const defaultSettings: AppSettings = {
   businessName: 'SABANA FRIED CHICKEN',
   outletName: 'Outlet utama',
+  outletPhone: '',
   receiptFooter: 'Terima kasih • Sabana POS',
   receiptPromo: '',
   theme: 'light',

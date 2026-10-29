@@ -20,6 +20,7 @@ import { Field, FieldGroup } from './ui'
 export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
   const [businessName, setBusinessName] = useState(store.settings.businessName)
   const [outletName, setOutletName] = useState(store.settings.outletName)
+  const [outletPhone, setOutletPhone] = useState(store.settings.outletPhone)
   const [receiptFooter, setReceiptFooter] = useState(store.settings.receiptFooter)
   const [receiptPromo, setReceiptPromo] = useState(store.settings.receiptPromo)
   const [theme, setTheme] = useState<ThemeMode>(store.settings.theme)
@@ -46,6 +47,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
 
   const dirty = businessName !== store.settings.businessName
     || outletName !== store.settings.outletName
+    || outletPhone !== store.settings.outletPhone
     || receiptFooter !== store.settings.receiptFooter
     || receiptPromo !== store.settings.receiptPromo
     || theme !== store.settings.theme
@@ -62,6 +64,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
   const receiptLayout = {
     businessName,
     outletName,
+    outletPhone,
     footer: receiptFooter,
     promo: receiptPromo,
     paperWidth,
@@ -89,6 +92,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
     const settings: AppSettings = {
       businessName: businessName.trim(),
       outletName: outletName.trim(),
+      outletPhone: outletPhone.trim(),
       receiptFooter: receiptFooter.trim() || 'Terima kasih',
       receiptPromo: receiptPromo.trim(),
       theme,
@@ -192,6 +196,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
           <div className="owner-setting-head"><span className="owner-stat-icon"><Store size={17} /></span><div><h2>Identitas outlet</h2><p className="owner-muted">Tampil di topbar dan struk pelanggan.</p></div></div>
           <Field label="Nama usaha"><input value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="SABANA FRIED CHICKEN" /></Field>
           <Field label="Nama outlet"><input value={outletName} onChange={(event) => setOutletName(event.target.value)} placeholder="Outlet utama" /></Field>
+          <Field label="Nomor telepon outlet" hint="Tampil di bawah nama outlet dan pada struk pelanggan."><input type="tel" value={outletPhone} onChange={(event) => setOutletPhone(event.target.value)} placeholder="0812-3456-7890" /></Field>
           <Field label="Catatan kaki struk" hint="Mis. ucapan terima kasih atau nomor WhatsApp outlet."><textarea className="owner-textarea" value={receiptFooter} onChange={(event) => setReceiptFooter(event.target.value)} rows={3} /></Field>
           <Field label="Baris promo struk" hint="Opsional. Satu baris per baris, maksimal 3 baris; tampil di bawah catatan kaki, teks panjang dibungkus dan tetap di tengah."><textarea className="owner-textarea" value={receiptPromo} onChange={(event) => setReceiptPromo(event.target.value)} rows={2} placeholder="Promo: Beli 2 gratis 1" /></Field>
         </section>

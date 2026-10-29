@@ -193,12 +193,13 @@ check('outlet kedua hanya melihat datanya sendiri', secondOutlet?.menus.length =
 const driverGateway = new FakeGateway()
 const driver = createOnlineDriver(driverGateway, OUTLET, seeded, 5)
 const firstSavePromise = driver.save(seeded)
-const secondStore = { ...seeded, settings: { ...seeded.settings, businessName: 'Warung Uji' } }
+const secondStore = { ...seeded, settings: { ...seeded.settings, businessName: 'Warung Uji', outletPhone: '0812-7777-8888' } }
 const secondSavePromise = driver.save(secondStore)
 await Promise.all([firstSavePromise, secondSavePromise])
 check('dua perubahan beruntun menjadi satu penulisan pengaturan', driverGateway.count('upsert', 'app_settings') === 1, String(driverGateway.count('upsert', 'app_settings')))
 const driverLoaded = await loadStore(driverGateway, OUTLET)
 check('driver menyimpan versi terbaru', driverLoaded?.settings.businessName === 'Warung Uji')
+check('nomor telepon outlet tersimpan lewat repo', driverLoaded?.settings.outletPhone === '0812-7777-8888', String(driverLoaded?.settings.outletPhone))
 
 const failingGateway = new FakeGateway()
 failingGateway.failOn = 'menu_items'

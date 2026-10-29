@@ -68,7 +68,7 @@ export function OwnerScreen({ store, setStore, onBack, darkMode, onToggleTheme, 
       <header className="pos-topbar owner-topbar">
         <div className="brand">
           <div className="brand-mark"><ChefHat size={20} /></div>
-          <div><strong>Sabana POS</strong><span>Mode pemilik • {store.settings.outletName}</span></div>
+          <div><strong>Sabana POS</strong><span>Mode pemilik • {store.settings.outletName}</span>{store.settings.outletPhone && <span className="brand-phone">{store.settings.outletPhone}</span>}</div>
         </div>
         <div className="top-actions">
           <button className="owner-back" onClick={onBack}><ArrowLeft size={15} /> Kasir</button>
