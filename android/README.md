@@ -39,9 +39,55 @@ Hasil:
 android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-APK debug ditandatangani dengan debug keystore lokal. Untuk dibagikan sebagai
-aplikasi produksi, buat signed APK/AAB di Android Studio dan simpan keystore
-tersendiri; jangan commit keystore.
+APK debug ditandatangani dengan debug keystore lokal dan **tidak bisa** menimpa
+APK release (tanda tangan berbeda). Gunakan APK debug hanya untuk uji cepat.
+
+## Build APK release (tanda tangan tetap)
+
+APK release memakai keystore sendiri supaya update berikutnya bisa dipasang
+tanpa uninstall, asalkan `versionCode` dinaikkan dan keystore yang sama dipakai.
+
+Prasyarat:
+
+- `android/release.keystore` — file keystore release.
+- `android/keystore.properties` — kredensial keystore (gitignored).
+
+Salin contoh lalu isi:
+
+```sh
+cp android/keystore.properties.example android/keystore.properties
+```
+
+```properties
+storeFile=release.keystore
+storePassword=...
+keyAlias=sabana
+keyPassword=...
+```
+
+Build:
+
+```sh
+cd android
+./gradlew assembleRelease
+```
+
+Hasil:
+
+```
+android/app/build/outputs/apk/release/app-release.apk
+```
+
+**Penting:**
+
+- `release.keystore` dan `keystore.properties` tidak boleh di-commit. Simpan
+  backup keduanya; kalau hilang, update berikutnya harus uninstall dulu karena
+  tidak bisa ditandatangani dengan kunci yang sama.
+- Naikkan `versionCode` di `android/app/build.gradle` setiap kali merilis update.
+- APK debug dan release memakai kunci berbeda, jadi memasang release di atas
+  debug akan ditolak Android. Uninstall APK debug sekali, lalu pasang release.
+- `assembleRelease` akan gagal dengan pesan jelas bila `keystore.properties`
+  tidak ada, supaya tidak ada APK "release" yang diam-diam ditandatangani debug.
 
 ## Mengubah URL aplikasi
 

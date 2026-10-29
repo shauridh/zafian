@@ -104,7 +104,19 @@ cd android
 # hasil: android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-APK debug memakai halaman production di `android/app/src/main/res/values/strings.xml` (default `https://zafian.vercel.app`). Karena halaman diambil dari web, **deploy ulang build web terbaru sebelum memasang APK** agar shim auto-connect ikut termuat. Bridge mendukung Bluetooth Classic/SPP (jalur umum RPP02N) dan BLE; printer yang dipilih disimpan, lalu disambungkan ulang otomatis saat mencetak. APK debug ditandatangani dengan debug keystore—buat signed APK/AAB sebelum distribusi permanen. Cetak dengan RPP02N fisik belum diuji di sandbox.
+APK debug memakai halaman production di `android/app/src/main/res/values/strings.xml` (default `https://zafian.vercel.app`). Karena halaman diambil dari web, **deploy ulang build web terbaru sebelum memasang APK** agar shim auto-connect ikut termuat. Bridge mendukung Bluetooth Classic/SPP (jalur umum RPP02N) dan BLE; printer yang dipilih disimpan, lalu disambungkan ulang otomatis saat mencetak. APK debug ditandatangani dengan debug keystore dan hanya untuk uji cepat.
+
+Untuk distribusi, buat APK release bertanda tangan tetap:
+
+```sh
+cp android/keystore.properties.example android/keystore.properties
+# isi kredensial dan letakkan android/release.keystore
+cd android
+./gradlew assembleRelease
+# hasil: android/app/build/outputs/apk/release/app-release.apk
+```
+
+Simpan `release.keystore` + `keystore.properties` di luar Git dan backup; tanpa keduanya update berikutnya harus uninstall. Naikkan `versionCode` setiap rilis. APK debug dan release tidak bisa saling menimpa karena beda kunci—uninstall debug sekali. Cetak dengan RPP02N fisik belum diuji di sandbox.
 
 ## Alur kasir
 

@@ -15,6 +15,7 @@ dist
 /.vercel/
 /android/.gradle/
 /android/local.properties
+/android/keystore.properties
 /android/app/build/
 /android/.idea/
 *.jks
