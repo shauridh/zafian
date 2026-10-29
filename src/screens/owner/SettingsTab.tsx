@@ -21,6 +21,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
   const [businessName, setBusinessName] = useState(store.settings.businessName)
   const [outletName, setOutletName] = useState(store.settings.outletName)
   const [receiptFooter, setReceiptFooter] = useState(store.settings.receiptFooter)
+  const [receiptPromo, setReceiptPromo] = useState(store.settings.receiptPromo)
   const [theme, setTheme] = useState<ThemeMode>(store.settings.theme)
   const [deviceName, setDeviceName] = useState(store.settings.printer.deviceName)
   const [paperWidth, setPaperWidth] = useState<58 | 80>(store.settings.printer.paperWidth)
@@ -46,6 +47,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
   const dirty = businessName !== store.settings.businessName
     || outletName !== store.settings.outletName
     || receiptFooter !== store.settings.receiptFooter
+    || receiptPromo !== store.settings.receiptPromo
     || theme !== store.settings.theme
     || deviceName !== store.settings.printer.deviceName
     || paperWidth !== store.settings.printer.paperWidth
@@ -61,6 +63,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
     businessName,
     outletName,
     footer: receiptFooter,
+    promo: receiptPromo,
     paperWidth,
     headerAlign,
     footerAlign,
@@ -87,6 +90,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
       businessName: businessName.trim(),
       outletName: outletName.trim(),
       receiptFooter: receiptFooter.trim() || 'Terima kasih',
+      receiptPromo: receiptPromo.trim(),
       theme,
       ownerPin: store.settings.ownerPin,
       printer: {
@@ -170,6 +174,8 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
   const testPrint = async () => {
     const outcome = await printTestReceiptPreferred(receiptLayout)
     notify(printOutcomeMessage(outcome))
+    // Auto-connect native dapat mengubah status tanpa pairing ulang.
+    refreshPrinterStatus()
   }
 
   const installPwa = async () => {
@@ -187,6 +193,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
           <Field label="Nama usaha"><input value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="SABANA FRIED CHICKEN" /></Field>
           <Field label="Nama outlet"><input value={outletName} onChange={(event) => setOutletName(event.target.value)} placeholder="Outlet utama" /></Field>
           <Field label="Catatan kaki struk" hint="Mis. ucapan terima kasih atau nomor WhatsApp outlet."><textarea className="owner-textarea" value={receiptFooter} onChange={(event) => setReceiptFooter(event.target.value)} rows={3} /></Field>
+          <Field label="Baris promo struk" hint="Opsional. Satu baris per baris, maksimal 3 baris; tampil di atas catatan kaki."><textarea className="owner-textarea" value={receiptPromo} onChange={(event) => setReceiptPromo(event.target.value)} rows={2} placeholder="Promo: Beli 2 gratis 1" /></Field>
         </section>
 
         <section className="owner-settings-card">
@@ -241,7 +248,7 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
             </div>
             <div className="owner-setting-note">
               <strong>Panduan pairing RPP02N</strong>
-              <span>Nyalakan printer → tekan <b>Cari &amp; pasangkan</b> → pilih <b>RPP02N</b> → tunggu status <b>TERHUBUNG</b> → <b>Tes cetak struk</b> → <b>Simpan pengaturan</b>. Pairing harus dilakukan dari Chrome di tablet (HTTPS), bukan dari preview desktop. Jika RPP02N tidak muncul, printer mungkin Bluetooth Classic/SPP; gunakan dialog cetak sistem atau shell Android dengan bridge native.</span>
+              <span>Nyalakan printer → tekan <b>Cari &amp; pasangkan</b> → pilih <b>RPP02N</b> → tunggu status <b>TERHUBUNG</b> → <b>Tes cetak struk</b> → <b>Simpan pengaturan</b>. Pairing dilakukan dari Chrome di tablet (HTTPS) atau dari APK Sabana POS, bukan dari preview desktop. Jika RPP02N tidak muncul di daftar Classic, tekan <b>Pindai BLE</b> atau pasangkan dulu lewat Pengaturan Bluetooth Android.</span>
             </div>
           </div>
 

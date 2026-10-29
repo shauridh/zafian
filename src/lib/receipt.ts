@@ -6,6 +6,7 @@ export type ReceiptBranding = {
   businessName?: string
   outletName?: string
   footer?: string
+  promo?: string
   paperWidth?: 58 | 80
   headerAlign?: ReceiptAlign
   footerAlign?: ReceiptAlign
@@ -19,6 +20,7 @@ const fallback: Required<ReceiptBranding> = {
   businessName: 'SABANA FRIED CHICKEN',
   outletName: 'Outlet utama',
   footer: 'Terima kasih',
+  promo: '',
   paperWidth: 58,
   headerAlign: 'left',
   footerAlign: 'left',
@@ -35,6 +37,7 @@ function resolveBranding(branding: ReceiptBranding = {}): Required<ReceiptBrandi
     businessName: branding.businessName?.trim() || fallback.businessName,
     outletName: branding.outletName?.trim() || fallback.outletName,
     footer: branding.footer?.trim() || fallback.footer,
+    promo: branding.promo?.trim() ?? '',
     paperWidth: branding.paperWidth === 80 ? 80 : fallback.paperWidth,
     headerAlign: branding.headerAlign === 'center' ? 'center' : fallback.headerAlign,
     footerAlign: branding.footerAlign === 'center' ? 'center' : fallback.footerAlign,
@@ -50,6 +53,7 @@ export function brandingFromSettings(settings: AppSettings): ReceiptBranding {
     businessName: settings.businessName,
     outletName: settings.outletName,
     footer: settings.receiptFooter,
+    promo: settings.receiptPromo,
     paperWidth: settings.printer.paperWidth,
     headerAlign: settings.printer.headerAlign,
     footerAlign: settings.printer.footerAlign,
@@ -95,6 +99,11 @@ export function buildReceiptText(transaction: Transaction, branding: ReceiptBran
   }
   if (transaction.status !== 'completed') rows.push(`STATUS: ${transaction.status.toUpperCase()}`)
   rows.push(line)
+  const promoLines = config.promo.split('\n').map((promoLine) => promoLine.trim()).filter(Boolean).slice(0, 3)
+  if (promoLines.length > 0) {
+    for (const promoLine of promoLines) rows.push(alignLine(promoLine, width, config.footerAlign))
+    rows.push(line)
+  }
   for (const footerLine of config.footer.split('\n')) rows.push(alignLine(footerLine, width, config.footerAlign))
   return rows.join('\n')
 }
@@ -137,7 +146,9 @@ export function printOutcomeMessage(outcome: PrintOutcome): string {
 async function printTextPreferred(text: string, title: string, branding: ReceiptBranding = {}): Promise<PrintOutcome> {
   const config = resolveBranding(branding)
   const active = getPrinterTransportStatus()
-  if (active.canSend) {
+  // Native boleh dicoba saat status terputus: bridge akan auto-connect ke
+  // printer tersimpan sebelum menulis payload.
+  if (active.kind === 'native' || active.canSend) {
     try {
       await sendReceiptText(text, config.copies, config.fontSize)
       const deviceName = active.deviceName ?? 'Printer thermal'

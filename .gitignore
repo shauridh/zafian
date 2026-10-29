@@ -13,6 +13,12 @@ dist
 /.screenshots/
 /artifacts/
 /.vercel/
+/android/.gradle/
+/android/local.properties
+/android/app/build/
+/android/.idea/
+*.jks
+*.keystore
 /.agents/
 /.claude/
 /agent/

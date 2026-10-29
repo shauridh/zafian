@@ -110,6 +110,13 @@ check('tipe pesanan bisa disembunyikan dari struk', !compactReceipt.includes('Ti
 check('rincian pembayaran bisa disembunyikan dari struk', !compactReceipt.includes('BAYAR') && !compactReceipt.includes('Metode:') && compactReceipt.includes('TOTAL'))
 check('footer multi-baris mengikuti perataan tengah', compactLines.slice(-2).every((line) => line.startsWith(' ')), JSON.stringify(compactLines.slice(-2)))
 
+const promoReceipt = buildReceiptText(cashSale, {
+  businessName: 'SABANA FRIED CHICKEN', outletName: 'Outlet utama', footer: 'Terima kasih', paperWidth: 58,
+  promo: 'Promo hari ini\nBeli 2 gratis 1',
+})
+check('struk memuat baris promo', promoReceipt.includes('Promo hari ini') && promoReceipt.includes('Beli 2 gratis 1'), JSON.stringify(promoReceipt.slice(-120)))
+check('baris promo tampil sebelum footer', promoReceipt.indexOf('Promo hari ini') < promoReceipt.indexOf('Terima kasih'))
+
 // ---- Migrasi state versi lama ----
 const legacyState = {
   // sengaja tanpa schemaVersion, menus, ingredients, auditLog, stockMovements
@@ -448,11 +455,15 @@ check('printer Bluetooth bisa diputuskan', !isBluetoothPrinterConnected())
 let nativeConnected = false
 const nativePayloads: string[] = []
 const nativeBridge = {
-  getStatus: () => ({ connected: nativeConnected, deviceName: nativeConnected ? 'Native Thermal' : null, transport: 'classic' as const }),
+  getStatus: () => ({ connected: nativeConnected, deviceName: 'Native Thermal', transport: 'classic' as const }),
   pair: async () => { nativeConnected = true; return { deviceName: 'Native Thermal', transport: 'classic' as const } },
   reconnect: async () => { nativeConnected = true; return { deviceName: 'Native Thermal', transport: 'classic' as const } },
   disconnect: () => { nativeConnected = false },
-  sendReceipt: async (input: { payloads: string[]; copies: number }) => { nativePayloads.push(...input.payloads) },
+  sendReceipt: async (input: { payloads: string[]; copies: number }) => {
+    // Meniru bridge Android: setiap kirim memastikan koneksi ke printer tersimpan.
+    nativeConnected = true
+    nativePayloads.push(...input.payloads)
+  },
 }
 ;(window as unknown as { SabanaPrinter?: typeof nativeBridge }).SabanaPrinter = nativeBridge
 const nativeStatus = getPrinterTransportStatus()
@@ -477,6 +488,8 @@ const largeNative = Uint8Array.from(Buffer.from(nativePayloads[nativePayloads.le
 check('ukuran font besar ikut terkirim ke printer native', containsSequence([...largeNative], [0x1b, 0x21, 0x10]), 'ESC ! 0x10')
 await disconnectActivePrinter()
 check('printer native bisa diputuskan', !getPrinterTransportStatus().canSend)
+const reconnectOutcome = await printReceiptPreferred(cashSale, { businessName: 'NATIVE AUTO RECONNECT', copies: 1 })
+check('cetak native tetap dicoba saat status terputus (auto-reconnect)', reconnectOutcome.mode === 'native' && nativeConnected, JSON.stringify(reconnectOutcome))
 
 if (failures > 0) {
   console.error(`${failures} pemeriksaan gagal`)

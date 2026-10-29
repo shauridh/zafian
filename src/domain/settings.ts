@@ -34,6 +34,8 @@ export type AppSettings = {
   businessName: string
   outletName: string
   receiptFooter: string
+  /** Baris promo opsional di atas catatan kaki; satu baris per baris. */
+  receiptPromo: string
   theme: ThemeMode
   printer: PrinterSettings
   /** PIN pemilik bersifat opsional sampai pemilik membuatnya. */
@@ -44,6 +46,7 @@ export const defaultSettings: AppSettings = {
   businessName: 'SABANA FRIED CHICKEN',
   outletName: 'Outlet utama',
   receiptFooter: 'Terima kasih • Sabana POS',
+  receiptPromo: '',
   theme: 'light',
   printer: {
     deviceName: '',

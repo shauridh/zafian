@@ -568,12 +568,14 @@ async function main(): Promise<number> {
     await navTo('Pengaturan')
     await page.getByRole('button', { name: '80 mm' }).click()
     await page.locator('[aria-label="Cetak 2 salinan"]').click()
+    await page.locator('.owner-field', { hasText: 'Baris promo struk' }).locator('textarea').fill('Promo hari ini\nBeli 2 gratis 1')
     await page.locator('.printer-grid').scrollIntoViewIfNeeded()
     await shot('pengaturan-printer')
     await page.getByRole('button', { name: 'Simpan pengaturan' }).click()
     await settle(600)
     store = await readStore()
     check('pengaturan printer tersimpan', store.settings.printer.paperWidth === 80 && store.settings.printer.copies === 2, JSON.stringify(store.settings.printer))
+    check('baris promo struk tersimpan', store.settings.receiptPromo === 'Promo hari ini\nBeli 2 gratis 1', JSON.stringify(store.settings.receiptPromo))
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await page.waitForSelector('.pos-screen', { timeout: 30_000 })
@@ -582,6 +584,8 @@ async function main(): Promise<number> {
     await navTo('Pengaturan')
     const previewLabel = (await page.locator('.owner-preview-label').innerText()).toLowerCase()
     check('pengaturan printer persist setelah reload', previewLabel.includes('80 mm') && previewLabel.includes('2 salinan'), previewLabel)
+    const previewText = await page.locator('.printer-preview').innerText()
+    check('baris promo tampil di pratinjau struk', previewText.includes('Promo hari ini') && previewText.includes('Beli 2 gratis 1'), previewText.slice(-180))
     const settingsText = await page.locator('.owner-settings-grid').innerText()
     check('pengaturan menampilkan status aplikasi offline', settingsText.includes('Service worker') && settingsText.includes('Install ke layar utama'), settingsText.split('\n').filter((line) => /Service worker|Install ke layar utama/.test(line)).join(' | '))
     await installPrintCapture()
@@ -590,6 +594,7 @@ async function main(): Promise<number> {
     const printHtml = await page.evaluate(() => (window as unknown as { __printHtml: string | null }).__printHtml)
     check('tes cetak memakai lebar 80 mm', Boolean(printHtml?.includes('size: 80mm')), printHtml ? 'HTML tercapture' : 'tidak ada HTML')
     check('tes cetak mengirim 2 salinan', (printHtml?.match(/<pre>/g) ?? []).length === 2, String((printHtml?.match(/<pre>/g) ?? []).length))
+    check('tes cetak memuat baris promo', Boolean(printHtml?.includes('Promo hari ini') && printHtml?.includes('Beli 2 gratis 1')), printHtml ? 'HTML tercapture' : 'tidak ada HTML')
     await shot('pengaturan-reload')
 
     // ---------- 7. Buka shift → transaksi tunai → struk → tutup shift ----------

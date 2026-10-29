@@ -94,6 +94,18 @@ Lalu muat ulang aplikasi. Outlet tidak bisa diatur lewat env, jadi tidak ada nil
 
 `bun run build` menyalin `manifest.webmanifest` + ikon 192/512/maskable dan menghasilkan `sw.js` yang mem-precache shell (`/`, JS/CSS ber-hash, ikon, aset menu) dengan nama cache berversi per build. `/index.html` sengaja tidak di-precache karena hosting produksi me-redirect-nya ke `/`, dan respons redirect tidak boleh memenuhi navigasi offline. Service worker hanya didaftarkan pada build produksi; navigasi memakai network-first dengan fallback `index.html` dari cache (deep link tetap bekerja), aset memakai stale-while-revalidate, dan request non-GET serta `/api/*` tidak pernah di-cache. Status service worker dan ketersediaan install tampil di **Pengaturan → Aplikasi & offline**. `check:ui` membangun produksi, menyajikannya lokal, memutus jaringan, lalu reload untuk membuktikan shell dan katalog tetap berfungsi. Pada mode online, shell tetap dimuat offline tetapi data Supabase baru tersedia setelah jaringan kembali.
 
+## APK Android (printer Bluetooth native)
+
+Folder [`android/`](android/README.md) berisi shell WebView untuk aplikasi production dan bridge printer Bluetooth native. Ini jalur yang dipakai untuk RPP02N agar koneksi tidak bergantung pada Web Bluetooth yang putus saat layar mati.
+
+```sh
+cd android
+./gradlew assembleDebug
+# hasil: android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+APK debug memakai halaman production di `android/app/src/main/res/values/strings.xml` (default `https://zafian.vercel.app`). Karena halaman diambil dari web, **deploy ulang build web terbaru sebelum memasang APK** agar shim auto-connect ikut termuat. Bridge mendukung Bluetooth Classic/SPP (jalur umum RPP02N) dan BLE; printer yang dipilih disimpan, lalu disambungkan ulang otomatis saat mencetak. APK debug ditandatangani dengan debug keystore—buat signed APK/AAB sebelum distribusi permanen. Cetak dengan RPP02N fisik belum diuji di sandbox.
+
 ## Alur kasir
 
 1. Buka shift (float default Rp350.000, bisa disesuaikan).
@@ -117,14 +129,14 @@ Klik avatar **P** di topbar, atau ikon printer untuk langsung membuka pengaturan
 - **Bahan & stok** — **tambah, ubah, dan hapus bahan** (tombol hapus tersedia langsung di tabel dan di editor, memakai dialog konfirmasi di dalam aplikasi agar tetap bekerja di preview iframe/WebView; bahan yang masih dipakai resep meminta konfirmasi eksplisit **“Hapus & lepas dari resep”** sehingga baris resep ikut dibersihkan dan tidak ada resep menggantung); **pembelian massal** beberapa bahan dalam satu kali simpan, dengan mode **per satuan** atau **per pack** (jumlah pack otomatis dikonversi ke satuan pakai dan biaya dihitung dari harga kemasan); **opname stok** untuk menambah, mengedit, dan menghapus hasil hitung fisik beserta selisihnya, dengan **nilai selisih otomatis dijurnal**; penyesuaian stok +/- dengan catatan; stok minimum dan pemakaian teoretis.
 - **Forecast** — kebutuhan harian dan mingguan berdasarkan rata-rata 7 hari, stok, dan saran pembelian.
 - **Laporan** — PNL, biaya operasional, neraca saldo, neraca, dan buku besar dari jurnal double-entry otomatis, termasuk penyesuaian selisih persediaan dari opname.
-- **Pengaturan** — identitas usaha/outlet, catatan kaki struk, tema, **PIN pemilik**, pairing printer Bluetooth, lebar kertas 58/80 mm, tata letak struk (perataan header/footer, ukuran font, isi struk, jumlah salinan), cetak otomatis setelah pembayaran, tes cetak, dan ringkasan data.
+- **Pengaturan** — identitas usaha/outlet, catatan kaki struk, **baris promo struk** (opsional, maks. 3 baris di atas footer), tema, **PIN pemilik**, pairing printer Bluetooth, lebar kertas 58/80 mm, tata letak struk (perataan header/footer, ukuran font, isi struk, jumlah salinan), cetak otomatis setelah pembayaran, tes cetak, dan ringkasan data.
 - **Backup** — backup harian otomatis, backup sebelum tutup shift, unduh backup terakhir/baru, restore dengan pratinjau dan konfirmasi, ekspor CSV penjualan dan jurnal, audit log.
 
 ### Printer & struk
 
-Aplikasi ini **murni web** saat ini: tidak ada folder Capacitor/Android, `capacitor.config`, atau plugin native terpasang. Build yang dikirim adalah `dist/client` + Worker. Karena itu transport printer dipilih otomatis oleh `src/lib/printer-connection.ts`:
+Ada dua bentuk distribusi: **web/PWA** (`dist/client` + Worker) dan **shell Android** di `android/`. Shell Android membungkus halaman production di WebView dan menyediakan bridge Bluetooth native (Classic/SPP dan BLE) yang menyimpan printer serta auto-connect sebelum setiap struk. Di browser, transport printer dipilih otomatis oleh `src/lib/printer-connection.ts`:
 
-1. **Native** — hanya jika shell Android/webview menyuntikkan `window.SabanaPrinter` (kontrak `NativePrinterBridge` di `src/lib/printer-connection.ts`). Bridge menerima payload ESC/POS base64, sehingga shell hanya menulis byte ke BLE atau Bluetooth Classic/SPP.
+1. **Native** — hanya jika shell Android/webview menyuntikkan `window.SabanaPrinter` (kontrak `NativePrinterBridge` di `src/lib/printer-connection.ts`). Bridge menerima payload ESC/POS base64, menyimpan alamat RPP02N, dan mencoba auto-connect sebelum menulis byte ke BLE atau Bluetooth Classic/SPP.
 2. **Web Bluetooth (BLE)** — Chrome/Edge Android atau desktop, HTTPS/localhost. Tombol **Cari & pasangkan** membuka pemilih perangkat; **Hubungkan ulang** memakai izin browser; **Putuskan** menutup koneksi GATT.
 3. **Dialog cetak sistem** — fallback di WebView/browser tanpa bridge maupun Web Bluetooth.
 
@@ -182,10 +194,10 @@ Aplikasi ini **murni web** saat ini: tidak ada folder Capacitor/Android, `capaci
 - `bun run typecheck` — lolos, exit 0.
 - `bun run build` — lolos (`dist/client` + Worker, aset menu ikut ter-copy).
 - `VERCEL=1 bun run build` — lolos tanpa `.env.local`: SPA + `manifest.webmanifest` + `sw.js` (25 aset di-precache), tanpa Worker Cloudflare.
-- `bun run check:domain` — **160 pemeriksaan lolos** (migrasi state lama, no-NaN cash, idempotensi tanpa duplikasi kas/jurnal, kategori menu & bahan, pengaturan, gambar menu/item, opname stok & snapshot, jurnal opname, struk 58/80 mm, transport printer, periode ringkasan, backup round-trip, **validasi backup rusak/versi lebih baru**, **hash PIN & kode pemulihan**).
+- `bun run check:domain` — **163 pemeriksaan lolos** (migrasi state lama, no-NaN cash, idempotensi tanpa duplikasi kas/jurnal, kategori menu & bahan, pengaturan, gambar menu/item, opname stok & snapshot, jurnal opname, struk 58/80 mm, **baris promo struk**, transport printer, periode ringkasan, backup round-trip, **validasi backup rusak/versi lebih baru**, **hash PIN & kode pemulihan**).
 - `bun run check:storage` — **14 pemeriksaan lolos** dengan fake-indexeddb: migrasi localStorage, migrasi kedua tidak menimpa IndexedDB, backup harian tidak dobel, backup sebelum tutup shift, unduhan file JSON, dan kegagalan tulis ditolak (tidak ditelan).
 - `bun run check:runtime` — **156 pemeriksaan lolos** di jsdom: App ter-mount tanpa error, gambar tampil di kasir, tema tersimpan, **PIN wajib sebelum mode pemilik/pengaturan printer**, **PIN disimpan sebagai hash**, **reset PIN dengan kode pemulihan dan PIN lama tidak berlaku**, **PIN wajib untuk tutup shift dan void transaksi**, **kegagalan penyimpanan menampilkan alert**, **file restore rusak ditolak dan file valid menampilkan pratinjau sebelum ditimpa**, filter periode ringkasan, ubah harga menu, CRUD menu/bahan/kategori menu & **kategori bahan**, filter kategori bahan, pembelian massal per pack, opname, dan pengaturan printer. Verifikasi ini memakai jsdom, bukan browser grafis atau printer fisik.
-- `bun run check:ui` — **114 pemeriksaan lolos** di Chromium headless (DPR 2, touch): CRUD menu + foto (buat/edit/hapus), CRUD bahan, tab kategori (tambah/ubah/hapus, proteksi kategori terpakai, strip kasir), foto menu di kasir `object-fit: contain` tanpa crop/gepeng (rasio 2:1 terukur), bulk pembelian 3 baris sekali simpan yang menambah stok ketiganya, 8 tab mode pemilik, pengaturan printer 80 mm/2 salinan persist setelah reload dan terbaca tes cetak, **buka shift float Rp350.000 → transaksi tunai uang pas → struk 80 mm/2 salinan tercetak → tutup shift dengan PIN dan kas aktual**, serta **cold start offline**: service worker aktif, reload tanpa jaringan tetap memuat shell, katalog dirender, dan buka shift + pilih menu tetap berfungsi; nol overflow horizontal di 1024×600, 1280×800, 800×1280, dan 360×640. Cetak ke printer thermal fisik tetap belum diuji (yang diperiksa HTML cetak).
+- `bun run check:ui` — **117 pemeriksaan lolos** di Chromium headless (DPR 2, touch): CRUD menu + foto (buat/edit/hapus), CRUD bahan, tab kategori (tambah/ubah/hapus, proteksi kategori terpakai, strip kasir), foto menu di kasir `object-fit: contain` tanpa crop/gepeng (rasio 2:1 terukur), bulk pembelian 3 baris sekali simpan yang menambah stok ketiganya, 8 tab mode pemilik, pengaturan printer 80 mm/2 salinan + **baris promo** persist setelah reload dan terbaca pratinjau serta tes cetak, **buka shift float Rp350.000 → transaksi tunai uang pas → struk 80 mm/2 salinan tercetak → tutup shift dengan PIN dan kas aktual**, serta **cold start offline**: service worker aktif, reload tanpa jaringan tetap memuat shell, katalog dirender, dan buka shift + pilih menu tetap berfungsi; nol overflow horizontal di 1024×600, 1280×800, 800×1280, dan 360×640. Cetak ke printer thermal fisik tetap belum diuji (yang diperiksa HTML cetak).
 - Dev server bind `0.0.0.0:3000`: `/`, `/src/main.tsx`, `/src/App.tsx`, `/src/lib/storage.ts`, `/src/lib/pin.ts`, `/src/lib/backup.ts`, `/src/components/OwnerPinDialog.tsx`, `/src/screens/owner/BackupTab.tsx`, `/src/screens/owner/SettingsTab.tsx`, dan `/src/styles.css` merespons HTTP 200.
 - Ikon tombol dapat diganti di `public/icons/`; ilustrasi menu di `public/menu/`.
 
@@ -212,10 +224,10 @@ Aplikasi ini **murni web** saat ini: tidak ada folder Capacitor/Android, `capaci
 
 - Saat mode online, seluruh data outlet (termasuk kategori bahan dan pengaturan printer/PIN) berada di Supabase, bukan di perangkat. Multi-perangkat membaca outlet yang sama; perubahan terakhir menang per baris.
 - Google Sheets belum terhubung; tersedia ekspor CSV sebagai jalur laporan.
-- Build saat ini murni web; belum ada wrapper Capacitor/Android. Jalur native hanya aktif bila shell masa depan menyediakan `window.SabanaPrinter`.
-- Cetak memakai Web Bluetooth untuk printer thermal **BLE** dan otomatis jatuh ke dialog print WebView/Android bila belum terhubung. Printer **Bluetooth Classic/SPP** memerlukan bridge native dan belum bisa dipakai langsung dari browser.
-- Pairing Web Bluetooth bergantung pada browser (Chrome/Edge Android atau desktop, HTTPS/localhost) dan izin perangkat; pada WebView tanpa Web Bluetooth panel menampilkan transport **Dialog cetak sistem** dan tombol pairing dinonaktifkan.
-- Belum ada verifikasi dengan printer fisik pada sesi ini; pengujian memakai mock BLE/native dan jsdom.
+- Tersedia shell Android native di `android/`: APK WebView + bridge Bluetooth Classic/SPP dan BLE dengan auto-connect ke printer tersimpan. Di browser biasa, cetak tetap memakai Web Bluetooth BLE.
+- Cetak di APK memakai bridge native; bila belum ada printer tersimpan, aplikasi memberi pesan pairing, bukan diam-diam membuka dialog. Print thermal fisik RPP02N belum diuji di sandbox ini—yang diverifikasi adalah build APK, signature, dan shim native di jsdom.
+- Pairing Web Bluetooth di browser bergantung pada Chrome/Edge (HTTPS/localhost) dan izin perangkat; di APK pairing memakai dialog native Android dan mendukung perangkat Classic yang sudah dipasangkan.
+- Unduhan backup berbasis `blob:` dari WebView belum memiliki handler native; gunakan browser untuk mengunduh backup sampai handler ditambahkan.
 - Foto menu disimpan sebagai data URL di IndexedDB (maks. 560 px JPEG). Backup JSON memuat foto tersebut; untuk katalog sangat besar, kapasitas perangkat tetap perlu dipantau.
 - Backup JSON otomatis/unduh tetap tersedia sebagai ekspor eksplisit dan disimpan di perangkat; sumber kebenaran tetap Supabase. Belum ada backup cloud otomatis terjadwal.
 - PIN memakai `crypto.subtle`; buka aplikasi lewat **HTTPS atau localhost**. Pada origin HTTP LAN biasa, PIN tidak bisa dibuat/diverifikasi (aplikasi menampilkan pesan; kasir tetap bisa berjualan, tetapi mode pemilik terkunci sampai origin aman dipakai).

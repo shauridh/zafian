@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { OnlineApp } from './OnlineApp'
+import './lib/native-printer-shim'
 import { registerPwa } from './lib/pwa'
 import { initStorage } from './lib/storage'
 import './styles.css'

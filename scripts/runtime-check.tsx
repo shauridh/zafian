@@ -603,6 +603,44 @@ check('void transaksi meminta PIN', Boolean(window.document.querySelector('.pin-
 clickByText('Batal')
 check('void bisa dibatalkan sebelum PIN', !window.document.querySelector('.pin-modal'))
 
+// ---- Jembatan printer native: callback Android menjadi Promise ----
+const { installNativePrinterShim, uninstallNativePrinterShim } = await import('../src/lib/native-printer-shim')
+const nativeCalls: Array<{ method: string; args: string[] }> = []
+const fakeNative = {
+  getStatus: () => JSON.stringify({ connected: true, deviceName: 'RPP02N', transport: 'classic' }),
+  requestPair: (id: string) => { nativeCalls.push({ method: 'pair', args: [id] }) },
+  requestReconnect: (id: string, name: string) => { nativeCalls.push({ method: 'reconnect', args: [id, name] }) },
+  requestDisconnect: (id: string) => { nativeCalls.push({ method: 'disconnect', args: [id] }) },
+  requestSendReceipt: (id: string, input: string) => { nativeCalls.push({ method: 'sendReceipt', args: [id, input] }) },
+}
+const nativeWindow = window as unknown as {
+  SabanaNative?: typeof fakeNative
+  SabanaPrinter?: {
+    getStatus: () => { connected: boolean; deviceName?: string | null }
+    pair: () => Promise<{ deviceName: string }>
+    sendReceipt: (input: { payloads: string[]; copies: number }) => Promise<void>
+  }
+  __sabanaNativeResolve?: (id: string, payload: string) => void
+}
+nativeWindow.SabanaNative = fakeNative
+check('shim printer native terpasang saat bridge Android tersedia', installNativePrinterShim() && Boolean(nativeWindow.SabanaPrinter))
+const nativeBridge = nativeWindow.SabanaPrinter
+check('status printer native terbaca oleh aplikasi', nativeBridge?.getStatus().connected === true && nativeBridge?.getStatus().deviceName === 'RPP02N', JSON.stringify(nativeBridge?.getStatus()))
+const nativePair = nativeBridge?.pair()
+const pairCall = nativeCalls.find((call) => call.method === 'pair')
+check('pairing native memakai requestId', Boolean(pairCall?.args[0]))
+if (pairCall) nativeWindow.__sabanaNativeResolve?.(pairCall.args[0], JSON.stringify({ ok: true, deviceName: 'RPP02N', transport: 'classic' }))
+check('pairing native resolve ke nama printer', (await nativePair)?.deviceName === 'RPP02N')
+const nativeSend = nativeBridge?.sendReceipt({ payloads: ['AA=='], copies: 1 })
+const sendCall = nativeCalls.find((call) => call.method === 'sendReceipt')
+let sentPayload = ''
+try { sentPayload = JSON.parse(sendCall?.args[1] ?? '{}').payloads?.[0] ?? '' } catch { sentPayload = '' }
+check('payload ESC/POS diteruskan ke bridge native', sentPayload === 'AA==', sentPayload)
+if (sendCall) nativeWindow.__sabanaNativeResolve?.(sendCall.args[0], JSON.stringify({ ok: true }))
+await nativeSend
+uninstallNativePrinterShim()
+nativeWindow.SabanaNative = undefined
+
 check('tidak ada error React/konsol', errors.length === 0, errors.slice(0, 2).join(' | '))
 
 await act(async () => { root.unmount() })

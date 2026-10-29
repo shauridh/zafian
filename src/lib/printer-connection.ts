@@ -58,18 +58,21 @@ export function getPrinterTransportStatus(): PrinterConnectionStatus {
     try {
       const state = native.getStatus()
       const label = nativeLabel(state.transport)
+      const savedName = state.deviceName?.trim() || null
       return {
         kind: 'native',
         label,
         connected: state.connected,
-        deviceName: state.deviceName?.trim() || null,
+        deviceName: savedName,
         canPair: true,
         canReconnect: Boolean(native.reconnect),
         canDisconnect: Boolean(native.disconnect) && state.connected,
         canSend: state.connected,
         diagnostic: state.connected
           ? `Printer terhubung lewat bridge native (${state.transport === 'classic' ? 'Bluetooth Classic/SPP' : 'BLE'}).`
-          : 'Bridge native terdeteksi, tetapi printer belum terhubung. Gunakan Cari & pasangkan atau Hubungkan ulang.',
+          : savedName
+            ? `Printer ${savedName} tersimpan. Cetak berikutnya akan menyambung ulang otomatis lewat bridge native.`
+            : 'Bridge native terdeteksi, tetapi belum ada printer tersimpan. Gunakan Cari & pasangkan.',
       }
     } catch {
       return {
@@ -156,8 +159,9 @@ export async function disconnectPrinter(): Promise<void> {
 export async function sendReceiptText(text: string, copies = 1, fontSize: EscPosFontSize = 'normal'): Promise<void> {
   const native = nativeBridge()
   if (native) {
-    const state = native.getStatus()
-    if (!state.connected) throw new Error('Printer native belum terhubung')
+    // Jangan cek status di sini: bridge native menyimpan printer dan melakukan
+    // auto-connect sebelum menulis. Pemeriksaan status justru memblokir
+    // pemulihan koneksi setelah layar mati.
     const payloads = buildEscPosPayloads(text, copies, fontSize)
     await native.sendReceipt({ payloads: payloads.map(bytesToBase64), copies: payloads.length })
     return
