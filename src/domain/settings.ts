@@ -18,18 +18,6 @@ export type PrinterSettings = {
   copies: number
 }
 
-export type OwnerPinRecord = {
-  /** Salt hex untuk PIN pemilik. */
-  salt: string
-  /** SHA-256 dari `salt:PIN`, bukan PIN mentah. */
-  hash: string
-  /** Salt hex untuk kode pemulihan. */
-  recoverySalt: string
-  /** SHA-256 dari `recoverySalt:kode`, bukan kode mentah. */
-  recoveryHash: string
-  updatedAt: string
-}
-
 export type AppSettings = {
   businessName: string
   outletName: string
@@ -46,8 +34,6 @@ export type AppSettings = {
   ingredientUsage?: Record<string, number>
   theme: ThemeMode
   printer: PrinterSettings
-  /** PIN pemilik bersifat opsional sampai pemilik membuatnya. */
-  ownerPin?: OwnerPinRecord
 }
 
 export const defaultSettings: AppSettings = {

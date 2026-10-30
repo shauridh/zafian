@@ -8,7 +8,7 @@
  *   3. Foto menu di kasir: object-fit contain, konten tidak gepeng/terpotong
  *   4. Bulk pembelian 3 baris sekali simpan menambah stok ketiga bahan
  *   4b. Isi pemakaian standar beberapa bahan sekaligus lalu dipakai resep menu
- *   5. Mode pemilik: PIN dan 8 tab terjangkau
+ *   5. Mode pemilik: 8 tab terjangkau
  *   6. Pengaturan printer: 80 mm + 2 salinan persist setelah reload dan dipakai tes cetak
  *   7. Buka shift, transaksi tunai, struk tercetak (80 mm/2 salinan), lalu tutup shift
  *   + nol overflow horizontal di 1024x600, 1280x800, 800x1280, 360x640
@@ -258,16 +258,6 @@ async function main(): Promise<number> {
   }
   const enterOwner = async () => {
     await page.locator('[aria-label="Buka mode pemilik"]').click()
-    await page.waitForSelector('.pin-modal', { timeout: 10_000 })
-    if (await page.locator('[aria-label="PIN baru"]').count()) {
-      await page.locator('[aria-label="PIN baru"]').fill('1234')
-      await page.locator('[aria-label="Ulangi PIN"]').fill('1234')
-      await page.getByRole('button', { name: 'Buat PIN', exact: true }).click()
-      await page.getByRole('button', { name: 'Saya sudah menyimpan kode' }).click()
-    } else {
-      await page.locator('input[aria-label="PIN pemilik"]').fill('1234')
-      await page.getByRole('button', { name: 'Buka', exact: true }).click()
-    }
     await page.waitForSelector('.owner-layout', { timeout: 15_000 })
     await settle(320)
   }
@@ -307,7 +297,7 @@ async function main(): Promise<number> {
 
     // ---------- 5. Mode pemilik: PIN + semua tab ----------
     await enterOwner()
-    check('mode pemilik terbuka lewat PIN', await page.locator('.owner-layout').count() === 1)
+    check('mode pemilik terbuka tanpa PIN', await page.locator('.owner-layout').count() === 1)
     const navButtons = page.locator('.owner-nav button')
     const navCount = await navButtons.count()
     check('mode pemilik memiliki 8 tab', navCount === 8, String(navCount))
@@ -748,12 +738,9 @@ async function main(): Promise<number> {
     check('struk memakai 80 mm + 2 salinan', Boolean(receiptHtml?.includes('size: 80mm')) && (receiptHtml?.match(/<pre>/g) ?? []).length === 2, 'dari pengaturan tersimpan')
     await shot('struk-transaksi')
 
-    // Void transaksi QRIS dengan alasan dan PIN pemilik.
+    // Void transaksi QRIS dengan alasan.
     await page.locator('.void-reason').fill('Uji void QRIS')
     await page.getByRole('button', { name: 'Void', exact: true }).click()
-    await page.waitForSelector('.pin-modal', { timeout: 10_000 })
-    await page.locator('input[aria-label="PIN pemilik"]').fill('1234')
-    await page.getByRole('button', { name: 'Buka', exact: true }).click()
     await settle(700)
     store = await readStore()
     const voidedSale = store.transactions.find((transaction: any) => transaction.id === qrisSale?.id)
@@ -811,10 +798,10 @@ async function main(): Promise<number> {
     const expectedCash = Number(expectedText.replace(/[^0-9]/g, ''))
     check('kas seharusnya = float + penjualan tunai - cash out', expectedCash === 350000 + soldPrice - 5000, `${expectedText} vs ${350000 + soldPrice - 5000}`)
     await page.locator('.modal input[type=number]').fill(String(expectedCash))
+    const handoverText = (await page.locator('.handover-row b').innerText()).trim()
+    const handoverAmount = Number(handoverText.replace(/[^0-9-]/g, ''))
+    check('setoran ke owner = kas fisik − float awal', handoverAmount === expectedCash - 350000, `${handoverText} vs ${expectedCash - 350000}`)
     await page.getByRole('button', { name: 'Konfirmasi tutup shift' }).click()
-    await page.waitForSelector('.pin-modal', { timeout: 10_000 })
-    await page.locator('input[aria-label="PIN pemilik"]').fill('1234')
-    await page.getByRole('button', { name: 'Buka', exact: true }).click()
     await settle(1500)
     store = await readStore()
     const closedShift = store.shifts.find((shift: any) => shift.id === openShift?.id)

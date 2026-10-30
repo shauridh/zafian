@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 
-import { balanceSheet, buildJournals, chartOfAccounts, pnl, trialBalance, type Expense, type ExpenseCategory } from '../../domain/accounting'
+import { balanceSheet, buildJournals, pnl, trialBalance, type Expense, type ExpenseCategory } from '../../domain/accounting'
 import { cogsForTransactions } from '../../domain/inventory'
 import { createId } from '../../lib/id'
 import type { OwnerTabProps } from './types'
@@ -61,12 +61,9 @@ export function ReportsTab({ store, setStore, notify }: Pick<OwnerTabProps, 'sto
           <h2>Neraca</h2>
           <p className="owner-muted">Aset = liabilitas + ekuitas: {Math.abs(sheet.totalAssets - (sheet.totalLiabilities + sheet.totalEquity)) < 1 ? 'seimbang' : 'periksa jurnal'}.</p>
           <div className="owner-metric-list">
-            <div className="strong"><span>Total aset</span><b>{money(sheet.totalAssets)}</b></div>
-            {sheet.assets.map((row) => <div key={row.code}><span>{row.name}</span><b>{money(row.balance)}</b></div>)}
-            <div className="strong"><span>Total liabilitas</span><b>{money(sheet.totalLiabilities)}</b></div>
-            {sheet.liabilities.map((row) => <div key={row.code}><span>{row.name}</span><b>{money(row.balance)}</b></div>)}
-            <div className="strong"><span>Total ekuitas</span><b>{money(sheet.totalEquity)}</b></div>
-            {sheet.equity.map((row) => <div key={row.code}><span>{row.name}</span><b>{money(row.balance)}</b></div>)}
+            <div className="strong"><span>Aset</span><b>{money(sheet.totalAssets)}</b></div>
+            <div className="strong"><span>Liabilitas</span><b>{money(sheet.totalLiabilities)}</b></div>
+            <div className="strong"><span>Ekuitas</span><b>{money(sheet.totalEquity)}</b></div>
           </div>
         </section>
       </div>
@@ -88,27 +85,6 @@ export function ReportsTab({ store, setStore, notify }: Pick<OwnerTabProps, 'sto
         <div className="owner-panel-head">
           <div><h2>Neraca saldo</h2><p className="owner-muted">{trial.balanced ? 'Seimbang' : 'Tidak seimbang'} • Debit {money(trial.debit)} • Kredit {money(trial.credit)}</p></div>
           <span className={trial.balanced ? 'owner-pill ok' : 'owner-pill danger'}>{trial.balanced ? 'BALANCE' : 'PERIKSA'}</span>
-        </div>
-        <div className="owner-table-wrap">
-          <table className="owner-data">
-            <thead><tr><th>Akun</th><th>Debit</th><th>Kredit</th><th>Saldo</th></tr></thead>
-            <tbody>
-              {trial.rows.filter((row) => row.debit || row.credit).map((row) => <tr key={row.code}><td><strong>{row.code}</strong> {row.name}</td><td>{money(row.debit)}</td><td>{money(row.credit)}</td><td>{money(row.balance)}</td></tr>)}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="owner-panel">
-        <h2>Buku besar</h2>
-        <p className="owner-muted">{chartOfAccounts.length} akun dalam bagan akun. Jurnal tidak dihapus, koreksi lewat void dan penyesuaian.</p>
-        <div className="owner-table-wrap">
-          <table className="owner-data">
-            <thead><tr><th>Akun</th><th>Tipe</th><th>Debit</th><th>Kredit</th><th>Saldo</th></tr></thead>
-            <tbody>
-              {trial.rows.map((row) => <tr key={row.code}><td><strong>{row.code}</strong> {row.name}</td><td>{row.type}</td><td>{money(row.debit)}</td><td>{money(row.credit)}</td><td>{money(row.balance)}</td></tr>)}
-            </tbody>
-          </table>
         </div>
       </section>
     </>

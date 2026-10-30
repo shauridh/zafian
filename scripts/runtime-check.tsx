@@ -98,28 +98,8 @@ const clickByTextAsync = async (label: string) => {
     await new Promise((resolve) => setTimeout(resolve, 40))
   })
 }
-let ownerPin = '1234'
-let recoveryCode = ''
-const setupOwnerPin = async () => {
-  const newPin = window.document.querySelector('[aria-label="PIN baru"]') as HTMLInputElement | null
-  const confirmPin = window.document.querySelector('[aria-label="Ulangi PIN"]') as HTMLInputElement | null
-  check('form membuat PIN tampil', Boolean(newPin && confirmPin))
-  if (newPin) setInput(newPin, ownerPin)
-  if (confirmPin) setInput(confirmPin, ownerPin)
-  await clickByTextAsync('Buat PIN')
-  const code = window.document.querySelector('[data-recovery-code]')
-  check('kode pemulihan ditampilkan sekali', Boolean(code))
-  recoveryCode = code?.getAttribute('data-recovery-code') ?? ''
-  await clickByTextAsync('Saya sudah menyimpan kode')
-  await settle(10)
-}
 const enterOwner = async (label = 'Buka mode pemilik') => {
   clickByLabel(label)
-  await settle(10)
-  const pinInput = window.document.querySelector('input[aria-label="PIN pemilik"]') as HTMLInputElement | null
-  if (!pinInput) return
-  setInput(pinInput, ownerPin)
-  await clickByTextAsync('Buka')
   await settle(10)
 }
 
@@ -142,12 +122,7 @@ check('tema terang kembali tersimpan', persistedState().settings?.theme === 'lig
 
 clickByLabel('Buka mode pemilik')
 await settle(10)
-check('mode pemilik meminta PIN sebelum dibuka', Boolean(window.document.querySelector('.pin-modal')))
-check('PIN pemilik belum tersimpan saat dialog pertama dibuka', !persistedState().settings?.ownerPin)
-await setupOwnerPin()
-check('layar pemilik terbuka setelah PIN dibuat', bodyText().includes('Mode pemilik'))
-check('PIN tersimpan sebagai hash, bukan plaintext', persistedState().settings?.ownerPin?.hash !== ownerPin && /^[a-f0-9]{64}$/.test(persistedState().settings?.ownerPin?.hash ?? ''), JSON.stringify(persistedState().settings?.ownerPin))
-check('kode pemulihan tidak disimpan sebagai plaintext', Boolean(recoveryCode) && !JSON.stringify(persistedState()).includes(recoveryCode.replace(/-/g, '')))
+check('mode pemilik terbuka langsung tanpa PIN', bodyText().includes('Mode pemilik') && !window.document.querySelector('.pin-modal'))
 check('navigasi pemilik memiliki tab kategori & pengaturan', bodyText().includes('Kategori') && bodyText().includes('Pengaturan'))
 const ownerStatsText = () => window.document.querySelector('.owner-stats')?.textContent ?? ''
 check('filter periode ringkasan tersedia', window.document.querySelectorAll('.owner-period-tab').length === 5, String(window.document.querySelectorAll('.owner-period-tab').length))
@@ -538,15 +513,11 @@ check('bahan dipakai resep bisa dihapus', !afterUsedDelete.ingredients?.some((in
 check('baris resep menu ikut dilepas', !afterUsedDelete.menus?.find((menu: { id: string }) => menu.id === 'bbq')?.recipe?.some((line: { ingredientId: string }) => line.ingredientId === 'saus-bbq'))
 check('resep menu lain tidak berubah', (afterUsedDelete.menus?.find((menu: { id: string }) => menu.id === 'dada')?.recipe ?? []).length === dadaRecipeBefore, `${dadaRecipeBefore} → ${(afterUsedDelete.menus?.find((menu: { id: string }) => menu.id === 'dada')?.recipe ?? []).length}`)
 
-// ---- Gerbang PIN untuk pengaturan printer dan tutup shift ----
+// ---- Pengaturan printer dan rekonsiliasi tutup shift ----
 clickByText('Kasir')
 clickByLabel('Pengaturan printer')
 await settle(10)
-check('pengaturan printer meminta PIN', Boolean(window.document.querySelector('.pin-modal')) && bodyText().includes('membuka pengaturan dan printer'), bodyText().slice(0, 160))
-const printerPinInput = window.document.querySelector('input[aria-label="PIN pemilik"]') as HTMLInputElement | null
-if (printerPinInput) setInput(printerPinInput, ownerPin)
-await clickByTextAsync('Buka')
-check('pengaturan terbuka setelah PIN benar', bodyText().includes('Printer & struk'))
+check('pengaturan printer terbuka langsung tanpa PIN', bodyText().includes('Printer & struk') && !window.document.querySelector('.pin-modal'))
 check('panduan pairing RPP02N tampil di pengaturan', bodyText().includes('Panduan pairing RPP02N'), bodyText().slice(0, 200))
 check('instruksi install PWA di Chrome tampil', bodyText().includes('Cara install di Chrome') && bodyText().includes('Tambahkan ke layar utama'), bodyText().slice(0, 200))
 
@@ -556,9 +527,17 @@ clickByText('Tutup shift')
 const actualCashInput = window.document.querySelector('input[placeholder="Uang fisik aktual"]') as HTMLInputElement | null
 check('form tutup shift tersedia', Boolean(actualCashInput))
 if (actualCashInput) setInput(actualCashInput, '385000')
-await clickByTextAsync('Konfirmasi tutup shift')
-check('tutup shift meminta PIN', Boolean(window.document.querySelector('.pin-modal')) && bodyText().includes('menutup shift'), bodyText().slice(0, 160))
-clickByText('Batal')
+const floatRowText = [...window.document.querySelectorAll('.summary-row')].find((row) => row.textContent?.includes('Float awal'))?.querySelector('b')?.textContent ?? ''
+const floatValue = Number(floatRowText.replace(/[^0-9-]/g, ''))
+const handoverValue = () => Number((window.document.querySelector('.handover-row b')?.textContent ?? '').replace(/[^0-9-]/g, ''))
+check('rekonsiliasi menampilkan setoran ke owner', Boolean(window.document.querySelector('.handover-row')), bodyText().slice(0, 200))
+check('setoran ke owner = kas fisik − float awal', handoverValue() === 385000 - floatValue, `${window.document.querySelector('.handover-row b')?.textContent} vs float ${floatRowText}`)
+if (actualCashInput) setInput(actualCashInput, '100000')
+check('kas fisik di bawah float tidak menghasilkan setoran negatif', handoverValue() === 0, String(handoverValue()))
+check('kekurangan kas terhadap float dijelaskan apa adanya', bodyText().includes('tidak ada setoran ke owner') && bodyText().includes('kurang'), bodyText().slice(0, 220))
+if (actualCashInput) setInput(actualCashInput, '385000')
+const closeShiftModal = window.document.querySelector('.modal.small .modal-close') as HTMLButtonElement | null
+if (closeShiftModal) act(() => { closeShiftModal.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
 
 const persisted = persistedState()
 check('state tersimpan dengan versi skema terbaru', persisted.schemaVersion === SCHEMA_VERSION, String(persisted.schemaVersion))
@@ -569,38 +548,6 @@ check('bahan seed menyimpan kategori', persisted.ingredients?.find((ingredient: 
 check('pengaturan printer tersimpan', persisted.settings?.printer?.paperWidth === 58 && typeof persisted.settings?.businessName === 'string')
 check('gambar menu tersimpan di katalog', Boolean(persisted.menus?.find((menu: { id: string }) => menu.id === 'dada')?.imageUrl))
 check('audit log tercatat setelah ubah harga', Array.isArray(persisted.auditLog) && persisted.auditLog.length > 0)
-
-// ---- Reset PIN dengan kode pemulihan ----
-const closeShiftModal = window.document.querySelector('.modal.small .modal-close') as HTMLButtonElement | null
-if (closeShiftModal) act(() => { closeShiftModal.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
-clickByLabel('Buka mode pemilik')
-await settle(10)
-clickByText('Lupa PIN? Pulihkan dengan kode')
-const recoveryInput = window.document.querySelector('input[aria-label="Kode pemulihan"]') as HTMLInputElement | null
-const newPinInput = window.document.querySelector('input[aria-label="PIN baru"]') as HTMLInputElement | null
-const confirmPinInput = window.document.querySelector('input[aria-label="Ulangi PIN"]') as HTMLInputElement | null
-check('form pemulihan PIN tersedia', Boolean(recoveryInput && newPinInput && confirmPinInput) && Boolean(recoveryCode))
-const oldPin = ownerPin
-if (recoveryInput) setInput(recoveryInput, recoveryCode)
-if (newPinInput) setInput(newPinInput, '5678')
-if (confirmPinInput) setInput(confirmPinInput, '5678')
-await clickByTextAsync('Pulihkan & buat PIN')
-const newRecovery = window.document.querySelector('[data-recovery-code]')?.getAttribute('data-recovery-code') ?? ''
-check('pemulihan menghasilkan kode pemulihan baru', Boolean(newRecovery) && newRecovery !== recoveryCode)
-await clickByTextAsync('Saya sudah menyimpan kode')
-check('mode pemilik terbuka setelah pemulihan', bodyText().includes('Mode pemilik'))
-clickByText('Kasir')
-clickByLabel('Buka mode pemilik')
-await settle(10)
-const retryPinInput = window.document.querySelector('input[aria-label="PIN pemilik"]') as HTMLInputElement | null
-if (retryPinInput) setInput(retryPinInput, oldPin)
-await clickByTextAsync('Buka')
-check('PIN lama tidak berlaku setelah pemulihan', bodyText().includes('PIN salah'))
-if (retryPinInput) setInput(retryPinInput, '5678')
-await clickByTextAsync('Buka')
-check('PIN baru berlaku setelah pemulihan', bodyText().includes('Mode pemilik'))
-ownerPin = '5678'
-clickByText('Kasir')
 
 // ---- Kegagalan penyimpanan harus terlihat, bukan ditelan ----
 const storagePrototype = Object.getPrototypeOf(window.localStorage) as unknown as { setItem: Storage['setItem'] }
@@ -658,9 +605,9 @@ check('struk riwayat memakai footer dari pengaturan', receiptPreview.includes('W
 const voidReasonInput = window.document.querySelector('.void-reason') as HTMLInputElement | null
 if (voidReasonInput) setInput(voidReasonInput, 'Salah input uji')
 await clickByTextAsync('Void')
-check('void transaksi meminta PIN', Boolean(window.document.querySelector('.pin-modal')) && bodyText().includes('void transaksi'), bodyText().slice(-180))
-clickByText('Batal')
-check('void bisa dibatalkan sebelum PIN', !window.document.querySelector('.pin-modal'))
+const voidedRuntime = (persistedState().transactions ?? []).find((transaction: { statusReason?: string }) => transaction.statusReason === 'Salah input uji')
+check('void tanpa dialog PIN', !window.document.querySelector('.pin-modal'))
+check('void langsung tersimpan setelah alasan diisi', voidedRuntime?.status === 'cancelled', JSON.stringify(voidedRuntime?.status ?? null))
 
 // ---- Jembatan printer native: callback Android menjadi Promise ----
 const { installNativePrinterShim, uninstallNativePrinterShim } = await import('../src/lib/native-printer-shim')

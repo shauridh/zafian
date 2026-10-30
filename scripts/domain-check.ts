@@ -3,10 +3,9 @@ import { buildOverviewSummary, percentDelta, resolvePeriod } from '../src/domain
 import { defaultRecipeQty, menuHpp, menuMargin, mergeIngredientUsage, scaleRecipe, seedCategories, seedIngredientCategories, seedIngredients, seedMenus } from '../src/domain/catalog'
 import { createDefaultSettings } from '../src/domain/settings'
 import { cogsForTransactions, inventoryRows } from '../src/domain/inventory'
-import { cashSalesForShift, expectedCashForShift, initialPosStore, preOrderCanStartProcessing, preOrderRemaining, SCHEMA_VERSION, type PosStore, type Shift, type Transaction } from '../src/domain/pos'
+import { cashSalesForShift, cashShortAgainstFloat, expectedCashForShift, handoverToOwner, initialPosStore, preOrderCanStartProcessing, preOrderRemaining, SCHEMA_VERSION, type PosStore, type Shift, type Transaction } from '../src/domain/pos'
 import { exportStore, parseStoreBackup } from '../src/lib/persistence'
 import { applyRestoredStore, createBackupRecord, inspectBackup, serializeBackup } from '../src/lib/backup'
-import { createOwnerPin, verifyOwnerPin, verifyRecoveryCode } from '../src/lib/pin'
 import { disconnectBluetoothPrinter, isBluetoothPrinterConnected, requestBluetoothPrinter, sendReceiptTextToBluetooth } from '../src/lib/bluetooth-printer'
 import { disconnectPrinter as disconnectActivePrinter, getPrinterTransportStatus, pairPrinter as pairWithActiveTransport, sendReceiptText as sendWithActiveTransport } from '../src/lib/printer-connection'
 import { brandingFromSettings, buildReceiptText, printReceiptPreferred } from '../src/lib/receipt'
@@ -23,6 +22,15 @@ function check(name: string, condition: boolean, detail = '') {
 }
 
 const shift: Shift = { id: 'shift-1', openedAt: new Date().toISOString(), openingFloat: 350000, status: 'open' }
+
+// ---- Setoran ke owner pada rekonsiliasi shift ----
+check('setoran owner = kas fisik − float awal', handoverToOwner(shift, 385000) === 35000, String(handoverToOwner(shift, 385000)))
+check('shift tanpa transaksi tidak menyetor apa pun', handoverToOwner(shift, 350000) === 0, String(handoverToOwner(shift, 350000)))
+check('setoran owner tidak pernah negatif saat kas kurang', handoverToOwner(shift, 100000) === 0, String(handoverToOwner(shift, 100000)))
+check('kekurangan kas dihitung terhadap float awal', cashShortAgainstFloat(shift, 100000) === 250000, String(cashShortAgainstFloat(shift, 100000)))
+check('kas di atas float tidak dianggap kurang', cashShortAgainstFloat(shift, 385000) === 0)
+check('setoran dibulatkan ke rupiah penuh', handoverToOwner(shift, 350500.6) === 501 && handoverToOwner(shift, 350000.4) === 0, `${handoverToOwner(shift, 350500.6)} / ${handoverToOwner(shift, 350000.4)}`)
+check('kas tidak valid tidak menghasilkan setoran', handoverToOwner(shift, Number.NaN) === 0 && cashShortAgainstFloat(shift, Number.NaN) === 0)
 
 function transaction(overrides: Partial<Transaction>): Transaction {
   return {
@@ -341,23 +349,10 @@ check('backup tanpa pengaturan ditolak', !inspectBackup(JSON.stringify({ ...back
 check('format backup tidak dikenal ditolak', !inspectBackup(JSON.stringify({ ...backupRecord, format: 'format-lain' })).ok)
 check('nomor transaksi berikutnya tetap valid', migrated.nextTransactionNumber >= 274 && migrated.nextTransactionNumber > 101, String(migrated.nextTransactionNumber))
 
-// ---- PIN pemilik ----
-const createdPin = await createOwnerPin('2468')
-check('PIN disimpan sebagai hash SHA-256, bukan plaintext', createdPin.record.hash !== '2468' && /^[a-f0-9]{64}$/.test(createdPin.record.hash), createdPin.record.hash)
-check('salt PIN dan kode pemulihan berbeda', createdPin.record.salt !== createdPin.record.recoverySalt)
-check('PIN benar bisa diverifikasi', await verifyOwnerPin(createdPin.record, '2468'))
-check('PIN salah ditolak', !(await verifyOwnerPin(createdPin.record, '2469')))
-check('kode pemulihan benar bisa diverifikasi', await verifyRecoveryCode(createdPin.record, createdPin.recoveryCode))
-check('kode pemulihan salah ditolak', !(await verifyRecoveryCode(createdPin.record, 'AAAA-BBBB-CCCC')))
-const pinStore = normalizeStore({ settings: { ownerPin: createdPin.record } })
-check('PIN tersimpan di pengaturan setelah migrasi', pinStore.settings.ownerPin?.hash === createdPin.record.hash)
-check('record PIN tidak valid dibuang saat normalisasi', normalizeStore({ settings: { ownerPin: { salt: 'x', hash: 'plain' } } }).settings.ownerPin === undefined)
-check('dua PIN memakai salt berbeda', (await createOwnerPin('2468')).record.salt !== createdPin.record.salt)
-const currentWithPin = normalizeStore({ ...baseStore, settings: { ...baseStore.settings, ownerPin: createdPin.record } })
+// ---- Restore store dari backup ----
 const restoreCandidate = normalizeStore({ ...migrated, transactions: [cashSale] })
-const restoredStore = applyRestoredStore(restoreCandidate, currentWithPin, 'uji-restore.json')
+const restoredStore = applyRestoredStore(restoreCandidate, 'uji-restore.json')
 check('restore valid menerapkan transaksi dari backup', restoredStore.transactions.length === 1 && restoredStore.transactions[0]?.id === cashSale.id)
-check('restore mempertahankan PIN perangkat saat ini', restoredStore.settings.ownerPin?.hash === createdPin.record.hash)
 check('restore menambahkan audit restore', restoredStore.auditLog.some((entry) => entry.action === 'restore'))
 
 const emptyStore = normalizeStore(null)

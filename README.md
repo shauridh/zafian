@@ -19,7 +19,7 @@ bun run dev        # http://localhost:3000 (Vite + Worker di workerd)
 bun run build      # dist/client + dist/saas_landing/index.js
 bun run typecheck
 bun run check:domain    # domain: kas, HPP, forecast, jurnal, struk, migrasi state lama
-bun run check:runtime   # jsdom: mount App, PIN, buka layar pemilik, ubah harga, kembali ke POS
+bun run check:runtime   # jsdom: mount App, buka layar pemilik, ubah harga, kembali ke POS
 bun run check:ui        # Chromium: CRUD, kategori, gambar, bulk, printer, shift/struk, overflow
 bun run check:storage   # fake-indexeddb: migrasi localStorage, idempotensi, backup, gagal tulis
 bun run check:repo      # repo Supabase dengan gateway tiruan: load/save, diff, hapus, dokumen, error
@@ -48,7 +48,7 @@ Repo sudah memuat `vercel.json`; aplikasi POS adalah SPA statis, dan Supabase di
    Tidak ada env outlet: aplikasi selalu memakai outlet dari akun pemilik yang login (tabel `staff`).
 
    **Redeploy wajib setelah mengubah env**, karena Vite menanamkan nilai saat build. Jangan memakai `service_role` key, kata sandi database, atau password pemilik di klien.
-4. Deploy menghasilkan URL HTTPS. HTTPS wajib untuk PIN (`crypto.subtle`) dan Web Bluetooth; service worker hanya aktif pada build production.
+4. Deploy menghasilkan URL HTTPS. HTTPS wajib untuk Web Bluetooth; service worker hanya aktif pada build production.
 5. Buka aplikasi → masuk dengan **satu akun pemilik**. Outlet dibuat otomatis pada login pertama (RPC `create_outlet`), katalog dimulai **kosong** tanpa menu/bahan contoh, dan tidak ada onboarding, pilihan outlet, atau manajemen staf. Tambahkan menu dan bahan sendiri dari mode pemilik.
 6. `vercel.json` menambahkan rewrite SPA agar refresh/deep link kembali ke `index.html`, header keamanan, cache `sw.js` yang tidak lengket, serta tipe konten manifest.
 
@@ -133,15 +133,15 @@ detail struk dengan void dan cetak ulang.
 
 ## Mode pemilik
 
-Klik avatar **P** di topbar, atau ikon printer untuk langsung membuka pengaturan printer. Keduanya meminta **PIN pemilik** bila sudah dibuat. Navigasi memakai sidebar pada tablet/desktop dan tab horizontal pada layar sempit.
+Klik avatar **P** di topbar, atau ikon printer untuk langsung membuka pengaturan printer. Keduanya langsung terbuka tanpa PIN. Navigasi memakai sidebar pada tablet/desktop dan tab horizontal pada layar sempit.
 
 - **Ringkasan** — filter periode (hari ini, 7/30 hari, bulan ini, atau rentang kustom), delapan metrik penjualan/laba/HPP/persediaan dengan pembanding periode sebelumnya, grafik tren penjualan, komposisi pembayaran Cash/QRIS/belum terbayar, kanal pesanan, kategori teratas, pola jam pesanan, menu terlaris, bahan di bawah minimum, dan aksi cepat.
 - **Menu & HPP** — **tambah, ubah, dan hapus menu**; unggah foto; pilih kategori; atur status jual, harga, dan resep bahan. HPP/margin dihitung ulang otomatis. Tersedia pencarian dan filter kategori.
 - **Kategori** — tambah, ubah nama, urutkan, dan hapus kategori. Rename ikut memperbarui menu terkait; kategori yang masih dipakai tidak bisa dihapus.
 - **Bahan & stok** — **tambah, ubah, dan hapus bahan** (tombol hapus tersedia langsung di tabel dan di editor, memakai dialog konfirmasi di dalam aplikasi agar tetap bekerja di preview iframe/WebView; bahan yang masih dipakai resep meminta konfirmasi eksplisit **“Hapus & lepas dari resep”** sehingga baris resep ikut dibersihkan dan tidak ada resep menggantung); **pembelian massal** beberapa bahan dalam satu kali simpan, dengan mode **per satuan** atau **per pack** (jumlah pack otomatis dikonversi ke satuan pakai dan biaya dihitung dari harga kemasan); **opname stok** untuk menambah, mengedit, dan menghapus hasil hitung fisik beserta selisihnya, dengan **nilai selisih otomatis dijurnal**; penyesuaian stok +/- dengan catatan; stok minimum dan pemakaian teoretis.
 - **Forecast** — kebutuhan harian dan mingguan berdasarkan rata-rata 7 hari, stok, dan saran pembelian.
-- **Laporan** — PNL, biaya operasional, neraca saldo, neraca, dan buku besar dari jurnal double-entry otomatis, termasuk penyesuaian selisih persediaan dari opname.
-- **Pengaturan** — identitas usaha/outlet, catatan kaki struk, **baris promo struk** (opsional, maks. 3 baris di bawah catatan kaki; teks panjang dibungkus dan tetap di tengah), tema, **PIN pemilik**, pairing printer Bluetooth, lebar kertas 58/80 mm, tata letak struk (perataan header/footer, ukuran font, isi struk, jumlah salinan), cetak otomatis setelah pembayaran, tes cetak, dan ringkasan data.
+- **Laporan** — PNL, biaya operasional, neraca saldo, dan neraca dari jurnal double-entry otomatis, termasuk penyesuaian selisih persediaan dari opname.
+- **Pengaturan** — identitas usaha/outlet, catatan kaki struk, **baris promo struk** (opsional, maks. 3 baris di bawah catatan kaki; teks panjang dibungkus dan tetap di tengah), tema, pairing printer Bluetooth, lebar kertas 58/80 mm, tata letak struk (perataan header/footer, ukuran font, isi struk, jumlah salinan), cetak otomatis setelah pembayaran, tes cetak, dan ringkasan data.
 - **Backup** — backup harian otomatis, backup sebelum tutup shift, unduh backup terakhir/baru, restore dengan pratinjau dan konfirmasi, ekspor CSV penjualan dan jurnal, audit log.
 
 ### Printer & struk
@@ -184,13 +184,13 @@ Ada dua bentuk distribusi: **web/PWA** (`dist/client` + Worker) dan **shell Andr
 - Kegagalan tulis/kuota penuh ditampilkan sebagai alert penyimpanan di aplikasi dengan tombol coba lagi; tidak ada catch kosong pada jalur simpan.
 - Versi skema saat ini `8`, disimpan di field `schemaVersion` dan key `sabana-pos-schema-version`.
 - `src/lib/schema.ts` menjalankan `normalizeStore()` setiap kali load, save, export, dan restore backup.
-- Skema v6 menambahkan `settings.ownerPin` berisi hash SHA-256 + salt dan hash kode pemulihan. PIN/kode asli tidak disimpan; kode pemulihan hanya ditampilkan sekali saat PIN dibuat atau diubah.
+- Skema v6 pernah menambahkan `settings.ownerPin` (hash + salt). PIN pemilik kini dinonaktifkan, sehingga field itu dibuang saat normalisasi dan tidak lagi disimpan.
 - Skema v3 menambahkan `categories`, `settings` (identitas, tema, printer/struk), dan `menu.imageUrl`. Pengaturan lama otomatis mendapat default aman.
 - Skema v4 menambahkan snapshot `unitCost` pada opname dan jurnal penyesuaian persediaan. Opname lama tanpa biaya snapshot diisi dari biaya bahan saat migrasi lalu dibekukan.
 - Skema v5 menambahkan pengaturan tata letak struk (`headerAlign`, `footerAlign`, `fontSize`, `showOrderType`, `showPaymentDetail`, `copies`); state lama mendapat default kiri/normal/tampil semua/1 salinan.
-- Skema v6 menambahkan PIN pemilik. PIN di-hash `SHA-256(salt:PIN)` via `crypto.subtle`; kode pemulihan memakai salt terpisah dan juga di-hash. PIN wajib untuk mode pemilik, pengaturan (termasuk printer), void, ubah menu/harga, dan tutup shift. Kasir tetap bisa membuka aplikasi dan berjualan tanpa PIN.
+- Mode pemilik, pengaturan (termasuk printer), void, ubah menu/harga, dan tutup shift dibuka tanpa PIN karena aplikasi ini dipakai pemilik tunggal per outlet.
 - Backup JSON memakai wrapper `sabana-pos-backup` berisi `schemaVersion`, `createdAt`, `reason`, ringkasan, dan seluruh state. Backup otomatis dibuat sekali sehari (dicek saat aplikasi dibuka dan berkala tiap 30 menit) serta tepat sebelum tutup shift; backup terakhir disimpan di IndexedDB dan bisa diunduh.
-- Restore memvalidasi format, versi skema, serta struktur transaksi/menu/bahan/kategori sebelum menampilkan ringkasan dan meminta konfirmasi. File rusak, versi lebih baru, atau data yang akan hilang ditolak tanpa mengubah state. PIN pemilik perangkat saat ini dipertahankan saat restore.
+- Restore memvalidasi format, versi skema, serta struktur transaksi/menu/bahan/kategori sebelum menampilkan ringkasan dan meminta konfirmasi. File rusak, versi lebih baru, atau data yang akan hilang ditolak tanpa mengubah state.
 - Opname disimpan sebagai `StockMovement` bertipe `opname` dengan snapshot `systemQty`, `countedQty`, dan `unitCost`; `qty` adalah selisih yang dipakai perhitungan stok. Selisihnya dijurnal ke **Persediaan Bahan (1200)** dan **Selisih Persediaan (6100)**, sehingga PNL dan neraca ikut menyesuaikan. Opname bisa diedit/dihapus tanpa mengubah riwayat pembelian.
 - Migrasi bersifat **idempoten**: dijalankan dua kali menghasilkan state yang sama, tanpa menambah transaksi, kas, atau jurnal.
 - Di **mode lokal**, state lama tanpa katalog/bahan/kategori/audit akan di-seed otomatis; harga, resep, status menu, dan kategori buatan pengguna **tidak** di-reset. Mode online tidak men-seed outlet baru — katalog dimulai kosong.
@@ -206,23 +206,23 @@ Ada dua bentuk distribusi: **web/PWA** (`dist/client` + Worker) dan **shell Andr
 - `bun run typecheck` — lolos, exit 0.
 - `bun run build` — lolos (`dist/client` + Worker, aset menu ikut ter-copy).
 - `VERCEL=1 bun run build` — lolos tanpa `.env.local`: SPA + `manifest.webmanifest` + `sw.js` (25 aset di-precache), tanpa Worker Cloudflare.
-- `bun run check:domain` — **163 pemeriksaan lolos** (migrasi state lama, no-NaN cash, idempotensi tanpa duplikasi kas/jurnal, kategori menu & bahan, pengaturan, gambar menu/item, opname stok & snapshot, jurnal opname, struk 58/80 mm, **baris promo struk**, transport printer, periode ringkasan, backup round-trip, **validasi backup rusak/versi lebih baru**, **hash PIN & kode pemulihan**).
-- `bun run check:storage` — **14 pemeriksaan lolos** dengan fake-indexeddb: migrasi localStorage, migrasi kedua tidak menimpa IndexedDB, backup harian tidak dobel, backup sebelum tutup shift, unduhan file JSON, dan kegagalan tulis ditolak (tidak ditelan).
-- `bun run check:runtime` — **163 pemeriksaan lolos** di jsdom: App ter-mount tanpa error, gambar tampil di kasir, tema tersimpan, **PIN wajib sebelum mode pemilik/pengaturan printer**, **PIN disimpan sebagai hash**, **reset PIN dengan kode pemulihan dan PIN lama tidak berlaku**, **PIN wajib untuk tutup shift dan void transaksi**, **kegagalan penyimpanan menampilkan alert**, **file restore rusak ditolak dan file valid menampilkan pratinjau sebelum ditimpa**, filter periode ringkasan, ubah harga menu, CRUD menu/bahan/kategori menu & **kategori bahan**, filter kategori bahan, pembelian massal per pack, opname, dan pengaturan printer. Verifikasi ini memakai jsdom, bukan browser grafis atau printer fisik.
-- `bun run check:ui` — **117 pemeriksaan lolos** di Chromium headless (DPR 2, touch): CRUD menu + foto (buat/edit/hapus), CRUD bahan, tab kategori (tambah/ubah/hapus, proteksi kategori terpakai, strip kasir), foto menu di kasir `object-fit: contain` tanpa crop/gepeng (rasio 2:1 terukur), bulk pembelian 3 baris sekali simpan yang menambah stok ketiganya, 8 tab mode pemilik, pengaturan printer 80 mm/2 salinan + **baris promo** persist setelah reload dan terbaca pratinjau serta tes cetak, **buka shift float Rp350.000 → transaksi tunai uang pas → struk 80 mm/2 salinan tercetak → tutup shift dengan PIN dan kas aktual**, serta **cold start offline**: service worker aktif, reload tanpa jaringan tetap memuat shell, katalog dirender, dan buka shift + pilih menu tetap berfungsi; nol overflow horizontal di 1024×600, 1280×800, 800×1280, dan 360×640. Cetak ke printer thermal fisik tetap belum diuji (yang diperiksa HTML cetak).
-- Dev server bind `0.0.0.0:3000`: `/`, `/src/main.tsx`, `/src/App.tsx`, `/src/lib/storage.ts`, `/src/lib/pin.ts`, `/src/lib/backup.ts`, `/src/components/OwnerPinDialog.tsx`, `/src/screens/owner/BackupTab.tsx`, `/src/screens/owner/SettingsTab.tsx`, dan `/src/styles.css` merespons HTTP 200.
+- `bun run check:domain` — **177 pemeriksaan lolos** (migrasi state lama, no-NaN cash, idempotensi tanpa duplikasi kas/jurnal, kategori menu & bahan, pengaturan, gambar menu/item, opname stok & snapshot, jurnal opname, struk 58/80 mm, **baris promo struk**, transport printer, periode ringkasan, backup round-trip, **validasi backup rusak/versi lebih baru**).
+- `bun run check:storage` — **20 pemeriksaan lolos** dengan fake-indexeddb: migrasi localStorage, migrasi kedua tidak menimpa IndexedDB, backup harian tidak dobel, backup sebelum tutup shift, unduhan file JSON, dan kegagalan tulis ditolak (tidak ditelan).
+- `bun run check:runtime` — **173 pemeriksaan lolos** di jsdom: App ter-mount tanpa error, gambar tampil di kasir, tema tersimpan, **mode pemilik tanpa PIN**, **rekonsiliasi menampilkan setoran ke owner (kas fisik − float, tidak negatif)**, **kegagalan penyimpanan menampilkan alert**, **file restore rusak ditolak dan file valid menampilkan pratinjau sebelum ditimpa**, filter periode ringkasan, ubah harga menu, CRUD menu/bahan/kategori menu & **kategori bahan**, filter kategori bahan, pembelian massal per pack, opname, dan pengaturan printer. Verifikasi ini memakai jsdom, bukan browser grafis atau printer fisik.
+- `bun run check:ui` — **133 pemeriksaan lolos** di Chromium headless (DPR 2, touch): CRUD menu + foto (buat/edit/hapus), CRUD bahan, tab kategori (tambah/ubah/hapus, proteksi kategori terpakai, strip kasir), foto menu di kasir `object-fit: contain` tanpa crop/gepeng (rasio 2:1 terukur), bulk pembelian 3 baris sekali simpan yang menambah stok ketiganya, 8 tab mode pemilik, pengaturan printer 80 mm/2 salinan + **baris promo** persist setelah reload dan terbaca pratinjau serta tes cetak, **buka shift float Rp350.000 → transaksi tunai uang pas → struk 80 mm/2 salinan tercetak → tutup shift dengan kas aktual dan setoran ke owner**, serta **cold start offline**: service worker aktif, reload tanpa jaringan tetap memuat shell, katalog dirender, dan buka shift + pilih menu tetap berfungsi; nol overflow horizontal di 1024×600, 1280×800, 800×1280, dan 360×640. Cetak ke printer thermal fisik tetap belum diuji (yang diperiksa HTML cetak).
+- Dev server bind `0.0.0.0:3000`: `/`, `/src/main.tsx`, `/src/App.tsx`, `/src/lib/storage.ts`, `/src/lib/backup.ts`, `/src/components/Dialog.tsx`, `/src/screens/owner/BackupTab.tsx`, `/src/screens/owner/SettingsTab.tsx`, dan `/src/styles.css` merespons HTTP 200.
 - Ikon tombol dapat diganti di `public/icons/`; ilustrasi menu di `public/menu/`.
 
-- `bun run check:repo` — **46 pemeriksaan lolos** dengan gateway Supabase tiruan: round-trip snapshot, outlet online baru mulai kosong tanpa katalog contoh, seed uji ber-ID uuid + referensi resep, penyimpanan idempoten (tanpa perubahan = nol tulis), upsert per baris, hapus baris, dokumen kas/audit/pre-order/beban, numeric PostgREST berbentuk string, nominasi transaksi diturunkan dari data, isolasi outlet, dan penolakan error jaringan.
+- `bun run check:repo` — **47 pemeriksaan lolos** dengan gateway Supabase tiruan: round-trip snapshot, outlet online baru mulai kosong tanpa katalog contoh, seed uji ber-ID uuid + referensi resep, penyimpanan idempoten (tanpa perubahan = nol tulis), upsert per baris, hapus baris, dokumen kas/audit/pre-order/beban, numeric PostgREST berbentuk string, nominasi transaksi diturunkan dari data, isolasi outlet, dan penolakan error jaringan.
 - **Migration Supabase diuji pada PostgreSQL 18.4 lokal** dengan stub Supabase (role `anon`/`authenticated`/`service_role`, schema `auth`, `auth.uid()`/`auth.jwt()`): `0001_init.sql` + `0002_rls.sql` **apply bersih tanpa error di dua database baru** (12 tabel masing-masing), lalu **26/26 pemeriksaan RLS lolos** — owner CRUD master data, kasir hanya baca master data + tulis transaksi/shift/dokumen, kasir ditolak mengubah pengaturan/staf, user outlet lain dan `anon` ditolak, `create_outlet` idempoten, serta trigger `transaction_items` terisi dan diperbarui. Bug yang ditemukan lewat uji ini (trigger tanpa `security definer`, kolom penghitung transaksi di tabel owner-only) sudah diperbaiki.
 - **Mode online belum diuji ke project Supabase hosted** karena tidak ada kredensial project. Login dengan JWT asli, klien PostgREST, dan dashboard Supabase tetap perlu diuji sekali setelah project dibuat.
 
 ### Uji manual cepat
 
 1. Buka aplikasi dari data localStorage lama → pastikan katalog/transaksi lama muncul, lalu buka DevTools → Application → IndexedDB → `sabana-pos` → `kv` → key `pos-store`.
-2. Klik avatar **P** → buat PIN → simpan kode pemulihan → pastikan mode pemilik terbuka. Tutup ke kasir dan coba lagi tanpa PIN → harus ditolak.
+2. Klik avatar **P** → mode pemilik langsung terbuka tanpa PIN.
 3. Buka **Backup** → **Backup sekarang & unduh**; muat ulang; **Unduh backup terakhir**. Coba pulihkan file rusak → harus ditolak. Pulihkan file valid → muncul ringkasan → konfirmasi → aplikasi memuat ulang.
-4. Buka tutup shift → isi kas fisik → konfirmasi → masukkan PIN → shift tertutup dan backup `sebelum tutup shift` muncul di daftar backup terakhir.
+4. Buka tutup shift → isi kas fisik → periksa baris **Setor ke owner** → konfirmasi → shift tertutup dan backup `sebelum tutup shift` muncul di daftar backup terakhir.
 
 ## Angka dan aturan
 
@@ -234,7 +234,7 @@ Ada dua bentuk distribusi: **web/PWA** (`dist/client` + Worker) dan **shell Andr
 
 ## Batasan saat ini
 
-- Saat mode online, seluruh data outlet (termasuk kategori bahan dan pengaturan printer/PIN) berada di Supabase, bukan di perangkat. Multi-perangkat membaca outlet yang sama; perubahan terakhir menang per baris.
+- Saat mode online, seluruh data outlet (termasuk kategori bahan dan pengaturan printer) berada di Supabase, bukan di perangkat. Multi-perangkat membaca outlet yang sama; perubahan terakhir menang per baris.
 - Google Sheets belum terhubung; tersedia ekspor CSV sebagai jalur laporan.
 - Tersedia shell Android native di `android/`: APK WebView + bridge Bluetooth Classic/SPP dan BLE dengan auto-connect ke printer tersimpan. Di browser biasa, cetak tetap memakai Web Bluetooth BLE.
 - Cetak di APK memakai bridge native; bila belum ada printer tersimpan, aplikasi memberi pesan pairing, bukan diam-diam membuka dialog. Print thermal fisik RPP02N belum diuji di sandbox ini—yang diverifikasi adalah build APK, signature, dan shim native di jsdom.
@@ -242,7 +242,6 @@ Ada dua bentuk distribusi: **web/PWA** (`dist/client` + Worker) dan **shell Andr
 - Unduhan backup berbasis `blob:` dari WebView belum memiliki handler native; gunakan browser untuk mengunduh backup sampai handler ditambahkan.
 - Foto menu disimpan sebagai data URL di IndexedDB (maks. 560 px JPEG). Backup JSON memuat foto tersebut; untuk katalog sangat besar, kapasitas perangkat tetap perlu dipantau.
 - Backup JSON otomatis/unduh tetap tersedia sebagai ekspor eksplisit dan disimpan di perangkat; sumber kebenaran tetap Supabase. Belum ada backup cloud otomatis terjadwal.
-- PIN memakai `crypto.subtle`; buka aplikasi lewat **HTTPS atau localhost**. Pada origin HTTP LAN biasa, PIN tidak bisa dibuat/diverifikasi (aplikasi menampilkan pesan; kasir tetap bisa berjualan, tetapi mode pemilik terkunci sampai origin aman dipakai).
 - Gambar menu disimpan sebagai URL/data URL di kolom `menu_items.image_url`. Data URL besar membebani baris database; untuk katalog besar, gunakan Supabase Storage dan simpan URL-nya.
 - Antrean offline belum ada: di mode online, transaksi memerlukan koneksi ke Supabase. Shell PWA tetap bisa dibuka offline, tetapi data tidak dapat dimuat/ditulis sampai jaringan kembali.
 - Migration Supabase belum dieksekusi ke project nyata pada turn ini; validasi baru sebatas review SQL + `check:repo` dengan gateway tiruan.

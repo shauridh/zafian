@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Bluetooth, DatabaseBackup, KeyRound, LogOut, Printer, RefreshCw, Save, ShieldCheck, Smartphone, Store, SwatchBook, Unplug } from 'lucide-react'
+import { Bluetooth, DatabaseBackup, LogOut, Printer, RefreshCw, Save, Smartphone, Store, SwatchBook, Unplug } from 'lucide-react'
 
-import type { AppSettings, OwnerPinRecord, ReceiptAlign, ReceiptFontSize, ThemeMode } from '../../domain/settings'
+import type { AppSettings, ReceiptAlign, ReceiptFontSize, ThemeMode } from '../../domain/settings'
 import {
   disconnectPrinter as disconnectActivePrinter,
   getPrinterTransportStatus,
@@ -13,7 +13,6 @@ import { createId } from '../../lib/id'
 import { isOnlineMode, signOutOnline } from '../../lib/online'
 import { getPwaStatus, hydratePwaStatus, promptPwaInstall, subscribePwaStatus, type PwaStatus } from '../../lib/pwa'
 import { buildTestReceiptText, printOutcomeMessage, printTestReceiptPreferred } from '../../lib/receipt'
-import { OwnerPinDialog } from '../../components/OwnerPinDialog'
 import type { OwnerTabProps } from './types'
 import { Field, FieldGroup } from './ui'
 
@@ -35,7 +34,6 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
   const [copies, setCopies] = useState(store.settings.printer.copies)
   const [printerStatus, setPrinterStatus] = useState<PrinterConnectionStatus>(() => getPrinterTransportStatus())
   const [printerBusy, setPrinterBusy] = useState(false)
-  const [pinDialogOpen, setPinDialogOpen] = useState(false)
   const [pwa, setPwa] = useState<PwaStatus>(() => getPwaStatus())
   const online = isOnlineMode()
 
@@ -77,15 +75,6 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
   }
   const fontSizeLabel = fontSize === 'compact' ? 'kecil' : fontSize === 'large' ? 'besar' : 'normal'
 
-  const saveOwnerPin = (record: OwnerPinRecord) => {
-    setStore((current) => ({
-      ...current,
-      settings: { ...current.settings, ownerPin: record },
-      auditLog: [...current.auditLog, { id: createId(), createdAt: new Date().toISOString(), action: 'settings_update' as const, detail: 'PIN pemilik diperbarui dari pengaturan' }],
-    }))
-    notify('PIN pemilik diperbarui')
-  }
-
   const save = () => {
     if (!businessName.trim()) { notify('Nama usaha wajib diisi'); return }
     if (!outletName.trim()) { notify('Nama outlet wajib diisi'); return }
@@ -97,7 +86,6 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
       receiptPromo: receiptPromo.trim(),
       ingredientUsage: store.settings.ingredientUsage ?? {},
       theme,
-      ownerPin: store.settings.ownerPin,
       printer: {
         deviceName: deviceName.trim(),
         paperWidth,
@@ -214,20 +202,6 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
           <div className="owner-setting-note">
             <strong>Kontras</strong>
             <span>Mode terang memakai teks hitam, mode gelap memakai teks putih agar tetap nyaman dibaca.</span>
-          </div>
-        </section>
-
-        <section className="owner-settings-card">
-          <div className="owner-setting-head"><span className="owner-stat-icon"><ShieldCheck size={17} /></span><div><h2>PIN pemilik</h2><p className="owner-muted">Melindungi menu, harga, pengaturan printer, void, dan tutup shift.</p></div></div>
-          <div className="owner-metric-list">
-            <div><span>Status PIN</span><b>{store.settings.ownerPin ? 'Aktif' : 'Belum dibuat'}</b></div>
-            {store.settings.ownerPin && <div><span>Terakhir diubah</span><b>{new Date(store.settings.ownerPin.updatedAt).toLocaleDateString('id-ID')}</b></div>}
-            <div><span>Kasir berjualan</span><b>Tetap tanpa PIN</b></div>
-          </div>
-          <button type="button" className="owner-ghost" onClick={() => setPinDialogOpen(true)}><KeyRound size={14} /> {store.settings.ownerPin ? 'Ubah PIN pemilik' : 'Buat PIN pemilik'}</button>
-          <div className="owner-setting-note">
-            <strong>Lupa PIN?</strong>
-            <span>Gunakan kode pemulihan yang ditampilkan sekali saat PIN dibuat. Kode dan PIN disimpan sebagai hash SHA-256, bukan teks biasa.</span>
           </div>
         </section>
 
@@ -359,15 +333,6 @@ export function SettingsTab({ store, setStore, notify, goTab }: OwnerTabProps) {
           </div>
         </section>
       </div>
-
-      {pinDialogOpen && <OwnerPinDialog
-        mode={store.settings.ownerPin ? 'change' : 'setup'}
-        record={store.settings.ownerPin}
-        purpose="mengubah PIN pemilik"
-        onSave={saveOwnerPin}
-        onDone={() => setPinDialogOpen(false)}
-        onCancel={() => setPinDialogOpen(false)}
-      />}
 
       <div className="owner-savebar">
         <span>{dirty ? 'Ada perubahan yang belum disimpan.' : 'Semua pengaturan tersimpan.'}</span>

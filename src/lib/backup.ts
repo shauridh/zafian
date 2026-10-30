@@ -231,18 +231,14 @@ export async function createAndStoreBackup(store: PosStore, reason: BackupReason
   return record
 }
 
-export function applyRestoredStore(restored: PosStore, current: PosStore, fileName: string): PosStore {
-  // PIN perangkat saat ini tidak diganti oleh backup lama agar pemilik tidak terkunci.
-  const withPin = current.settings.ownerPin
-    ? { ...restored, settings: { ...restored.settings, ownerPin: current.settings.ownerPin } }
-    : restored
+export function applyRestoredStore(restored: PosStore, fileName: string): PosStore {
   return {
-    ...withPin,
-    auditLog: [...withPin.auditLog, {
+    ...restored,
+    auditLog: [...restored.auditLog, {
       id: createId(),
       createdAt: new Date().toISOString(),
       action: 'restore',
-      detail: `Restore ${fileName} • ${withPin.transactions.length} transaksi`,
+      detail: `Restore ${fileName} • ${restored.transactions.length} transaksi`,
     }],
   }
 }

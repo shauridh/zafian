@@ -104,7 +104,7 @@ export function BackupTab({ store, setStore, notify }: OwnerTabProps) {
     if (!pendingRestore) return
     setBusy(true)
     try {
-      const next: PosStore = applyRestoredStore(pendingRestore.store, store, pendingRestore.fileName)
+      const next: PosStore = applyRestoredStore(pendingRestore.store, pendingRestore.fileName)
       await savePosStore(next)
       setStore(next)
       setPendingRestore(null)
@@ -200,7 +200,7 @@ export function BackupTab({ store, setStore, notify }: OwnerTabProps) {
               <div><span>Menu / bahan</span><b>{pendingRestore.meta.summary.menus} / {pendingRestore.meta.summary.ingredients}</b></div>
               <div><span>Kategori</span><b>{pendingRestore.meta.summary.categories}</b></div>
             </div>
-            <p className="restore-warning">Pastikan file berasal dari perangkat ini. Data saat ini akan diganti dan aplikasi dimuat ulang. PIN pemilik yang aktif saat ini dipertahankan.</p>
+            <p className="restore-warning">Pastikan file berasal dari perangkat ini. Data saat ini akan diganti dan aplikasi dimuat ulang.</p>
             <div className="restore-actions">
               <button className="owner-ghost" onClick={() => setPendingRestore(null)} disabled={busy}>Batal</button>
               <button className="owner-primary" onClick={() => void confirmRestore()} disabled={busy}>{busy ? 'Memulihkan…' : 'Timpa data & muat ulang'}</button>

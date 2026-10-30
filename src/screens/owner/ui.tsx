@@ -1,5 +1,7 @@
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
+
+import { useDialogFocus } from '../../components/Dialog'
 
 export const money = (value: number) => `Rp${Math.round(value).toLocaleString('id-ID')}`
 
@@ -10,9 +12,12 @@ export function Modal({ eyebrow, title, onClose, children, wide = false }: {
   children: ReactNode
   wide?: boolean
 }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useDialogFocus(ref, onClose)
+
   return (
     <div className="modal-backdrop">
-      <div className={wide ? 'modal editor' : 'modal owner-modal'} role="dialog" aria-modal="true" aria-label={title}>
+      <div className={wide ? 'modal editor' : 'modal owner-modal'} role="dialog" aria-modal="true" aria-label={title} ref={ref}>
         <button className="modal-close" onClick={onClose} aria-label="Tutup"><X size={18} /></button>
         <span className="eyebrow">{eyebrow}</span>
         <h2>{title}</h2>
@@ -57,9 +62,12 @@ export function ConfirmDialog({ eyebrow = 'KONFIRMASI', title, description, conf
   onConfirm: () => void
   onCancel: () => void
 }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useDialogFocus(ref, onCancel)
+
   return (
     <div className="modal-backdrop">
-      <div className="modal owner-modal owner-confirm" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="modal owner-modal owner-confirm" role="dialog" aria-modal="true" aria-label={title} ref={ref}>
         <button className="modal-close" onClick={onCancel} aria-label="Tutup"><X size={18} /></button>
         <span className="eyebrow">{eyebrow}</span>
         <h2>{title}</h2>

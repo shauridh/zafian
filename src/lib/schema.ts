@@ -16,7 +16,7 @@ import {
   type TransactionStatus,
 } from '../domain/pos'
 import type { StockMovement } from '../domain/inventory'
-import { defaultSettings, type AppSettings, type OwnerPinRecord, type ThemeMode } from '../domain/settings'
+import { defaultSettings, type AppSettings, type ThemeMode } from '../domain/settings'
 
 const ORDER_TYPES: OrderType[] = ['Takeaway', 'Dine in', 'GoFood', 'GrabFood', 'ShopeeFood']
 const PAYMENT_METHODS: PaymentMethod[] = ['Cash', 'QRIS', 'Unpaid']
@@ -120,18 +120,6 @@ function mergeCategories<T extends Category>(
   return categories
 }
 
-function normalizeOwnerPin(value: unknown): OwnerPinRecord | undefined {
-  if (!isObject(value)) return undefined
-  const salt = typeof value.salt === 'string' ? value.salt : ''
-  const hash = typeof value.hash === 'string' ? value.hash : ''
-  const recoverySalt = typeof value.recoverySalt === 'string' ? value.recoverySalt : ''
-  const recoveryHash = typeof value.recoveryHash === 'string' ? value.recoveryHash : ''
-  const updatedAt = typeof value.updatedAt === 'string' && !Number.isNaN(new Date(value.updatedAt).getTime()) ? value.updatedAt : ''
-  if (!/^[a-f0-9]{16,128}$/i.test(salt) || !/^[a-f0-9]{64}$/i.test(hash)) return undefined
-  if (!/^[a-f0-9]{16,128}$/i.test(recoverySalt) || !/^[a-f0-9]{64}$/i.test(recoveryHash) || !updatedAt) return undefined
-  return { salt, hash, recoverySalt, recoveryHash, updatedAt }
-}
-
 /** Pemakaian standar bahan: hanya entri dengan jumlah positif yang disimpan. */
 function normalizeIngredientUsage(value: unknown): Record<string, number> {
   if (!isObject(value)) return {}
@@ -148,7 +136,6 @@ function normalizeIngredientUsage(value: unknown): Record<string, number> {
 function normalizeSettings(value: unknown): AppSettings {
   const raw = isObject(value) ? value : {}
   const printer = isObject(raw.printer) ? raw.printer : {}
-  const ownerPin = normalizeOwnerPin(raw.ownerPin)
   return {
     businessName: text(raw.businessName, defaultSettings.businessName),
     outletName: text(raw.outletName, defaultSettings.outletName),
@@ -157,7 +144,6 @@ function normalizeSettings(value: unknown): AppSettings {
     receiptPromo: text(raw.receiptPromo, ''),
     ingredientUsage: normalizeIngredientUsage(raw.ingredientUsage),
     theme: oneOf<ThemeMode>(raw.theme, ['light', 'dark'], defaultSettings.theme),
-    ...(ownerPin ? { ownerPin } : {}),
     printer: {
       deviceName: typeof printer.deviceName === 'string' ? printer.deviceName : defaultSettings.printer.deviceName,
       paperWidth: num(printer.paperWidth, 58) === 80 ? 80 : 58,

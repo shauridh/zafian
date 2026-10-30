@@ -136,6 +136,18 @@ export function cashMovementsForShift(store: PosStore, shiftId: string, type: Ca
   return store.cashMovements.filter((item) => item.shiftId === shiftId && item.type === type).reduce((sum, item) => sum + item.amount, 0)
 }
 
+/** Uang yang diserahkan ke owner saat tutup shift: kas fisik dikurangi float awal (tidak pernah negatif). */
+export function handoverToOwner(shift: Shift, countedCash: Money): Money {
+  if (!Number.isFinite(countedCash)) return 0
+  return Math.max(0, Math.round(countedCash - shift.openingFloat))
+}
+
+/** Kekurangan kas fisik terhadap float awal; 0 bila kas cukup. */
+export function cashShortAgainstFloat(shift: Shift, countedCash: Money): Money {
+  if (!Number.isFinite(countedCash)) return 0
+  return Math.max(0, Math.round(shift.openingFloat - countedCash))
+}
+
 export function expectedCashForShift(store: PosStore, shift: Shift): Money {
   return shift.openingFloat + cashSalesForShift(store, shift.id) + cashMovementsForShift(store, shift.id, 'in') - cashMovementsForShift(store, shift.id, 'out')
 }

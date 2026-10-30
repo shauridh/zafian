@@ -31,7 +31,7 @@ const tabs = [
   { id: 'kategori' as const, label: 'Kategori', icon: Tags, title: 'Kategori menu & bahan', subtitle: 'Kelola kelompok menu kasir dan kategori bahan baku.' },
   { id: 'stok' as const, label: 'Bahan & stok', icon: Boxes, title: 'Bahan & stok', subtitle: 'Catat pembelian massal, stok, dan penyesuaian.' },
   { id: 'forecast' as const, label: 'Forecast', icon: TrendingUp, title: 'Forecast bahan', subtitle: 'Perkiraan kebutuhan harian dan mingguan dari penjualan.' },
-  { id: 'laporan' as const, label: 'Laporan', icon: BarChart3, title: 'Laporan keuangan', subtitle: 'Laba rugi, neraca, dan buku besar double-entry.' },
+  { id: 'laporan' as const, label: 'Laporan', icon: BarChart3, title: 'Laporan keuangan', subtitle: 'Laba rugi, neraca saldo, dan neraca dari jurnal otomatis' },
   { id: 'pengaturan' as const, label: 'Pengaturan', icon: Settings, title: 'Pengaturan aplikasi', subtitle: 'Identitas outlet, struk, printer, dan tampilan.' },
   { id: 'backup' as const, label: 'Backup', icon: DatabaseBackup, title: 'Backup & data', subtitle: 'Unduh data, pulihkan perangkat, dan periksa audit log.' },
 ]
